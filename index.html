@@ -2206,23 +2206,24 @@ ${content}
   (async function main(){
     const params = new URLSearchParams(window.location.search);
     const canvasId = params.get("canvas") || "canvas-002";
+    const token = params.get("token") 
     let rootCanvasState = {
       canvasId: canvasId,
       elements: [],
       edges: [],
       versionHistory: []
     };
-    rootCanvasState = await loadInitialCanvas(rootCanvasState);
+    rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
     activeCanvasController = new CanvasController(rootCanvasState, null);
   })();
 
-  async function loadInitialCanvas(defaultState) {
+  async function loadInitialCanvas(defaultState, paramToken) {
     const tokenKey = "PARC.LAND/BKPK_TOKEN";
-    let token = localStorage.getItem(tokenKey);
+    let token = paramToken || localStorage.getItem(tokenKey);
     if (!token) {
-      localStorage.setItem(tokenKey, "TBC");
       token = "TBC";
     }
+    localStorage.setItem(tokenKey, token);
     const savedLocal = localStorage.getItem("myCanvasData_"+defaultState.canvasId);
     try {
       const namespace = "websim";

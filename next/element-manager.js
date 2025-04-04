@@ -194,7 +194,12 @@ class ElementManager {
         drillInBtn.style.zIndex = "10";
         drillInBtn.onclick = (ev) => {
             ev.stopPropagation();
-            this.state.requestDrillIn(el.childCanvasState);
+            this.state.requestDrillIn(el.childCanvasState || {
+                canvasId: el.id,
+                elements: [],
+                edges: [],
+                selectedElementId: null
+            });
         };
 
         containerDiv.appendChild(drillInBtn);

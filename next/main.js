@@ -31,6 +31,20 @@ class ControllerRegistry {
 // Create the global registry
 const controllerRegistry = new ControllerRegistry();
 
+
+const getAuthToken = async () => {
+    const tokenKey = "PARC.LAND/BKPK_TOKEN";
+    const params = new URLSearchParams(window.location.search);
+    const paramToken = params.get("token");
+
+    let token = paramToken || localStorage.getItem(tokenKey);
+    if (!token) {
+        localStorage.setItem(tokenKey, "TBC");
+        token = "TBC";
+    }
+    return token;
+};
+
 /**
  * Initialize the application
  */
@@ -38,6 +52,7 @@ async function initializeApplication() {
     // Get URL parameters
     const params = new URLSearchParams(window.location.search);
     const canvasId = params.get("canvas") || "canvas-002";
+    const paramToken = params.get("token");
 
     // Create default canvas state
     let rootCanvasState = {
@@ -93,15 +108,8 @@ async function initializeApplication() {
  * Load initial canvas data
  */
 async function loadInitialCanvas(defaultState) {
-    const tokenKey = "PARC.LAND/BKPK_TOKEN";
-    let token = localStorage.getItem(tokenKey);
-    if (!token) {
-        localStorage.setItem(tokenKey, "TBC");
-        token = "TBC";
-    }
-
     const savedLocal = localStorage.getItem("myCanvasData_" + defaultState.canvasId);
-
+    const token = await getAuthToken();
     try {
         const namespace = "websim";
         const response = await fetch(`https://c15r-parcland_backpack.web.val.run/${namespace}/${defaultState.canvasId}`, {

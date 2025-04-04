@@ -157,46 +157,97 @@ class CanvasController {
   }
   
   /**
-   * Reattach this controller (show canvas)
-   */
-  reattach() {
-    this.domElements.canvas.style.display = 'block';
-    this.viewManager.updateCanvasTransform();
-    this.renderAll();
+ * Drill into a child canvas
+ */
+drillIntoChildCanvas(childCanvasState) {
+  // Add parent element reference
+  childCanvasState.parentElementId = childCanvasState.sourceElementId;
+
+  // Create child controller
+  const childController = new CanvasController(childCanvasState, this);
+  
+  // Register the controller before initialization
+  controllerRegistry.register(childCanvasState.canvasId, childController);
+  
+  // Store in our child controllers map
+  this.childControllers.set(childCanvasState.canvasId, childController);
+
+  // CRITICAL: Clear the container elements before detaching
+  // This ensures the parent's elements don't interfere with the child's view
+  this.clearCanvasElements();
+  
+  // Hide the parent canvas (may not be necessary after clearing)
+  this.detach();
+  
+  // Initialize the child controller
+  childController.initialize();
+  
+  // Set the child as active
+  controllerRegistry.setActive(childController);
+  
+  // Properly position child canvas
+  const parentElement = this.findElementById(childCanvasState.parentElementId);
+  if (parentElement) {
+    childController.viewManager.setInitialTransform({
+      x: parentElement.x,
+      y: parentElement.y,
+      scale: this.viewManager.viewState.scale
+    });
   }
   
-  /**
-   * Drill into a child canvas
-   */
-  drillIntoChildCanvas(childCanvasState) {
-    // Add parent element reference
-    childCanvasState.parentElementId = childCanvasState.sourceElementId;
+  // Update URL
+  window.history.pushState({}, "", "?canvas=" + childCanvasState.canvasId);
+}
 
-    const childController = new CanvasController(childCanvasState, this);
-    this.childControllers.set(childCanvasState.canvasId, childController);
+/**
+ * Clear all element nodes from the canvas
+ * This is important when switching between controllers
+ */
+clearCanvasElements() {
+  // Clear container elements
+  while (this.domElements.container.firstChild) {
+    this.domElements.container.removeChild(this.domElements.container.firstChild);
+  }
+  
+  // Clear the element nodes mapping in state manager
+  this.stateManager.elementNodesMap = {};
+}
 
-    // Hide the parent canvas first
+/**
+ * Drill up to parent canvas
+ */
+drillUp() {
+  if (this.parentController) {
+    // Clear child elements first
+    this.clearCanvasElements();
+    
+    // Detach this controller
     this.detach();
-  
-    // Initialize the child controller
-    childController.initialize();
-  
-    // Explicitly reattach (show) the child's canvas
-    childController.reattach();
-
-    // Properly position child canvas
-    const parentElement = this.findElementById(childCanvasState.parentElementId);
-    if (parentElement) {
-      childController.viewManager.setInitialTransform({
-        x: parentElement.x,
-        y: parentElement.y,
-        scale: this.viewManager.viewState.scale
-      });
-    }
-
-    controllerRegistry.setActive(childController);
-    window.history.pushState({}, "", "?canvas=" + childCanvasState.canvasId);
+    
+    // Set parent as active
+    controllerRegistry.setActive(this.parentController);
+    
+    // Reattach parent (which will re-render its elements)
+    this.parentController.reattach();
+    
+    // Update URL
+    window.history.pushState({}, "", "?canvas=" + this.parentController.stateManager.canvasState.canvasId);
   }
+}
+
+/**
+ * Reattach this controller (show canvas)
+ */
+reattach() {
+  this.domElements.canvas.style.display = 'block';
+  
+  // Ensure we re-render all elements when reattaching
+  // This is critical after switching between controllers
+  this.elementManager.renderElements();
+  this.edgeManager.renderEdges();
+  
+  this.viewManager.updateCanvasTransform();
+}
   
   /**
    * Check if element contains child canvas

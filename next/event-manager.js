@@ -694,18 +694,13 @@ class EventManager {
 
     document.addEventListener("pointermove", this.edgePointerMoveHandler);
     document.addEventListener("pointerup", this.edgePointerUpHandler);
-
-    // Track temporary event handlers for cleanup
-    this.tempEventHandlers.push(
-      { type: "pointermove", fn: this.edgePointerMoveHandler },
-      { type: "pointerup", fn: this.edgePointerUpHandler }
-    );
   }
 
   /**
-   * Handle edge pointer move
+   * Handle edge creation pointer move
    */
   onEdgePointerMove(ev) {
+    console.log("onEdgePointerMove(ev)");
     if (this.activeGesture !== "create-edge" || !this.gestureData.activeEdgeCreation) return;
 
     const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
@@ -714,13 +709,16 @@ class EventManager {
   }
 
   /**
-   * Handle edge pointer up
+   * Handle edge creation pointer up
    */
   onEdgePointerUp(ev) {
+    console.log("onEdgePointerUp(ev)", this.activeGesture, this.gestureData.activeEdgeCreation);
     if (this.activeGesture !== "create-edge" || !this.gestureData.activeEdgeCreation) return;
 
     const targetEl = document.elementFromPoint(ev.clientX, ev.clientY);
     let targetElement = targetEl && targetEl.closest(".canvas-element");
+
+    console.log("targetEl", targetEl, targetElement);
 
     if (targetElement) {
       const targetId = targetElement.dataset.elId;
@@ -730,21 +728,44 @@ class EventManager {
       }
     }
 
-    // Clean up edge creation
     if (this.gestureData.activeEdgeCreation.tempLine) {
       this.gestureData.activeEdgeCreation.tempLine.remove();
     }
+
     this.gestureData.activeEdgeCreation = null;
     this.state.clearActiveGesture();
 
-    // Remove temporary event handlers
     document.removeEventListener("pointermove", this.edgePointerMoveHandler);
     document.removeEventListener("pointerup", this.edgePointerUpHandler);
 
-    // Update view
-    this.state.renderElements();
+    const controller = this.state.getController();
+    controller.renderAll();
     this.state.saveCanvas();
+  }
+
+  /**
+   * Clean up resources when this manager is no longer needed
+   */
+  destroy() {
+    // Remove any temporary elements
+    if (this.gestureData.activeEdgeCreation && this.gestureData.activeEdgeCreation.tempLine) {
+      this.gestureData.activeEdgeCreation.tempLine.remove();
+    }
+
+    // Remove edge creation handlers
+    if (this.edgePointerMoveHandler) {
+      document.removeEventListener("pointermove", this.edgePointerMoveHandler);
+    }
+
+    if (this.edgePointerUpHandler) {
+      document.removeEventListener("pointerup", this.edgePointerUpHandler);
+    }
+
+    // Unsubscribe from all state subscriptions
+    this.stateSubscriptions.forEach(unsubscribe => unsubscribe());
+    this.stateSubscriptions = [];
   }
 }
 
+// Export the class
 export default EventManager;

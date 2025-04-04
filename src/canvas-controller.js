@@ -175,7 +175,7 @@ class CanvasController {
     const childController = new CanvasController(childCanvasState, this);
     this.childControllers.set(childCanvasState.canvasId, childController);
 
-    // Properly position child canvas based on parent element
+    // Properly position child canvas
     const parentElement = this.findElementById(childCanvasState.parentElementId);
     if (parentElement) {
       childController.viewManager.setInitialTransform({

@@ -129,37 +129,6 @@ class StateManager {
     }
 
     /**
-     * Register a child canvas element
-     */
-    registerChildCanvas(elementId, childCanvasId) {
-        this.childCanvasElements.set(elementId, childCanvasId);
-        this.notify('child-canvas-registered', { elementId, childCanvasId });
-    }
-
-    /**
-     * Get child canvas state
-     */
-    getChildCanvasState(elementId) {
-        const childCanvasId = this.childCanvasElements.get(elementId);
-        if (childCanvasId) {
-            return {
-                canvasId: childCanvasId,
-                sourceElementId: elementId,
-                elements: [],
-                edges: []
-            };
-        }
-        return null;
-    }
-
-    /**
-     * Check if element is a child canvas container
-     */
-    isChildCanvasContainer(elementId) {
-        return this.childCanvasElements.has(elementId);
-    }
-
-    /**
      * Find an element by ID
      */
     findElementById(id) {
@@ -188,6 +157,30 @@ class StateManager {
     findEdgesByElementId(id) {
         if (!id) return [];
         return this.edges.filter(e => e.source === id || e.target === id);
+    }
+
+    /**
+     * Register a child canvas element
+     */
+    registerChildCanvas(elementId, childCanvasId) {
+        this.childCanvasElements.set(elementId, childCanvasId);
+        this.notify('child-canvas-registered', { elementId, childCanvasId });
+    }
+
+    /**
+     * Get child canvas state
+     */
+    getChildCanvasState(elementId) {
+        const childCanvasId = this.childCanvasElements.get(elementId);
+        if (childCanvasId) {
+            return {
+                canvasId: childCanvasId,
+                sourceElementId: elementId,
+                elements: [],
+                edges: []
+            };
+        }
+        return null;
     }
 
     /**
@@ -240,7 +233,7 @@ class StateManager {
                 this.removeEdgeById(edge.id);
             });
 
-            // If this was a child canvas container, clean up the reference
+            // Remove child canvas reference if this was a container
             if (this.childCanvasElements.has(id)) {
                 this.childCanvasElements.delete(id);
             }

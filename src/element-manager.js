@@ -170,6 +170,7 @@ class ElementManager {
     renderCanvasContainerElement(node, el) {
         const containerDiv = document.createElement('div');
         containerDiv.classList.add('content');
+        containerDiv.classList.add('child-canvas-container');
         containerDiv.style.position = 'relative';
         containerDiv.style.display = 'flex';
         containerDiv.style.flexDirection = 'column';
@@ -177,29 +178,53 @@ class ElementManager {
         containerDiv.style.justifyContent = 'center';
         containerDiv.style.width = '100%';
         containerDiv.style.height = '100%';
-        containerDiv.style.border = '1px dotted #ccc';
-        containerDiv.style.fontStyle = 'italic';
+        containerDiv.style.border = '2px dashed #aaa';
+        containerDiv.style.borderRadius = '8px';
+        containerDiv.style.backgroundColor = 'rgba(240, 240, 240, 0.5)';
+        containerDiv.style.backdropFilter = 'blur(2px)';
 
+        // Create preview container
+        const previewContainer = document.createElement('div');
+        previewContainer.style.flex = '1';
+        previewContainer.style.width = '100%';
+        previewContainer.style.position = 'relative';
+        previewContainer.style.overflow = 'hidden';
+
+        // Show preview of child canvas content
         if (el.childCanvasState && el.childCanvasState.elements && el.childCanvasState.elements.length > 0) {
-            containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Child Canvas Content Rendered</div>";
+            const elementCount = el.childCanvasState.elements.length;
+            const edgeCount = (el.childCanvasState.edges || []).length;
+            previewContainer.innerHTML = `
+                <div style='font-size:0.9em; color: #666; text-align: center; padding: 10px;'>
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <div>Child Canvas</div>
+                    <div style='font-size:0.8em; color: #888;'>
+                        ${elementCount} element${elementCount !== 1 ? 's' : ''},
+                        ${edgeCount} edge${edgeCount !== 1 ? 's' : ''}
+                    </div>
+                </div>
+            `;
         } else {
-            containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Empty Child Canvas</div>";
+            previewContainer.innerHTML = `
+                <div style='font-size:0.9em; color: #888; text-align: center; padding: 10px;'>
+                    <i class="fa-solid fa-square-plus"></i>
+                    <div>Empty Child Canvas</div>
+                    <div style='font-size:0.8em;'>Click to add content</div>
+                </div>
+            `;
         }
 
+        // Add drill-in button
         const drillInBtn = document.createElement('button');
-        drillInBtn.textContent = "Drill In";
-        drillInBtn.style.position = "absolute";
-        drillInBtn.style.bottom = "5px";
-        drillInBtn.style.right = "5px";
-        drillInBtn.style.zIndex = "10";
+        drillInBtn.className = 'drill-in-button';
+        drillInBtn.innerHTML = '<i class="fa-solid fa-arrow-down"></i> Drill In';
         drillInBtn.onclick = (ev) => {
             ev.stopPropagation();
-            this.state.requestDrillIn(el.childCanvasState || {
-                canvasId: el.id,
-                elements: [],
-                edges: [],
-                selectedElementId: null
-            });
+            const childState = el.childCanvasState || {
+                canvasId: el.id + "_child",
+                elements: [], edges: []
+            };
+            this.state.requestDrillIn(childState);
         };
 
         containerDiv.appendChild(drillInBtn);
@@ -462,7 +487,7 @@ class ElementManager {
     createNewElement(x, y, type = 'markdown', content = '', isCanvasContainer = false, data = {}) {
         const newId = "el-" + Date.now();
         const defaultMap = {
-            text: "New text element",
+            text: "New Text",
             img: "Realistic tree on white background",
             html: "<div>Hello World</div>",
             markdown: "# New Markdown\nSome **content** here..."
@@ -476,8 +501,8 @@ class ElementManager {
             ...data,
             id: newId,
             x, y,
-            width: 120 / scaleFactor,
-            height: 40 / scaleFactor,
+            width: (isCanvasContainer ? 200 : 120) / scaleFactor,
+            height: (isCanvasContainer ? 150 : 40) / scaleFactor,
             rotation: 0,
             type: finalType,
             content: finalContent,
@@ -486,7 +511,8 @@ class ElementManager {
             childCanvasState: (isCanvasContainer ? {
                 canvasId: newId + "_child",
                 elements: [],
-                versionHistory: []
+                edges: [],
+                versionHistory: [],
             } : null)
         };
 

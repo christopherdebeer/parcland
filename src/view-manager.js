@@ -57,6 +57,47 @@ class ViewManager {
     }
 
     /**
+     * Set initial transform for child canvas
+     */
+    setInitialTransform({ x, y, scale }) {
+        this.state.setViewState({
+            translateX: x,
+            translateY: y,
+            scale: scale
+        });
+        this.updateCanvasTransform();
+        this.saveLocalViewState();
+    }
+
+    /**
+     * Convert coordinates from parent to child space
+     */
+    parentToChildCoordinates(x, y) {
+        const parentState = this.state.parentStateManager?.viewState;
+        if (parentState) {
+            return {
+                x: (x - parentState.translateX) / parentState.scale,
+                y: (y - parentState.translateY) / parentState.scale
+            };
+        }
+        return { x, y };
+    }
+
+    /**
+     * Convert coordinates from child to parent space
+     */
+    childToParentCoordinates(x, y) {
+        const parentState = this.state.parentStateManager?.viewState;
+        if (parentState) {
+            return {
+                x: (x * parentState.scale) + parentState.translateX,
+                y: (y * parentState.scale) + parentState.translateY
+            };
+        }
+        return { x, y };
+    }
+
+    /**
      * Update canvas transform based on view state
      */
     updateCanvasTransform() {
@@ -92,10 +133,18 @@ class ViewManager {
         const dx = px - canvasRect.left;
         const dy = py - canvasRect.top;
 
-        return {
+        // Convert to local canvas coordinates
+        const localCoords = {
             x: (dx - viewState.translateX) / viewState.scale,
             y: (dy - viewState.translateY) / viewState.scale
         };
+
+        // If this is a child canvas, convert from parent space
+        if (this.state.parentStateManager) {
+            return this.parentToChildCoordinates(localCoords.x, localCoords.y);
+        }
+
+        return localCoords;
     }
 
     /**
@@ -105,9 +154,15 @@ class ViewManager {
         const { viewState } = this.state;
         const canvasRect = this.canvas.getBoundingClientRect();
 
+        // If this is a child canvas, convert to parent space first
+        let coords = { x: cx, y: cy };
+        if (this.state.parentStateManager) {
+            coords = this.childToParentCoordinates(cx, cy);
+        }
+
         return {
-            x: (cx * viewState.scale) + viewState.translateX + canvasRect.left,
-            y: (cy * viewState.scale) + viewState.translateY + canvasRect.top
+            x: (coords.x * viewState.scale) + viewState.translateX + canvasRect.left,
+            y: (coords.y * viewState.scale) + viewState.translateY + canvasRect.top
         };
     }
 
@@ -267,9 +322,15 @@ class ViewManager {
         const centerX = canvasRect.width / 2;
         const centerY = canvasRect.height / 2;
 
+        // Convert element coordinates if in child canvas
+        let coords = { x: element.x, y: element.y };
+        if (this.state.parentStateManager) {
+            coords = this.childToParentCoordinates(element.x, element.y);
+        }
+
         this.state.setViewState({
-            translateX: centerX - (element.x * this.state.viewState.scale),
-            translateY: centerY - (element.y * this.state.viewState.scale)
+            translateX: centerX - (coords.x * this.state.viewState.scale),
+            translateY: centerY - (coords.y * this.state.viewState.scale)
         });
 
         this.saveLocalViewState();

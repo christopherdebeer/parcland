@@ -14,7 +14,8 @@ class CanvasController {
   constructor(canvasState, parentController = null) {
     this.parentController = parentController;
     this.childControllers = new Map(); // Track child canvas controllers
-    
+  }
+  initialize() {
     // Initialize DOM elements
     this.domElements = this.initializeDomElements();
     

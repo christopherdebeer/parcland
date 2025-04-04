@@ -663,16 +663,16 @@ class EventManager {
       ev.stopPropagation();
       if (this.state.mode !== 'direct') return;
       if (!this.state.selectedElementId) return;
-      
+
       console.log("starting edge creation...");
-      
+
       // Start the edge creation gesture
       this.state.setActiveGesture("create-edge");
-      
+
       // Create the temp line for edge creation
       const sourceId = this.state.selectedElementId;
       const sourceEl = this.state.findElementById(sourceId);
-      
+
       if (sourceEl) {
         // Create a temporary dashed line element
         const tempLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -683,13 +683,66 @@ class EventManager {
         tempLine.setAttribute("y1", sourceEl.y);
         tempLine.setAttribute("x2", sourceEl.x);
         tempLine.setAttribute("y2", sourceEl.y);
-        
+
         this.gestureData.activeEdgeCreation = { sourceId, tempLine };
         this.domElements.edgesLayer.appendChild(tempLine);
       }
-      
+
       // Add global pointermove and pointerup listeners for the edge gesture
       this.edgePointerMoveHandler = this.onEdgePointerMove.bind(this);
       this.edgePointerUpHandler = this.onEdgePointerUp.bind(this);
-      
-      document.addEventListener("pointermove", this.
+
+      document.addEventListener("pointermove", this.edgePointerMoveHandler);
+      document.addEventListener("pointerup", this.edgePointerUpHandler);
+
+      // Track temporary event handlers for cleanup
+      this.tempEventHandlers.push(
+        { type: "pointermove", fn: this.edgePointerMoveHandler },
+        { type: "pointerup", fn: this.edgePointerUpHandler }
+      );
+    }
+
+    /**
+     * Handle edge pointer move
+     */
+    onEdgePointerMove(ev) {
+      if (this.activeGesture !== "create-edge" || !this.gestureData.activeEdgeCreation) return;
+
+      const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
+      this.gestureData.activeEdgeCreation.tempLine.setAttribute("x2", pt.x);
+      this.gestureData.activeEdgeCreation.tempLine.setAttribute("y2", pt.y);
+    }
+
+    /**
+     * Handle edge pointer up
+     */
+    onEdgePointerUp(ev) {
+      if (this.activeGesture !== "create-edge" || !this.gestureData.activeEdgeCreation) return;
+
+      const targetEl = document.elementFromPoint(ev.clientX, ev.clientY);
+      let targetElement = targetEl && targetEl.closest(".canvas-element");
+
+      if (targetElement) {
+        const targetId = targetElement.dataset.elId;
+        if (targetId && targetId !== this.gestureData.activeEdgeCreation.sourceId) {
+          const controller = this.state.getController();
+          controller.createNewEdge(this.gestureData.activeEdgeCreation.sourceId, targetId, "");
+        }
+      }
+
+      // Clean up edge creation
+      if (this.gestureData.activeEdgeCreation.tempLine) {
+        this.gestureData.activeEdgeCreation.tempLine.remove();
+      }
+      this.gestureData.activeEdgeCreation = null;
+      this.state.clearActiveGesture();
+
+      // Remove temporary event handlers
+      document.removeEventListener("pointermove", this.edgePointerMoveHandler);
+      document.removeEventListener("pointerup", this.edgePointerUpHandler);
+
+      // Update view
+      this.state.renderElements();
+      this.state.saveCanvas();
+    }
+}

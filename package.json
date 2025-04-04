@@ -2,9 +2,12 @@
   "name": "parcland",
   "version": "1.0.0",
   "description": "Interactive canvas-based diagramming application",
+  "type": "module",
   "scripts": {
+    "dev": "vite",
     "test": "jest",
-    "build": "esbuild next/*.js --bundle --minify --outdir=dist",
+    "build": "vite build",
+    "preview": "vite preview",
     "lint": "eslint next/",
     "format": "prettier --write next/"
   },
@@ -14,6 +17,7 @@
     "eslint": "^9.23.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "vite": "^5.1.4"
   }
 }

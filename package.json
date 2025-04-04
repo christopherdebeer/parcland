@@ -8,8 +8,8 @@
     "test": "jest",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint next/",
-    "format": "prettier --write next/"
+    "lint": "eslint src/",
+    "format": "prettier --write src/"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",

@@ -3,6 +3,7 @@ class StateManager {
     constructor(initialState = {}, parentStateManager = null) {
         this.canvasState = initialState;
         this.parentStateManager = parentStateManager;
+        this.childCanvasElements = new Map(); // Track elements that contain child canvases
 
         // Initialize canvas state if not provided
         if (!this.canvasState.elements) {
@@ -128,6 +129,37 @@ class StateManager {
     }
 
     /**
+     * Register a child canvas element
+     */
+    registerChildCanvas(elementId, childCanvasId) {
+        this.childCanvasElements.set(elementId, childCanvasId);
+        this.notify('child-canvas-registered', { elementId, childCanvasId });
+    }
+
+    /**
+     * Get child canvas state
+     */
+    getChildCanvasState(elementId) {
+        const childCanvasId = this.childCanvasElements.get(elementId);
+        if (childCanvasId) {
+            return {
+                canvasId: childCanvasId,
+                sourceElementId: elementId,
+                elements: [],
+                edges: []
+            };
+        }
+        return null;
+    }
+
+    /**
+     * Check if element is a child canvas container
+     */
+    isChildCanvasContainer(elementId) {
+        return this.childCanvasElements.has(elementId);
+    }
+
+    /**
      * Find an element by ID
      */
     findElementById(id) {
@@ -207,6 +239,11 @@ class StateManager {
             connectedEdges.forEach(edge => {
                 this.removeEdgeById(edge.id);
             });
+
+            // If this was a child canvas container, clean up the reference
+            if (this.childCanvasElements.has(id)) {
+                this.childCanvasElements.delete(id);
+            }
 
             this.notify('element-removed', id);
 
@@ -340,6 +377,10 @@ class StateManager {
      * Request a drill-in to a child canvas
      */
     requestDrillIn(childCanvasState) {
+        childCanvasState.parentContext = {
+            elementId: childCanvasState.sourceElementId,
+            canvasId: this.canvasState.canvasId
+        };
         this.notify('drill-in-requested', childCanvasState);
     }
 
@@ -632,23 +673,23 @@ class StateManager {
                                 {
                                     type: "text",
                                     text: `You will be given an element which is rendered into visual canvas. Either follow the user request or improve the provided content. The element content type should be <type>${type}</type>.
-  
+
   Please provide your response in two parts:
   1. Your thought process about how to handle this request
   2. The actual result/content
-  
+
   Here is the user request or content to process:
-  
+
   <related-context>
   ${edges.map(e => `<relation><label>${e.label || "undefined"}</label><content>${e.el?.content || ""}</content></relation>`).join("\n")}
   </related-context>
-  
+
   <current-content>
   ${content}
   </current-content>
-  
+
   Respond only with valid json (do not wrap in code block) following the ApiResponse schema:
-  
+
   <schema>
   interface ApiResponse {
     thoughts: string;
@@ -695,19 +736,19 @@ class StateManager {
                     'Accept': 'application/json',
                 },
                 body: JSON.stringify({
-                    instructions: `You will be given an element which is rendered into a visual canvas. 
-  Either follow the user request or improve the provided content. 
+                    instructions: `You will be given an element which is rendered into a visual canvas.
+  Either follow the user request or improve the provided content.
   The element content type should be <content-type>${type}</content-type>.
-  
+
   Response should be valid JSON conforming to response schema:
-  
+
   <schema>
   interface Response {
     thinking: string;
     result: string;
   }
   </schema>
-  
+
   <user_request_or_content>
   ${content}
   </user_request_or_content>`
@@ -836,6 +877,7 @@ class StateManager {
         // Clear references
         this.controller = null;
         this.parentStateManager = null;
+        this.childCanvasElements.clear();
     }
 }
 

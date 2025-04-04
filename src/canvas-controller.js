@@ -13,6 +13,7 @@ import { controllerRegistry } from './main.js';
 class CanvasController {
   constructor(canvasState, parentController = null) {
     this.parentController = parentController;
+    this.childControllers = new Map(); // Track child canvas controllers
     
     // Initialize DOM elements
     this.domElements = this.initializeDomElements();
@@ -168,12 +169,34 @@ class CanvasController {
    * Drill into a child canvas
    */
   drillIntoChildCanvas(childCanvasState) {
+    // Add parent element reference
+    childCanvasState.parentElementId = childCanvasState.sourceElementId;
+
     const childController = new CanvasController(childCanvasState, this);
+    this.childControllers.set(childCanvasState.canvasId, childController);
+
+    // Properly position child canvas based on parent element
+    const parentElement = this.findElementById(childCanvasState.parentElementId);
+    if (parentElement) {
+      childController.viewManager.setInitialTransform({
+        x: parentElement.x,
+        y: parentElement.y,
+        scale: this.viewManager.viewState.scale
+      });
+    }
+
     this.detach();
     controllerRegistry.setActive(childController);
     window.history.pushState({}, "", "?canvas=" + childCanvasState.canvasId);
   }
   
+  /**
+   * Check if element contains child canvas
+   */
+  hasChildCanvas(elementId) {
+    return this.childControllers.has(elementId);
+  }
+
   /**
    * Drill up to parent canvas
    */
@@ -277,6 +300,10 @@ class CanvasController {
     // Clean up subscriptions
     this.stateSubscriptions.forEach(unsubscribe => unsubscribe());
     
+    // Clean up child controllers
+    this.childControllers.forEach(controller => controller.destroy());
+    this.childControllers.clear();
+
     // Clean up managers
     this.eventManager.destroy();
     this.uiManager.destroy();

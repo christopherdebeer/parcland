@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../next', // Output to next directory in project root
+    outDir: 'next', // Output to next directory in project root
     emptyOutDir: true, // Clean the output directory before build
   },
 });

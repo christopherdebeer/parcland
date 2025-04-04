@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  root: 'src', // Set the root directory to next/
+  // root: 'src', // Set the root directory to next/
   server: {
     port: 3000,
     open: true, // Open browser on server start

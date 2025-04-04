@@ -14,13 +14,14 @@ class CanvasController {
   constructor(canvasState, parentController = null) {
     this.parentController = parentController;
     this.childControllers = new Map(); // Track child canvas controllers
+    this.canvasState = canvasState;
   }
   initialize() {
     // Initialize DOM elements
     this.domElements = this.initializeDomElements();
     
     // Initialize state manager
-    this.stateManager = new StateManager(canvasState, parentController?.stateManager);
+    this.stateManager = new StateManager(this.canvasState, this.parentController?.stateManager);
     this.stateManager.setController(this);
     
     // Initialize view manager

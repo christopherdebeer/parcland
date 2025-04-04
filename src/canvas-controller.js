@@ -59,8 +59,6 @@ class CanvasController {
     // Initialize the canvas
     this.init();
     
-    // Register this controller
-    controllerRegistry.register(this.canvasState.canvasId, this);
   }
   
   /**
@@ -176,6 +174,9 @@ class CanvasController {
 
     const childController = new CanvasController(childCanvasState, this);
     this.childControllers.set(childCanvasState.canvasId, childController);
+
+    // Initialize the child controller
+    childController.initialize();
 
     // Properly position child canvas
     const parentElement = this.findElementById(childCanvasState.parentElementId);

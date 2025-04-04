@@ -57,7 +57,7 @@ class CanvasController {
     this.setupStateSubscriptions();
     
     // Initialize the canvas
-    this.initialize();
+    this.init();
     
     // Register this controller
     controllerRegistry.register(canvasState.canvasId, this);
@@ -103,7 +103,7 @@ class CanvasController {
   /**
    * Initialize the canvas
    */
-  initialize() {
+  init() {
     // Display drill-up button if we have a parent
     if (this.parentController) {
       this.domElements.drillUpBtn.style.display = 'block';

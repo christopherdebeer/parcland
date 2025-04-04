@@ -175,8 +175,14 @@ class CanvasController {
     const childController = new CanvasController(childCanvasState, this);
     this.childControllers.set(childCanvasState.canvasId, childController);
 
+    // Hide the parent canvas first
+    this.detach();
+  
     // Initialize the child controller
     childController.initialize();
+  
+    // Explicitly reattach (show) the child's canvas
+    childController.reattach();
 
     // Properly position child canvas
     const parentElement = this.findElementById(childCanvasState.parentElementId);
@@ -188,7 +194,6 @@ class CanvasController {
       });
     }
 
-    this.detach();
     controllerRegistry.setActive(childController);
     window.history.pushState({}, "", "?canvas=" + childCanvasState.canvasId);
   }

@@ -65,9 +65,15 @@ async function initializeApplication() {
     // Load initial canvas data
     rootCanvasState = await loadInitialCanvas(rootCanvasState);
 
-    // Create the root controller
+    // Create the root controller (without initialization)
     const rootController = new CanvasController(rootCanvasState);
+    
+    // Register and set as active BEFORE initialization
+    controllerRegistry.register(rootCanvasState.canvasId, rootController);
     controllerRegistry.setActive(rootController);
+    
+    // Initialize the controller after setting it as active
+    rootController.initialize();
 
     // Set up global event handlers
     window.addEventListener('resize', () => {
@@ -98,6 +104,7 @@ async function initializeApplication() {
                     const newController = new CanvasController(canvasState);
                     controllerRegistry.register(canvasId, newController);
                     controllerRegistry.setActive(newController);
+                    newController.initialize();
                 });
             }
         }

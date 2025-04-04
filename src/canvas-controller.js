@@ -60,7 +60,7 @@ class CanvasController {
     this.init();
     
     // Register this controller
-    controllerRegistry.register(canvasState.canvasId, this);
+    controllerRegistry.register(this.canvasState.canvasId, this);
   }
   
   /**

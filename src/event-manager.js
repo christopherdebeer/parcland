@@ -410,9 +410,12 @@ class EventManager {
   
     // Create edge
     controller.createNewEdge(sourceId, newNodeId, label);
-  
+
+
+    console.log({newNodeId,label,pt,sourceId});
     // Generate content for new node based on ancestry
     const ancestors = this.state.findAncestorElements(sourceId);
+    console.log({ancestors});
     const promptText = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
     controller.generateContent(promptText, this.state.findElementById(newNodeId));
   

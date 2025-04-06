@@ -47,6 +47,8 @@ class EventManager {
     this.edgePointerMoveHandler = null;
     this.edgePointerUpHandler = null;
 
+    this.handleCanvasPointerUpCreateNode = this.handleCanvasPointerUpCreateNode.bind(this);
+
     // Constants
     this.DOUBLE_TAP_THRESHOLD = 300;
     this.TAP_MOVE_TOLERANCE = 10;

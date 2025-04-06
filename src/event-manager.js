@@ -395,7 +395,7 @@ class EventManager {
     }
   }
 
-  handleCanvasPointerUpCreateNode(ev) {
+  async handleCanvasPointerUpCreateNode(ev) {
     console.log("handleCanvasPointerUpCreateNode()");
     this.domElements.canvas.removeEventListener("pointerup", this.handleCanvasPointerUpCreateNode);
     const controller = this.state.getController();
@@ -418,7 +418,7 @@ class EventManager {
     console.log({ancestors});
     const promptText = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
     console.log({promptText});
-    const generated = controller.generateContent(promptText, this.state.findElementById(newNodeId));
+    const generated = await controller.generateContent(promptText, this.state.findElementById(newNodeId));
     console.log({generated});
     this.state.clearActiveGesture();
   }

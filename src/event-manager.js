@@ -414,11 +414,12 @@ class EventManager {
 
     console.log({newNodeId,label,pt,sourceId});
     // Generate content for new node based on ancestry
-    const ancestors = this.state.findAncestorElements(sourceId);
+    const ancestors = this.state.findAncestorElements(newNodeId);
     console.log({ancestors});
     const promptText = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
-    controller.generateContent(promptText, this.state.findElementById(newNodeId));
-  
+    console.log({promptText});
+    const generated = controller.generateContent(promptText, this.state.findElementById(newNodeId));
+    console.log({generated});
     this.state.clearActiveGesture();
   }
 

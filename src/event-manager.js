@@ -413,8 +413,8 @@ class EventManager {
   
     // Generate content for new node based on ancestry
     const ancestors = this.state.findAncestorElements(sourceId);
-    const prompt = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
-    controller.generateContent(prompt, this.state.findElementById(newNodeId));
+    const promptText = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
+    controller.generateContent(promptText, this.state.findElementById(newNodeId));
   
     this.state.clearActiveGesture();
   }

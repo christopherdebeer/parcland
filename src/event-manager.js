@@ -158,6 +158,10 @@ class EventManager {
     this.state.notifyEdgeHandlePointerDown = (ev) => {
       this.handleEdgeHandlePointerDown(ev);
     };
+
+    this.state.notifyCreateNodeHandlePointerDown = (ev) => {
+      this.handleCreateNodeHandlePointerDown(ev);
+    };
   }
 
   /**
@@ -387,6 +391,41 @@ class EventManager {
       controller.switchMode('direct');
       controller.createNewEdge(elId, edge.id, "Editing...", { meta: true });
     }
+  }
+
+  handleCanvasPointerUpCreateNode(ev) {
+    this.domElements.canvas.removeEventListener("pointerup", this.handleCanvasPointerUpCreateNode);
+    const controller = this.state.getController();
+    const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
+    const sourceId = this.gestureData.sourceElementId;
+  
+    // Prompt user for edge label
+    const label = prompt("Enter edge label:");
+  
+    // Create new node
+    const newNodeId = controller.createNewElement(pt.x, pt.y, "markdown", "");
+  
+    // Create edge
+    controller.createNewEdge(sourceId, newNodeId, label);
+  
+    // Generate content for new node based on ancestry
+    const ancestors = this.state.findAncestorElements(sourceId);
+    const prompt = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
+    controller.generateContent(prompt, this.state.findElementById(newNodeId));
+  
+    this.state.clearActiveGesture();
+  }
+
+  handleCreateNodeHandlePointerDown(ev) {
+    const sourceEl = this.state.findElementById(this.state.selectedElementId);
+    if (!sourceEl) return;
+  
+    this.state.setActiveGesture("create-node");
+    const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
+    this.gestureData.sourceElementId = sourceEl.id;
+    this.gestureData.startPt = pt;
+  
+    this.domElements.canvas.addEventListener("pointerup", this.handleCanvasPointerUpCreateNode);
   }
 
   /**

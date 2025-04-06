@@ -160,6 +160,29 @@ class StateManager {
     }
 
     /**
+ * Find all ancestor elements that lead to the given element
+ * via edges, ordered from oldest ancestor to immediate parent.
+ */
+findAncestorElements(targetId, visited = new Set()) {
+    if (!targetId || visited.has(targetId)) return [];
+    visited.add(targetId);
+  
+    const incomingEdges = this.edges.filter(edge => edge.target === targetId);
+    let ancestors = [];
+  
+    for (const edge of incomingEdges) {
+      const sourceEl = this.findElementById(edge.source);
+      if (sourceEl) {
+        // Recurse upward through graph
+        ancestors.push(...this.findAncestorElements(sourceEl.id, visited));
+        ancestors.push(sourceEl);
+      }
+    }
+  
+    return ancestors;
+  }
+
+    /**
      * Register a child canvas element
      */
     registerChildCanvas(elementId, childCanvasId) {

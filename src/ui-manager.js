@@ -1,410 +1,645 @@
-// /src/ui-manager.js
-
-/**
- * Manages UI elements like context menus, modals, and buttons.
- */
+// ui-manager.js
 class UIManager {
-    constructor(canvasContainer, stateManager, canvasController) {
-        this.canvasContainer = canvasContainer;
-        this.stateManager = stateManager;
-        this.canvasController = canvasController; // Retain for context or potential future use
+    constructor(stateManager, domElements, dependencies = {}) {
+        this.state = stateManager;
+        this.domElements = domElements;
+        this.elementManager = dependencies.elementManager;
+        this.edgeManager = dependencies.edgeManager;
+        this.viewManager = dependencies.viewManager;
 
-        // Existing UI Elements
-        this.contextMenu = null;
-        this.editModal = null;
-        this.editTextArea = null;
-        this.saveButton = null;
-        this.closeButton = null;
-        this.modeButton = null;
-        this.drillUpButton = null;
+        // Modal state
+        this.currentElForVersions = null;
+        this.currentVersionIndex = 0;
+        this.activeEditTab = "content";
 
-        // New Raw Data Modal Elements
-        this.rawDataModal = null;
-        this.rawDataTextArea = null;
-        this.rawDataSaveButton = null;
-        this.rawDataCloseButton = null;
-        this.editingElementId = null; // To store the ID of the element being edited (for either modal)
+        // CodeMirror instances
+        this.codeMirrorContent = null;
+        this.codeMirrorSrc = null;
 
-        this._createUIElements();
-        this._createRawDataModal(); // Create the new modal
-        this._bindUIEvents();
+        // Initialize modal event listeners
+        this.initializeModalHandlers();
 
-        // Subscribe to state changes to update UI elements if needed (e.g., drill-up button visibility)
+        // Subscribe to state changes
         this.stateSubscriptions = [
-             this.stateManager.subscribe('controller-changed', (controller) => this.updateDrillUpButtonVisibility(controller)),
-             // Add other necessary subscriptions
+            this.state.subscribe('selection-changed', (id) => {
+                // Update UI based on selection
+                if (id === null) {
+                    this.hideContextMenu();
+                }
+            })
         ];
-
-        // Initial setup
-         this.updateDrillUpButtonVisibility(this.canvasController); // Set initial state
-         this.updateModeButton(this.stateManager.getState().mode); // Set initial mode button text
     }
 
-    _createUIElements() {
-        // Create or find existing UI elements (Context Menu, Edit Modal, Mode Button, Drill Up Button)
+    /**
+     * Initialize modal event handlers
+     */
+    initializeModalHandlers() {
+        const {
+            modalCancelBtn,
+            modalSaveBtn,
+            modalGenerateBtn,
+            modalVersionsPrevBtn,
+            modalVersionsNextBtn
+        } = this.domElements;
 
-        // Context Menu (Create dynamically when needed)
-        this.contextMenu = document.createElement('div');
-        this.contextMenu.id = 'contextMenu';
-        this.contextMenu.className = 'context-menu'; // Assuming a CSS class for styling
-        this.contextMenu.style.position = 'absolute';
-        this.contextMenu.style.display = 'none';
-        this.contextMenu.style.zIndex = '1000'; // Ensure it's on top
-        document.body.appendChild(this.contextMenu);
-
-
-        // Edit Modal (Assuming structure exists in index.html or created similarly)
-        this.editModal = document.getElementById('editModal'); // Or create dynamically
-         if (!this.editModal) {
-             console.warn("Edit modal element not found, creating dynamically.");
-             // Add dynamic creation logic here if needed, similar to rawDataModal
-             // For now, assume it exists in HTML or create a placeholder:
-             this.editModal = document.createElement('div');
-             this.editModal.id = 'editModal';
-             this.editModal.className = 'modal';
-             this.editModal.style.display = 'none';
-             this.editModal.innerHTML = `
-                 <div class="modal-content">
-                     <span class="close-button edit-close">&times;</span>
-                     <h2>Edit Element</h2>
-                     <textarea id="editTextArea" rows="10" style="width: 95%;"></textarea>
-                     <button id="saveButton">Save</button>
-                 </div>`;
-             document.body.appendChild(this.editModal);
-         }
-        this.editTextArea = document.getElementById('editTextArea');
-        this.saveButton = document.getElementById('saveButton');
-        this.closeButton = this.editModal?.querySelector('.edit-close'); // Use optional chaining
-
-        // Mode Button
-        this.modeButton = document.getElementById('modeButton'); // Assuming it exists in HTML
-         if (!this.modeButton) {
-             console.warn("Mode button element not found.");
-         }
-
-        // Drill Up Button
-        this.drillUpButton = document.getElementById('drillUpButton'); // Assuming it exists in HTML
-        if (!this.drillUpButton) {
-            console.warn("Drill up button element not found.");
-        } else {
-             this.drillUpButton.style.display = 'none'; // Initially hidden
-        }
-    }
-
-     _createRawDataModal() {
-         // Create modal structure dynamically
-         this.rawDataModal = document.createElement('div');
-         this.rawDataModal.id = 'rawDataModal';
-         this.rawDataModal.className = 'modal'; // Reuse existing modal styles
-         this.rawDataModal.style.display = 'none'; // Initially hidden
-
-         const modalContent = `
-             <div class="modal-content">
-                 <span class="close-button raw-data-close">&times;</span>
-                 <h2>Edit Raw Element Data</h2>
-                 <textarea id="rawDataTextArea" rows="15" style="width: 95%; font-family: monospace;"></textarea>
-                 <button id="rawDataSaveButton">Save</button>
-             </div>
-         `;
-         this.rawDataModal.innerHTML = modalContent;
-         document.body.appendChild(this.rawDataModal); // Append to body
-
-         // Get references to modal elements
-         this.rawDataTextArea = this.rawDataModal.querySelector('#rawDataTextArea');
-         this.rawDataSaveButton = this.rawDataModal.querySelector('#rawDataSaveButton');
-         this.rawDataCloseButton = this.rawDataModal.querySelector('.raw-data-close');
-     }
-
-
-    _bindUIEvents() {
-        // Edit Modal events
-        if (this.closeButton) {
-            this.closeButton.onclick = () => this.hideEditModal();
-        }
-        if (this.saveButton) {
-             this.saveButton.onclick = () => this._handleEditSave();
-         }
-
-        // Raw Data Modal events
-         if (this.rawDataCloseButton) {
-            this.rawDataCloseButton.onclick = () => this.hideRawDataModal();
-         }
-         if(this.rawDataSaveButton) {
-             this.rawDataSaveButton.onclick = () => this._handleRawDataSave();
-         }
-
-        // Hide context menu on click outside
-        document.addEventListener('click', (event) => {
-            if (this.contextMenu && !this.contextMenu.contains(event.target)) {
-                this.hideContextMenu();
-            }
-        });
-
-        // Hide modals on click outside (optional, added for both)
-        window.addEventListener('click', (event) => {
-            if (this.editModal && event.target === this.editModal) {
-                this.hideEditModal();
-            }
-             if (this.rawDataModal && event.target === this.rawDataModal) {
-                 this.hideRawDataModal();
-             }
-        });
-
-
-        // Mode Button event
-        if (this.modeButton) {
-             this.modeButton.onclick = () => {
-                 const currentMode = this.stateManager.getState().mode;
-                 const nextMode = currentMode === 'direct' ? 'navigate' : 'direct';
-                 this.stateManager.setMode(nextMode);
-                 this.updateModeButton(nextMode);
-             };
-         }
-
-         // Drill Up Button event
-         if (this.drillUpButton) {
-             this.drillUpButton.onclick = () => {
-                 if (this.canvasController && this.canvasController.parentController) {
-                     this.canvasController.drillUp();
-                 }
-             };
-         }
-    }
-
-    updateModeButton(mode) {
-        if (this.modeButton) {
-            this.modeButton.textContent = mode === 'direct' ? 'Mode: Direct Edit' : 'Mode: Navigate';
-        }
-    }
-
-    updateDrillUpButtonVisibility(controller) {
-        if (this.drillUpButton) {
-            // Use the controller passed from the event, or the current one
-            const currentController = controller || this.canvasController;
-            this.drillUpButton.style.display = currentController && currentController.parentController ? 'block' : 'none';
-        }
-    }
-
-
-    // --- Context Menu Methods ---
-
-    showContextMenu(x, y, elementId = null) {
-        this.contextMenu.innerHTML = ''; // Clear previous items
-
-        // Example: Add Element (always available)
-        // const addElementItem = document.createElement('div');
-        // addElementItem.className = 'context-menu-item';
-        // addElementItem.textContent = 'Add Element';
-        // addElementItem.onclick = (e) => {
-        //     e.stopPropagation();
-        //     // Logic to add a new element at position (x, y) translated to canvas coords
-        //     const canvasCoords = this.canvasController.viewManager.screenToCanvasCoordinates(x, y);
-        //     this.canvasController.createElement({ type: 'text', x: canvasCoords.x, y: canvasCoords.y, content: 'New Element' });
-        //     this.hideContextMenu();
-        // };
-        // this.contextMenu.appendChild(addElementItem);
-
-
-        if (elementId) {
-            // Options available when clicking on an element
-            const element = this.stateManager.getElement(elementId);
-
-            // Edit Option (reuse existing logic if applicable)
-             const editItem = document.createElement('div');
-             editItem.className = 'context-menu-item';
-             editItem.textContent = 'Edit Content';
-             editItem.onclick = (e) => {
-                 e.stopPropagation();
-                 this.showEditModal(elementId);
-                 this.hideContextMenu();
-             };
-             this.contextMenu.appendChild(editItem);
-
-
-            // NEW: View/Edit Raw Data Option
-            const viewRawDataItem = document.createElement('div');
-            viewRawDataItem.className = 'context-menu-item';
-            viewRawDataItem.textContent = 'View/Edit Raw Data';
-            viewRawDataItem.onclick = (e) => {
-                e.stopPropagation();
-                this.showRawDataModal(elementId); // Call the method to show the new modal
-                this.hideContextMenu();
-            };
-            this.contextMenu.appendChild(viewRawDataItem);
-
-
-            // Delete Option
-             const deleteItem = document.createElement('div');
-             deleteItem.className = 'context-menu-item';
-             deleteItem.textContent = 'Delete Element';
-             deleteItem.onclick = (e) => {
-                 e.stopPropagation();
-                 if (confirm(`Are you sure you want to delete element ${elementId}?`)) {
-                      this.stateManager.removeElement(elementId); // Assuming removeElement handles edges too
-                 }
-                 this.hideContextMenu();
-             };
-             this.contextMenu.appendChild(deleteItem);
-
-              // Add other element-specific options here...
-               if(element && element.type === 'canvas-container') {
-                   const drillInItem = document.createElement('div');
-                   drillInItem.className = 'context-menu-item';
-                   drillInItem.textContent = 'Drill In';
-                   drillInItem.onclick = (e) => {
-                       e.stopPropagation();
-                       this.canvasController.drillIntoCanvas(elementId);
-                       this.hideContextMenu();
-                   };
-                   this.contextMenu.appendChild(drillInItem);
-               }
-
-        } else {
-            // Options available when clicking on the canvas background
-             // Example: Paste? Add element?
-        }
-
-
-        // Position and show the menu
-        this.contextMenu.style.left = `${x}px`;
-        this.contextMenu.style.top = `${y}px`;
-        this.contextMenu.style.display = 'block';
-    }
-
-    hideContextMenu() {
-        if (this.contextMenu) {
-            this.contextMenu.style.display = 'none';
-        }
-    }
-
-    // --- Edit Modal Methods ---
-
-    showEditModal(elementId) {
-         if (!this.editModal || !this.editTextArea) {
-             console.error("Edit modal elements not initialized.");
-             return;
-         }
-        this.editingElementId = elementId; // Store the ID
-        const elementData = this.stateManager.getElement(elementId);
-        if (elementData) {
-            // Populate based on element type, assuming 'content' field for simplicity
-            this.editTextArea.value = elementData.content || '';
-            this.editModal.style.display = 'block';
-        } else {
-            console.error("Element not found for editing:", elementId);
-        }
-    }
-
-    hideEditModal() {
-         if (!this.editModal) return;
-        this.editingElementId = null; // Clear the ID
-        this.editModal.style.display = 'none';
-    }
-
-    _handleEditSave() {
-         if (!this.editingElementId || !this.editTextArea) return;
-
-        const currentElementData = this.stateManager.getElement(this.editingElementId);
-         if (!currentElementData) {
-             console.error("Element to save not found:", this.editingElementId);
-             this.hideEditModal(); // Hide modal even if save fails
-             return;
-         }
-
-        // Create update payload - only update 'content' for this simple modal
-        // More complex modals might update other properties.
-        const updatedFields = {
-            content: this.editTextArea.value
+        // Modal cancel button
+        modalCancelBtn.onclick = () => {
+            this.hideEditModal();
         };
 
-        this.stateManager.updateElement(this.editingElementId, { ...currentElementData, ...updatedFields });
+        // Modal save button
+        modalSaveBtn.onclick = () => {
+            this.saveModalContent();
+        };
+
+        // Modal generate button
+        modalGenerateBtn.onclick = async () => {
+            await this.generateModalContent();
+        };
+
+        // Modal clear button
+        document.getElementById("modal-clear").onclick = () => {
+            this.clearModalContent();
+        };
+
+        // Modal copy button
+        document.getElementById("modal-copy").onclick = async () => {
+            await this.copyModalContentToClipboard();
+        };
+
+        // Version navigation buttons
+        modalVersionsPrevBtn.onclick = () => {
+            this.navigateToPreviousVersion();
+        };
+
+        modalVersionsNextBtn.onclick = () => {
+            this.navigateToNextVersion();
+        };
+
+        // Modal tab switching
+        document.getElementById("tab-content").onclick = () => {
+            this.switchModalTab("content");
+        };
+
+        document.getElementById("tab-src").onclick = () => {
+            this.switchModalTab("src");
+        };
+    }
+
+    /**
+     * Show the context menu
+     */
+    showContextMenu(x, y, elementId = null) {
+        const contextMenu = this.domElements.contextMenu;
+
+        // Position the menu
+        contextMenu.style.left = x + "px";
+        contextMenu.style.top = y + "px";
+
+        // Build menu content
+        if (elementId) {
+            this.buildContextMenu(elementId);
+        }
+
+        // Show the menu
+        contextMenu.style.display = "flex";
+    }
+
+    /**
+     * Hide the context menu
+     */
+    hideContextMenu() {
+        this.domElements.contextMenu.style.display = "none";
+    }
+
+    /**
+     * Build context menu for an element
+     */
+    buildContextMenu(elId) {
+        const el = this.state.findElementById(elId) || this.state.findEdgeElementById(elId);
+        if (!el) return;
+
+        const contextMenu = this.domElements.contextMenu;
+        contextMenu.innerHTML = "";
+
+        // Type switches
+        const typesContainer = document.createElement('div');
+        typesContainer.classList.add('btn-container');
+        contextMenu.appendChild(typesContainer);
+
+        const types = [
+            { type: 'img', icon: 'fa-solid fa-image' },
+            { type: 'text', icon: 'fa-solid fa-font' },
+            { type: 'html', icon: 'fa-solid fa-code' },
+            { type: 'markdown', icon: 'fa-brands fa-markdown' },
+            { type: 'canvas-container', icon: 'fa-regular fa-object-group' }
+        ];
+
+        types.forEach(t => {
+            const btn = document.createElement("button");
+            btn.innerHTML = `<i class="${t.icon}"></i>`;
+            btn.title = `Type: ${t.type}`;
+            if (el.type === t.type) btn.classList.add('selected');
+
+            this.clickCapture(btn, () => {
+                this.state.updateElement(el.id, { type: t.type });
+                this.hideContextMenu();
+            });
+
+            typesContainer.appendChild(btn);
+        });
+
+        // Blend mode selector
+        const blendSelect = document.createElement('select');
+        contextMenu.appendChild(blendSelect);
+
+        const blends = [
+            'normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn',
+            'hard-light', 'soft-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'
+        ];
+
+        blends.forEach(bm => {
+            const option = document.createElement('option');
+            option.value = bm;
+            option.textContent = bm;
+            blendSelect.appendChild(option);
+        });
+
+        blendSelect.value = el.blendMode || 'normal';
+        blendSelect.onchange = (ev) => {
+            this.state.updateElement(el.id, { blendMode: ev.target.value });
+        };
+
+        // Regen button for images
+        if (el.type === "img") {
+            const regenBtn = document.createElement("button");
+            regenBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i> Regen';
+            regenBtn.onclick = () => {
+                this.state.regenerateImage(el);
+                this.hideContextMenu();
+            };
+            contextMenu.appendChild(regenBtn);
+        }
+
+        // Color picker for text/markdown
+        if (el.type === 'text' || el.type === 'markdown') {
+            const colorInput = document.createElement('input');
+            colorInput.type = 'color';
+            colorInput.value = el.color || "#000000";
+            colorInput.addEventListener('change', (ev) => {
+                this.state.updateElement(el.id, { color: ev.target.value });
+            });
+            contextMenu.appendChild(colorInput);
+        }
+
+        // Toggle static
+        const staticBtn = document.createElement("button");
+        staticBtn.innerHTML = el.static ? "Unset Static" : "Set Static";
+        this.clickCapture(staticBtn, () => {
+            this.elementManager.toggleStatic(el);
+            this.hideContextMenu();
+        });
+        contextMenu.appendChild(staticBtn);
+
+        // Open child canvas if applicable
+        if (el.type === 'canvas-container' && el.childCanvasState) {
+            const openCanvasBtn = document.createElement("button");
+            openCanvasBtn.textContent = "Open Child Canvas";
+            this.clickCapture(openCanvasBtn, () => {
+                this.hideContextMenu();
+                this.state.requestDrillIn(el.childCanvasState);
+            });
+            contextMenu.appendChild(openCanvasBtn);
+        }
+
+        // Edit button
+        const editBtn = document.createElement("button");
+        editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit';
+        this.clickCapture(editBtn, () => {
+            this.openEditModal(el);
+            this.hideContextMenu();
+        });
+        contextMenu.appendChild(editBtn);
+
+        // Edit inline button
+        const editInlineBtn = document.createElement("button");
+        editInlineBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit inline';
+        this.clickCapture(editInlineBtn, (ev) => {
+            this.createEditElement(ev, el, "content");
+            this.hideContextMenu();
+        });
+        contextMenu.appendChild(editInlineBtn);
+
+        // Delete button
+        const deleteBtn = document.createElement("button");
+        deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Delete';
+        this.clickCapture(deleteBtn, () => {
+            if (el.id.startsWith('edge-')) {
+                this.state.removeEdgeById(el.id);
+            } else {
+                this.state.removeElementById(el.id);
+            }
+            this.hideContextMenu();
+        });
+        contextMenu.appendChild(deleteBtn);
+
+        // Duplicate button
+        const duplicateBtn = document.createElement("button");
+        duplicateBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Duplicate';
+        this.clickCapture(duplicateBtn, () => {
+            const newEl = { ...el };
+            newEl.id = "el-" + Date.now();
+            newEl.x += 20;
+            newEl.y += 20;
+            this.state.addElement(newEl);
+            this.state.selectElement(newEl.id);
+            this.hideContextMenu();
+        });
+        contextMenu.appendChild(duplicateBtn);
+
+        // ID display
+        const idEl = document.createElement("span");
+        idEl.innerHTML = el.id;
+        contextMenu.appendChild(idEl);
+    }
+
+    /**
+     * Helper function to capture clicks properly
+     */
+    clickCapture(btn, handler) {
+        btn.addEventListener("pointerdown", (ev) => {
+            ev.stopPropagation();
+            btn.setPointerCapture(ev.pointerId);
+        });
+        btn.onclick = handler;
+    }
+
+    /**
+     * Create an inline edit element
+     */
+    createEditElement(ev, el, prop) {
+        const canvasPt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
+        const elId = this.elementManager.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", el[prop], false, {
+            target: el.id,
+            property: prop,
+        });
+
+        const controller = this.state.getController();
+        controller.switchMode('direct');
+
+        this.edgeManager.createNewEdge(elId, el.id, "Editing...", { meta: true });
+    }
+
+    /**
+     * Open the edit modal for an element
+     */
+    openEditModal(el) {
+        const { editModal, editorContentContainer, editorSrcContainer } = this.domElements;
+
+        editModal.style.display = "block";
+        this.currentElForVersions = el;
+        el.versions = el.versions || [];
+        this.currentVersionIndex = el.versions.length;
+
+        // Initialize CodeMirror instances if needed
+        if (!this.codeMirrorContent) {
+            this.codeMirrorContent = CodeMirror(editorContentContainer, {
+                value: "",
+                lineNumbers: true,
+                mode: this.getCodeMirrorMode(el.type),
+                theme: "default",
+                lineWrapping: true
+            });
+        } else {
+            this.codeMirrorContent.setOption('mode', this.getCodeMirrorMode(el.type));
+        }
+
+        if (!this.codeMirrorSrc) {
+            this.codeMirrorSrc = CodeMirror(editorSrcContainer, {
+                value: "",
+                lineNumbers: true,
+                mode: "text",
+                theme: "default",
+                lineWrapping: true
+            });
+        }
+
+        // Set the active tab based on element type
+        if (el.type === "img" && el.src) {
+            this.switchModalTab("src");
+        } else {
+            this.switchModalTab("content");
+        }
+
+        // Load the element content
+        this.loadVersion(el, this.currentVersionIndex);
+    }
+
+    /**
+     * Hide the edit modal
+     */
+    hideEditModal() {
+        this.domElements.editModal.style.display = "none";
+    }
+
+    /**
+     * Switch modal tab
+     */
+    switchModalTab(tab) {
+        this.activeEditTab = tab;
+
+        if (tab === "content") {
+            document.getElementById("tab-content").classList.add("active");
+            document.getElementById("tab-src").classList.remove("active");
+            document.getElementById("editor-content").style.display = "block";
+            document.getElementById("editor-src").style.display = "none";
+        } else {
+            document.getElementById("tab-src").classList.add("active");
+            document.getElementById("tab-content").classList.remove("active");
+            document.getElementById("editor-src").style.display = "block";
+            document.getElementById("editor-content").style.display = "none";
+        }
+    }
+
+    /**
+     * Load a specific version of element content
+     */
+    loadVersion(el, index) {
+        if (!el.versions) return;
+
+        if (index < el.versions.length) {
+            const older = el.versions[index];
+            this.codeMirrorContent.setValue(older.content);
+        } else {
+            this.codeMirrorContent.setValue(el.content || "");
+        }
+
+        this.codeMirrorSrc.setValue(el.src || "");
+
+        this.currentVersionIndex = index;
+        this.renderVersionInfo(el);
+    }
+
+    /**
+     * Render version info
+     */
+    renderVersionInfo(el) {
+        const total = el.versions.length + 1;
+        const shown = this.currentVersionIndex + 1;
+
+        if (this.currentVersionIndex < el.versions.length) {
+            this.domElements.modalVersionsInfo.textContent = `Viewing Older Version ${shown} of ${total}`;
+        } else {
+            this.domElements.modalVersionsInfo.textContent = `Viewing Current Version ${shown} of ${total}`;
+        }
+    }
+
+    /**
+     * Navigate to previous version
+     */
+    navigateToPreviousVersion() {
+        if (!this.currentElForVersions) return;
+
+        if (this.currentVersionIndex > 0) {
+            this.currentVersionIndex--;
+            this.loadVersion(this.currentElForVersions, this.currentVersionIndex);
+        }
+    }
+
+    /**
+     * Navigate to next version
+     */
+    navigateToNextVersion() {
+        if (!this.currentElForVersions) return;
+
+        if (this.currentVersionIndex < this.currentElForVersions.versions.length) {
+            this.currentVersionIndex++;
+            this.loadVersion(this.currentElForVersions, this.currentVersionIndex);
+        }
+    }
+
+    /**
+     * Save modal content
+     */
+    saveModalContent() {
+        const el = this.state.findElementById(this.state.selectedElementId);
+        if (!el) return;
+
+        if (this.activeEditTab === "content") {
+            const newContent = this.codeMirrorContent.getValue();
+
+            if (el.content) {
+                el.versions = el.versions || [];
+                el.versions.push({ content: el.content, timestamp: Date.now() });
+            }
+
+            el.content = newContent;
+
+            if (el.type !== "img") {
+                el.src = undefined;
+            }
+        } else if (this.activeEditTab === "src") {
+            const newSrc = this.codeMirrorSrc.getValue();
+            el.src = newSrc;
+        }
+
+        this.state.updateElement(el.id, el);
         this.hideEditModal();
     }
 
-     // --- Raw Data Modal Methods ---
+    /**
+     * Generate content using AI
+     */
+    async generateModalContent() {
+        const el = this.state.findElementById(this.state.selectedElementId);
+        if (!el) return;
 
-     showRawDataModal(elementId) {
-         if (!this.rawDataModal || !this.rawDataTextArea) {
-             console.error("Raw data modal elements not initialized.");
-             return;
-         }
-         this.editingElementId = elementId; // Store the ID
-         const elementData = this.stateManager.getElement(this.editingElementId);
-         if (!elementData) {
-             console.error("Element not found for raw edit:", this.editingElementId);
-             return;
-         }
+        this.clearModalError();
+        this.domElements.modalGenerateBtn.disabled = true;
 
-         try {
-             // Pretty-print JSON
-             this.rawDataTextArea.value = JSON.stringify(elementData, null, 2);
-         } catch (error) {
-             console.error("Error stringifying element data:", error);
-             this.rawDataTextArea.value = "Error displaying element data.";
-         }
+        const oldBtnContent = this.domElements.modalGenerateBtn.innerHTML;
+        this.domElements.modalGenerateBtn.innerHTML = `Generating... <i class="fa-solid fa-spinner fa-spin"></i>`;
 
-         this.rawDataModal.style.display = 'block';
-     }
+        try {
+            let currentContent;
+            if (this.activeEditTab === "content") {
+                currentContent = this.codeMirrorContent.getValue();
+            } else {
+                currentContent = this.codeMirrorSrc.getValue();
+            }
 
-     hideRawDataModal() {
-         if (!this.rawDataModal) return;
-         this.editingElementId = null; // Clear the ID
-         this.rawDataModal.style.display = 'none';
-     }
+            const controller = this.state.getController();
+            const generatedContent = await controller.generateContent(currentContent, el);
 
-     _handleRawDataSave() {
-         if (!this.editingElementId || !this.rawDataTextArea) return;
-
-         try {
-             const updatedData = JSON.parse(this.rawDataTextArea.value);
-
-             // Basic validation (ensure core properties aren't wiped out, ID matches)
-             if (!updatedData || typeof updatedData !== 'object' || !updatedData.id || updatedData.id !== this.editingElementId) {
-                 alert('Invalid data structure or ID mismatch. Ensure "id" property exists and matches the element being edited.');
-                 return;
-             }
-
-             // Directly update the element state with the parsed object
-             this.stateManager.updateElement(this.editingElementId, updatedData);
-
-             this.hideRawDataModal();
-         } catch (error) {
-             console.error("Error parsing or saving raw data:", error);
-             alert(`Error saving data: Invalid JSON format.\n${error.message}`);
-         }
-     }
-
-
-    // --- Cleanup ---
-
-    destroy() {
-        // Remove dynamically created elements
-        if (this.contextMenu && this.contextMenu.parentNode) {
-            this.contextMenu.parentNode.removeChild(this.contextMenu);
-            this.contextMenu = null;
+            if (generatedContent) {
+                if (this.activeEditTab === "content") {
+                    this.codeMirrorContent.setValue(generatedContent);
+                } else {
+                    this.codeMirrorSrc.setValue(generatedContent);
+                }
+            } else {
+                this.showModalError("No content generated or an error occurred.");
+            }
+        } catch (err) {
+            console.error("Generate error", err);
+            this.showModalError("An error occurred while generating content.");
+        } finally {
+            this.domElements.modalGenerateBtn.disabled = false;
+            this.domElements.modalGenerateBtn.innerHTML = oldBtnContent;
         }
-         if (this.rawDataModal && this.rawDataModal.parentNode) {
-             this.rawDataModal.parentNode.removeChild(this.rawDataModal);
-             this.rawDataModal = null;
-         }
-        // If edit modal was created dynamically, remove it too
-        // if (/* check if editModal was dynamically created */ && this.editModal && this.editModal.parentNode) {
-        //     this.editModal.parentNode.removeChild(this.editModal);
-        //     this.editModal = null;
-        // }
+    }
 
+    /**
+     * Clear modal content
+     */
+    clearModalContent() {
+        if (this.activeEditTab === "content") {
+            this.codeMirrorContent.setValue("");
+        } else {
+            this.codeMirrorSrc.setValue("");
+        }
+    }
 
-        // Remove event listeners added to document/window
-        // Assuming the click listeners were bound in _bindUIEvents
-        // Note: Storing bound functions might be needed for accurate removal if not using arrow functions directly
-        // Example: document.removeEventListener('click', this._handleDocumentClick);
+    /**
+     * Copy modal content to clipboard
+     */
+    async copyModalContentToClipboard() {
+        try {
+            if (this.activeEditTab === "content") {
+                await navigator.clipboard.writeText(this.codeMirrorContent.getValue());
+            } else {
+                await navigator.clipboard.writeText(this.codeMirrorSrc.getValue());
+            }
+            alert("Copied to clipboard!");
+        } catch (err) {
+            console.error("Failed to copy:", err);
+            this.showModalError("Failed to copy to clipboard.");
+        }
+    }
 
-        // Unsubscribe from state changes
+    /**
+     * Clear modal error message
+     */
+    clearModalError() {
+        this.domElements.modalError.textContent = "";
+    }
+
+    /**
+     * Show modal error message
+     */
+    showModalError(msg) {
+        this.domElements.modalError.textContent = msg;
+    }
+
+    /**
+     * Get CodeMirror mode for element type
+     */
+    getCodeMirrorMode(type) {
+        switch (type) {
+            case 'html': return 'htmlmixed';
+            case 'markdown': return 'markdown';
+            case 'text': return 'javascript';
+            default: return 'javascript';
+        }
+    }
+
+    /**
+     * Create a confirmation dialog
+     */
+    showConfirmation(message, onConfirm, onCancel) {
+        const confirmation = confirm(message);
+        if (confirmation) {
+            if (typeof onConfirm === 'function') {
+                onConfirm();
+            }
+        } else {
+            if (typeof onCancel === 'function') {
+                onCancel();
+            }
+        }
+    }
+
+    /**
+     * Show a prompt dialog
+     */
+    showPrompt(message, defaultValue, onSubmit, onCancel) {
+        const result = prompt(message, defaultValue);
+        if (result !== null) {
+            if (typeof onSubmit === 'function') {
+                onSubmit(result);
+            }
+        } else {
+            if (typeof onCancel === 'function') {
+                onCancel();
+            }
+        }
+    }
+
+    /**
+     * Show a notification
+     */
+    showNotification(message, type = 'info', duration = 3000) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.position = 'fixed';
+        notification.style.bottom = '20px';
+        notification.style.right = '20px';
+        notification.style.padding = '10px 20px';
+        notification.style.background = type === 'error' ? '#ff4444' : '#4ad36a';
+        notification.style.color = 'white';
+        notification.style.borderRadius = '4px';
+        notification.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+        notification.style.zIndex = '9999';
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s ease-in-out';
+
+        // Add to DOM
+        document.body.appendChild(notification);
+
+        // Show notification
+        setTimeout(() => {
+            notification.style.opacity = '1';
+        }, 10);
+
+        // Hide notification after duration
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, duration);
+    }
+
+    /**
+     * Create a tooltip for an element
+     */
+    createTooltip(element, text) {
+        element.title = text;
+
+        // For more advanced tooltips, add additional functionality here
+    }
+
+    /**
+     * Clean up resources when this manager is no longer needed
+     */
+    destroy() {
+        // Unsubscribe from all state subscriptions
         this.stateSubscriptions.forEach(unsubscribe => unsubscribe());
         this.stateSubscriptions = [];
 
-        console.log("UIManager destroyed");
+        // Clean up CodeMirror instances
+        if (this.codeMirrorContent) {
+            // No direct destroy method, but we can clean up the DOM
+            this.codeMirrorContent = null;
+        }
+
+        if (this.codeMirrorSrc) {
+            this.codeMirrorSrc = null;
+        }
     }
 }
 
+// Export the class
 export default UIManager;

@@ -396,6 +396,7 @@ class EventManager {
   }
 
   handleCanvasPointerUpCreateNode(ev) {
+    console.log("handleCanvasPointerUpCreateNode()");
     this.domElements.canvas.removeEventListener("pointerup", this.handleCanvasPointerUpCreateNode);
     const controller = this.state.getController();
     const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
@@ -421,7 +422,7 @@ class EventManager {
   handleCreateNodeHandlePointerDown(ev) {
     const sourceEl = this.state.findElementById(this.state.selectedElementId);
     if (!sourceEl) return;
-  
+    console.log("handleCreateNodeHandlePointerDown()");
     this.state.setActiveGesture("create-node");
     const pt = this.viewManager.screenToCanvas(ev.clientX, ev.clientY);
     this.gestureData.sourceElementId = sourceEl.id;

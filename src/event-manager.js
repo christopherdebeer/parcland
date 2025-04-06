@@ -418,7 +418,9 @@ class EventManager {
     console.log({ancestors});
     const promptText = `Extend this thought: ${ancestors.map(a => a.content).join(" > ")}`;
     console.log({promptText});
-    const generated = await controller.generateContent(promptText, this.state.findElementById(newNodeId));
+    const el = this.state.findElementById(newNodeId);
+    console.log({el});
+    const generated = await controller.generateContent(promptText, el);
     console.log({generated});
     this.state.clearActiveGesture();
   }

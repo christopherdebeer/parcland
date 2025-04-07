@@ -119,9 +119,11 @@ class CanvasController {
         this.container.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev));
         this.container.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev));
 
-        this.container.addEventListener('gesturestart', function (e) {
-            console.log("[DEBUG] preventing gesture start");
-            e.preventDefault();
+        [this.canvas,this.container, this.edgesLayer, this.staticContainer].map( el => {
+            el.addEventListener('gesturestart', function (e) {
+                console.log("[DEBUG] preventing gesture start on", el);
+                e.preventDefault();
+            });
         });
 
         this.staticContainer.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev));

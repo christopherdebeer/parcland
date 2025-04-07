@@ -408,7 +408,7 @@ class EventManager {
     // Create new node
     const newNode = controller.createNewElement(pt.x, pt.y, "markdown", "");
     console.log(newNode)
-    const newNodeId = newNode.dataset.id;
+    const newNodeId = newNode.dataset.elId;
   
     // Create edge
     controller.createNewEdge(sourceId, newNodeId, label);

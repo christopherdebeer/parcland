@@ -986,6 +986,7 @@ class CanvasController {
         const TAP_MOVE_TOLERANCE = 10;
         if (timeDiff < DOUBLE_TAP_THRESHOLD && dist < TAP_MOVE_TOLERANCE) {
             console.log("[DEBUG] Double tap detected");
+            ev.preventDefault();
             ev.stopPropagation();
             if (handler && typeof handler === 'function') {
                 handler(ev, context)

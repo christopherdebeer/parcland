@@ -229,14 +229,24 @@ body {
     cursor: text;
 }
 
-/* New handle for creating edges */
 .edge-handle {
     bottom: -2em;
-    left: 50%;
+    left: 66%;
     transform: translateX(-50%);
 }
 
 .edge-handle i {
+    background: #555;
+    cursor: crosshair;
+}
+
+.create-handle {
+    bottom: -2em;
+    left: 33%;
+    transform: translateX(-50%);
+}
+
+.create-handle i {
     background: #555;
     cursor: crosshair;
 }
@@ -294,6 +304,12 @@ body {
     outline: none;
 }
 
+#context-menu .id-label {
+    font-size: 0.5rem;
+    color: grey;
+    padding: 0.3rem;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -347,7 +363,7 @@ body {
 /* Use div containers for CodeMirror editors rather than textareas */
 #editor-content,
 #editor-src {
-    height: 100%;
+    height: 300px;
     border: 1px solid #ccc;
 }
 
@@ -375,7 +391,6 @@ body {
     align-items: center;
     gap: 1em;
     margin-bottom: 0.5em;
-    justify-content: center;
 }
 
 .versions-nav button {
@@ -402,11 +417,6 @@ body {
         justify-content: center;
         align-content: center;
         align-items: stretch;
-        height: 100vh;
-    }
-
-    .modal-content .modal-versions {
-        padding: 0.5em;
     }
 
     .CodeMirror {

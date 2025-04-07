@@ -1,76 +1,74 @@
 <html>
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="parc.land">
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <title>🌲 parc.land</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/markdown/markdown.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/xml/xml.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/htmlmixed/htmlmixed.min.js"></script>
-    <link rel="stylesheet" href="./styles/main.css">
-    <link rel="stylesheet" href="./styles/child-canvas.css">
+  <!-- <base href="https://parc.land"> -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="parc.land">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <title>🌲 parc.land</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/markdown/markdown.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/xml/xml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/javascript/javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.1/mode/htmlmixed/htmlmixed.min.js"></script>
+  <link rel="stylesheet" href="./main.css">
 </head>
-
 <body>
+  
+  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+  <script>eruda.init();</script>
 
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
+  <button id="drillUp">↑ Drill Up</button>
 
-    <button id="drillUp">↑ Drill Up</button>
+  <!-- The canvas includes our container for elements and an SVG layer for edges -->
+  <div id="canvas" mode="navigate">
+    <!-- SVG layer for edges (drawn behind the elements) -->
+    <svg id="edges-layer"></svg>
+    <div id="canvas-container"></div>
+    <div id="context-menu"></div> <!-- Right-click context menu -->
+  </div>
 
-    <!-- The canvas includes our container for elements and an SVG layer for edges -->
-    <div id="canvas" mode="navigate">
-        <!-- SVG layer for edges (drawn behind the elements) -->
-        <svg id="edges-layer"></svg>
-        <div id="canvas-container"></div>
-        <div id="context-menu"></div> <!-- Right-click context menu -->
-    </div>
+  <div id="static-container"></div>
 
-    <div id="static-container"></div>
+  <button id="mode">
+    <i class="fa-solid fa-hand"></i> direct
+  </button>
 
-    <button id="mode">
-        <i class="fa-solid fa-hand"></i> direct
-    </button>
-
-    <div id="edit-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-versions">
-                <div class="versions-nav">
-                    <button id="versions-prev"><i class="fa-solid fa-angle-left"></i></button>
-                    <span id="versions-info">Version X of Y</span>
-                    <button id="versions-next"><i class="fa-solid fa-angle-right"></i></button>
-                </div>
-                <div id="modal-error"></div>
-            </div>
-            <div class="modal-tabs">
-                <button id="tab-content" class="active">Content</button>
-                <button id="tab-src">Src</button>
-            </div>
-            <div class="modal-editor">
-                <div id="editor-content"></div>
-                <div id="editor-src"></div>
-            </div>
-            <div class="modal-buttons">
-                <button id="modal-clear">Clear</button>
-                <button id="modal-copy">Copy</button>
-                <button id="modal-cancel">Close</button>
-                <button id="modal-save">Save</button>
-                <button id="modal-generate">Generate</button>
-            </div>
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-versions">
+        <div class="versions-nav">
+          <button id="versions-prev"><i class="fa-solid fa-angle-left"></i></button>
+          <span id="versions-info">Version X of Y</span>
+          <button id="versions-next"><i class="fa-solid fa-angle-right"></i></button>
         </div>
+        <div id="modal-error"></div>
+      </div>
+      <div class="modal-tabs">
+        <button id="tab-content" class="active">Content</button>
+        <button id="tab-src">Src</button>
+      </div>
+      <div class="modal-editor">
+        <div id="editor-content"></div>
+        <div id="editor-src"></div>
+      </div>
+      <div class="modal-buttons">
+        <button id="modal-clear">Clear</button>
+        <button id="modal-copy">Copy</button>
+        <button id="modal-cancel">Close</button>
+        <button id="modal-save">Save</button>
+        <button id="modal-generate">Generate</button>
+      </div>
     </div>
-    <script type="module" src="./main.js"></script>
-</body>
+  </div>
 
+  <script type="module" src="./main.js"></script>
+</body>
 </html>

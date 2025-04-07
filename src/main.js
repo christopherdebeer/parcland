@@ -1676,14 +1676,16 @@ ${content}
         if (type === 'create-node') {
             const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
             const textPrompt = prompt("Enter text for the new element:", "");
-            const elId = this.createNewElement(canvasPt.x, canvasPt.y, "markdown", "generating...", false);
-            const el = this.findElementById(elId);
-            const edge = this.createNewEdge(this.activeEdgeCreation.sourceId, elId, textPrompt);
-            this.activeEdgeCreation = null;
-            const resp = await this.generateContent(textPrompt, el);
-            el.content = resp;
-            console.log({el, edge, resp, textPrompt});
-            this.updateElementNode(this.elementNodesMap[el.id], el, true);
+            if (textPrompt) {
+              const elId = this.createNewElement(canvasPt.x, canvasPt.y, "markdown", "generating...", false);
+              const el = this.findElementById(elId);
+              const edge = this.createNewEdge(this.activeEdgeCreation.sourceId, elId, textPrompt);
+              this.activeEdgeCreation = null;
+              const resp = await this.generateContent(textPrompt, el);
+              el.content = resp;
+              console.log({el, edge, resp, textPrompt});
+              this.updateElementNode(this.elementNodesMap[el.id], el, true);
+            }
         }
 
         this.activeEdgeCreation = null;

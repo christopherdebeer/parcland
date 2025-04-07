@@ -406,7 +406,8 @@ class EventManager {
     const label = prompt("Enter edge label:");
   
     // Create new node
-    const newNodeId = controller.createNewElement(pt.x, pt.y, "markdown", "");
+    const newNode = controller.createNewElement(pt.x, pt.y, "markdown", "");
+    const newNodeId = newNode.dataset.id;
   
     // Create edge
     controller.createNewEdge(sourceId, newNodeId, label);

@@ -547,7 +547,7 @@ class CanvasController {
         ) {
             return;
         }
-        console.log("Setting element content", el.id, el.type)
+        // console.log("Setting element content", el.id, el.type)
         node.dataset.type = el.type;
         node.dataset.content = el.content;
         node.dataset.src = desiredSrc;
@@ -1038,7 +1038,7 @@ class CanvasController {
         const target = ev.target;
         const targetEl = target.closest(".canvas-element");
         if (!targetEl) return;
-        ev.stopPropagation()
+        
         const isHandle = target.classList.contains("resize-handle") ||
             target.classList.contains("rotate-handle") ||
             target.classList.contains("reorder-handle") ||
@@ -1055,6 +1055,8 @@ class CanvasController {
         this.elementStartPos = { x: el.x, y: el.y };
         if (this.mode !== 'direct') return;
         this.activeGesture = "move-element";
+
+        ev.stopPropagation();
     }
 
     onPointerMoveElement(ev) {

@@ -17,6 +17,41 @@ class ElementManager {
         ];
     }
 
+    createNewElement(x, y, type='markdown', content='', isCanvasContainer=false, data={}) {
+      const newId = "el-" + Date.now();
+      const defaultMap = {
+        text: "New text element",
+        img: "Realistic tree on white background",
+        html: "<div>Hello World</div>",
+        markdown: "# New Markdown\nSome **content** here..."
+      };
+      let finalType = isCanvasContainer ? 'canvas-container' : type;
+      let finalContent = content || defaultMap[finalType] || "Untitled";
+      const scaleFactor = this.state.viewState.scale || 1;
+      const elObj = {
+        ...data,
+        id: newId,
+        x, y,
+        width: 120 / scaleFactor,
+        height: 40 / scaleFactor,
+        rotation: 0,
+        type: finalType,
+        content: finalContent,
+        versions: [],
+        static: false,
+        childCanvasState: (isCanvasContainer ? { 
+          canvasId: newId + "_child", 
+          elements: [],
+          versionHistory: []
+        } : null)
+      };
+      this.state.addElement(elObj);
+      this.state.selectElement(newId);
+      this.renderElements();
+      this.constoller.saveCanvas();
+      return newId;
+    }
+
     createElementNode(el) {
         const node = document.createElement("div");
         node.classList.add("canvas-element");

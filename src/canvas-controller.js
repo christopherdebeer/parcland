@@ -272,7 +272,7 @@ reattach() {
    * Create a new element
    */
   createNewElement(x, y, type = 'markdown', content = '', isCanvasContainer = false, data = {}) {
-    return this.elementManager.createElementNode(x, y, type, content, isCanvasContainer, data);
+    return this.elementManager.createNewElement(x, y, type, content, isCanvasContainer, data);
   }
   
   /**

@@ -44,6 +44,7 @@ class CanvasController {
         this.modalVersionsInfo = document.getElementById("versions-info");
         this.modalError = document.getElementById("modal-error");
 
+        this.lastTapPosition = { x: 0, y: 0 };
         this.dragStartPos = { x: 0, y: 0 };
         this.elementStartPos = { x: 0, y: 0 };
         this.elementStartSize = { width: 0, height: 0 };
@@ -108,52 +109,32 @@ class CanvasController {
             }
         };
 
-        this.canvas.addEventListener("pointerdown", (ev) => this.onPointerDownCanvas(ev));
-        this.canvas.addEventListener("pointermove", (ev) => this.onPointerMoveCanvas(ev));
-        this.canvas.addEventListener("pointerup", (ev) => this.onPointerUpCanvas(ev));
-        this.canvas.addEventListener("pointercancel", (ev) => this.onPointerUpCanvas(ev));
-        this.canvas.addEventListener("wheel", (ev) => this.onWheelCanvas(ev));
+        this.canvas.addEventListener("pointerdown", ((ev) => this.onPointerDownCanvas(ev), { passive: false }));
+        this.canvas.addEventListener("pointermove", ((ev) => this.onPointerMoveCanvas(ev), { passive: false }));
+        this.canvas.addEventListener("pointerup", ((ev) => this.onPointerUpCanvas(ev), { passive: false }));
+        this.canvas.addEventListener("pointercancel", ((ev) => this.onPointerUpCanvas(ev), { passive: false }));
+        this.canvas.addEventListener("wheel", ((ev) => this.onWheelCanvas(ev), { passive: false }));
 
-        this.container.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev));
-        this.container.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev));
-        this.container.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev));
-        this.container.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev));
+        this.container.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev), { passive: false }));
+        this.container.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev), { passive: false }));
+        this.container.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev), { passive: false }));
+        this.container.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev), { passive: false }));
 
-        [this.canvas,this.container, this.edgesLayer, this.staticContainer].map( el => {
+        [this.canvas, this.container, this.edgesLayer, this.staticContainer].map(el => {
             el.addEventListener('gesturestart', function (e) {
                 console.log("[DEBUG] preventing gesture start on", el);
                 e.preventDefault();
             });
         });
 
-        this.staticContainer.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev));
-        this.staticContainer.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev));
-        this.staticContainer.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev));
-        this.staticContainer.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev));
+        this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev), { passive: false }));
+        this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev), { passive: false }));
+        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev), { passive: false }));
+        this.staticContainer.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev), { passive: false }));
 
         this.edgesLayer.addEventListener("pointerdown", this.blockPropagation);
         this.edgesLayer.addEventListener("pointerup", this.blockPropagation);
-
-        this.edgesLayer.addEventListener("pointerup", ev => {
-            console.log("[DEBUG] Edges layer pointerup", ev.target.dataset.id, ev.target);
-            const id = ev.target.dataset.id;
-            if (id) {
-                this.onPointerUpDoubleTap(ev, "edge", (ev) => {
-                    console.log(`[DEBUG] Double click on edge (label?)`, ev.target)
-                    this.selectedElementId = id;
-                    const edge = this.findEdgeElementById(ev.target.dataset.id);
-                    const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
-                    const elId = this.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", edge.label || "", false, {
-                        target: edge.id,
-                        property: "label",
-                    });
-                    this.switchMode('direct');
-                    this.createNewEdge(elId, edge.id, "Editing...", { meta: true });
-                })
-            }
-        });
-
-        this.lastTapPosition = { x: 0, y: 0 };
+        this.edgesLayer.addEventListener("pointerup", () => this.onPointerUpEdges(ev));
 
         this.contextMenu.addEventListener("pointerdown", (ev) => {
             console.log("contextMenu")
@@ -542,273 +523,6 @@ class CanvasController {
         }
     }
 
-    setElementContent(node, el) {
-        const currentType = node.dataset.type || "";
-        const currentContent = node.dataset.content || "";
-        const currentSrc = node.dataset.src || "";
-        const desiredSrc = el.src || "";
-        if (
-            currentType === el.type &&
-            currentContent === el.content &&
-            currentSrc === desiredSrc
-        ) {
-            return;
-        }
-        // console.log("Setting element content", el.id, el.type)
-        node.dataset.type = el.type;
-        node.dataset.content = el.content;
-        node.dataset.src = desiredSrc;
-        node.innerHTML = "";
-        // Render based on type:
-        if (el.type === "text") {
-            const t = document.createElement('p');
-            t.classList.add('content');
-            t.textContent = el.content;
-            t.style.color = el.color || "#000000";
-            node.appendChild(t);
-        } else if (el.type === "html") {
-            const t = document.createElement('div');
-            t.classList.add('content');
-            t.innerHTML = el.content;
-            node.appendChild(t);
-            this.executeScriptElements(el, t);
-        } else if (el.type === "markdown") {
-            const t = document.createElement('div');
-            t.classList.add('content');
-            t.innerHTML = marked.parse(el.content);
-            t.style.color = el.color || "#000000";
-            node.appendChild(t);
-        } else if (el.type === "img") {
-            const i = document.createElement("img");
-            i.classList.add("content");
-            i.dataset.image_id = el.imgId || "";
-            i.title = el.content;
-            i.onerror = (err) => {
-                console.warn("Image failed to load", err);
-            };
-
-            if (!el.src && !i.src) {
-                this.regenerateImage(el);
-            }
-            i.src = el.src || `https://placehold.co/${Math.round(el.width)}x${Math.round(el.height)}?text=${encodeURIComponent(el.content)}&font=lora`;
-
-            node.appendChild(i);
-        } else if (el.type === "canvas-container") {
-            // Create a container to render the child canvas snapshot and a drill-in button.
-            const containerDiv = document.createElement('div');
-            containerDiv.classList.add('content');
-            containerDiv.style.position = 'relative';
-            containerDiv.style.display = 'flex';
-            containerDiv.style.flexDirection = 'column';
-            containerDiv.style.alignItems = 'center';
-            containerDiv.style.justifyContent = 'center';
-            containerDiv.style.width = '100%';
-            containerDiv.style.height = '100%';
-            containerDiv.style.border = '1px dotted #ccc';
-            containerDiv.style.fontStyle = 'italic';
-            if (el.childCanvasState && el.childCanvasState.elements && el.childCanvasState.elements.length > 0) {
-                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Child Canvas Content Rendered</div>";
-            } else {
-                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Empty Child Canvas</div>";
-            }
-            const drillInBtn = document.createElement('button');
-            drillInBtn.textContent = "Drill In";
-            drillInBtn.style.position = "absolute";
-            drillInBtn.style.bottom = "5px";
-            drillInBtn.style.right = "5px";
-            drillInBtn.style.zIndex = "10";
-            drillInBtn.onclick = (ev) => {
-                ev.stopPropagation();
-                const childController = new CanvasController(el.childCanvasState, this);
-                this.detach();
-                activeCanvasController = childController;
-                window.history.pushState({}, "", "?canvas=" + el.childCanvasState.canvasId);
-            };
-            containerDiv.appendChild(drillInBtn);
-            node.appendChild(containerDiv);
-        } else if (el.type === "edit-prompt") {
-            // Render a prompt element for editing using a mini CodeMirror editor.
-            const container = document.createElement('div');
-            container.classList.add('content');
-            node.appendChild(container);
-            if (!node.editor) {
-                node.editor = CodeMirror(container, {
-                    value: el.content || "",
-                    lineNumbers: false,
-                    mode: "text",
-                    theme: "default",
-                    lineWrapping: true,
-                    viewportMargin: Infinity
-                });
-            }
-            // Add Save and Cancel buttons beneath the editor.
-            const btnContainer = document.createElement('div');
-            btnContainer.classList.add('actions')
-            node.appendChild(btnContainer);
-            const saveBtn = document.createElement('button');
-            saveBtn.textContent = "Save";
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = "Delete";
-            const cancelBtn = document.createElement('button');
-            cancelBtn.textContent = "Cancel";
-            btnContainer.appendChild(cancelBtn);
-            btnContainer.appendChild(saveBtn);
-            btnContainer.appendChild(deleteBtn);
-
-            deleteBtn.onclick = () => {
-                console.log("edit-prompt delete target")
-                const target = this.findElementOrEdgeById(el.target);
-                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== target?.id && e.id !== el.id);
-                this.canvasState.edges = this.canvasState.edges.filter(e => e.id !== target?.id);
-                this.renderElements();
-                this.saveCanvas();
-            }
-
-            saveBtn.onclick = () => {
-                const val = node.editor.getValue();
-                const target = this.findElementOrEdgeById(el.target);
-                if (target) {
-                    console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el)
-                    if (target) {
-                        target[el.property] = val;
-                        this.renderEdges();
-                        this.saveCanvas();
-                    }
-                }
-                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
-                this.renderElements();
-            };
-            cancelBtn.onclick = () => {
-                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
-                this.renderElements();
-                this.saveCanvas();
-            };
-        }
-        const c = node.querySelector('.content');
-        if (c.clientHeight < c.scrollHeight) {
-            c.classList.add('scroller')
-        } else {
-            c.classList.remove('scroller')
-        }
-    }
-
-    computeIntersection(el, otherEl) {
-        // Our elements' x and y represent the center coordinates.
-        const cx = el.x;
-        const cy = el.y;
-        // IMPORTANT: Factor in the element's scale to compute its visible dimensions.
-        const scaleFactor = el.scale || 1;
-        const w = (el.width || 10) * scaleFactor;
-        const h = (el.height || 10) * scaleFactor;
-
-        // Compute the vector from el's center toward the other element.
-        let dx = otherEl.x - cx;
-        let dy = otherEl.y - cy;
-
-        // If the centers coincide, return the center.
-        if (dx === 0 && dy === 0) {
-            return { x: cx, y: cy };
-        }
-
-        const halfW = w / 2;
-        const halfH = h / 2;
-
-        // Compute scale factors for hitting the vertical and horizontal borders.
-        let scaleX = Infinity, scaleY = Infinity;
-        if (dx !== 0) {
-            scaleX = halfW / Math.abs(dx);
-        }
-        if (dy !== 0) {
-            scaleY = halfH / Math.abs(dy);
-        }
-
-        // The proper scale is the smaller one, ensuring we hit the closest border.
-        const scale = Math.min(scaleX, scaleY);
-
-        // The intersection point is computed by scaling the direction vector.
-        const ix = cx + dx * scale;
-        const iy = cy + dy * scale;
-        return { x: ix, y: iy };
-    }
-
-    buildHandles(node, el) {
-        const corners = [
-            { className: "type-handle element-handle", icon: "fa-solid fa-font", handler: (ev) => this.typeHandlePointerDown(ev) },
-            { className: "scale-handle element-handle top-right", icon: "fa-solid fa-up-down-left-right", handler: (ev) => this.scaleHandlePointerDown(ev) },
-            { className: "reorder-handle bottom-left element-handle", icon: "fa-solid fa-layer-group", handler: (ev) => this.reorderHandlePointerDown(ev) },
-            { className: "resize-handle bottom-right element-handle", icon: "fa-solid fa-up-right-and-down-left-from-center", handler: (ev) => this.resizeHandlePointerDown(ev) }
-        ];
-        corners.forEach(c => {
-            const h = document.createElement("div");
-            h.className = c.className;
-            const i = document.createElement("i");
-            i.className = c.icon;
-            h.appendChild(i);
-            h.addEventListener("pointerdown", c.handler);
-            node.appendChild(h);
-        });
-        // Add rotate handle
-        const rotateHandle = document.createElement("div");
-        rotateHandle.className = "rotate-handle rotate-handle-position element-handle";
-        const rotateIcon = document.createElement("i");
-        rotateIcon.className = "fa-solid fa-rotate";
-        rotateHandle.appendChild(rotateIcon);
-        rotateHandle.addEventListener("pointerdown", (ev) => this.rotateHandlePointerDown(ev));
-        node.appendChild(rotateHandle);
-
-        // Add an edge handle for connecting elements.
-        const edgeHandle = document.createElement("div");
-        edgeHandle.className = "edge-handle element-handle";
-        const edgeIcon = document.createElement("i");
-        edgeIcon.className = "fa-solid fa-link";
-        edgeHandle.appendChild(edgeIcon);
-        edgeHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-edge'));
-        node.appendChild(edgeHandle);
-
-        // Add an new node handle for creating linked element.
-        const createHandle = document.createElement("div");
-        createHandle.className = "create-handle element-handle";
-        const createIcon = document.createElement("i");
-        createIcon.className = "fa-solid fa-plus";
-        createHandle.appendChild(createIcon);
-        createHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-node'));
-        node.appendChild(createHandle);
-    }
-
-    applyPositionStyles(node, el) {
-        const scale = el.scale || 1;
-        const rotation = el.rotation || 0;
-        const zIndex = Math.floor(el.zIndex) || 1;
-        const blendMode = el.blendMode || 'normal';
-        if (el.static) {
-            node.style.position = 'fixed';
-            node.style.left = (el.fixedLeft || 0) + '%';
-            node.style.top = (el.fixedTop || 0) + '%';
-            node.style.width = (el.width * scale) + "px";
-            node.style.height = (el.height * scale) + "px";
-            node.style.setProperty('--scale', zIndex);
-            node.style.setProperty('--scale', scale);
-            node.style.setProperty('--width', (el.width * scale) + "px");
-            node.style.setProperty('--height', (el.height * scale) + "px");
-            node.style.setProperty('--blend-mode', blendMode);
-            node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
-        } else {
-            node.style.position = 'absolute';
-            node.style.left = (el.x - (el.width * scale) / 2) + "px";
-            node.style.top = (el.y - (el.height * scale) / 2) + "px";
-            node.style.width = (el.width * scale) + "px";
-            node.style.height = (el.height * scale) + "px";
-            node.style.setProperty('--scale', zIndex);
-            node.style.setProperty('--scale', scale);
-            node.style.setProperty('--width', (el.width * scale) + "px");
-            node.style.setProperty('--height', (el.height * scale) + "px");
-            node.style.setProperty('--blend-mode', blendMode);
-            node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
-        }
-        const edges = this.findEdgesByElementId(el.id) || [];
-        this.renderEdges();
-    }
-
     selectElement(id) {
         this.selectedElementId = id;
         this.renderElements();
@@ -866,14 +580,21 @@ class CanvasController {
         return newId;
     }
 
-    hideContextMenu() {
-        this.contextMenu.style.display = "none";
-    }
-
-    showContextMenu(x, y) {
-        this.contextMenu.style.left = x + "px";
-        this.contextMenu.style.top = y + "px";
-        this.contextMenu.style.display = "flex";
+    createNewEdge(sourceId, targetId, label, data = {}, style = {}) {
+        // Create a new edge object.
+        const newEdge = {
+            id: "edge-" + Date.now(),
+            source: sourceId,
+            target: targetId,
+            label: label,
+            style: {
+                ...style,
+            },
+            data: {
+                ...data,
+            }
+        };
+        this.canvasState.edges.push(newEdge);
     }
 
     onPointerDownCanvas(ev) {
@@ -1046,7 +767,7 @@ class CanvasController {
         const target = ev.target;
         const targetEl = target.closest(".canvas-element");
         if (!targetEl) return;
-        
+
         const isHandle = target.classList.contains("resize-handle") ||
             target.classList.contains("rotate-handle") ||
             target.classList.contains("reorder-handle") ||
@@ -1144,6 +865,480 @@ class CanvasController {
             this.saveCanvas();
         }
         this.activeGesture = null;
+    }
+
+    onPointerUpEdges(ev) {
+        console.log("[DEBUG] Edges layer pointerup", ev.target.dataset.id, ev.target);
+        const id = ev.target.dataset.id;
+        if (id) {
+            this.onPointerUpDoubleTap(ev, "edge", (ev) => {
+                console.log(`[DEBUG] Double click on edge (label?)`, ev.target)
+                this.selectedElementId = id;
+                const edge = this.findEdgeElementById(ev.target.dataset.id);
+                const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
+                const elId = this.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", edge.label || "", false, {
+                    target: edge.id,
+                    property: "label",
+                });
+                this.switchMode('direct');
+                this.createNewEdge(elId, edge.id, "Editing...", { meta: true });
+            })
+        }
+    }
+
+    rotateHandlePointerDown(ev) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        const el = this.findElementById(this.selectedElementId);
+        if (!el) return;
+        this.activeGesture = "rotate-element";
+        this.container.setPointerCapture(ev.pointerId);
+        this.elementStartRotation = el.rotation;
+        this.centerForRotation = {
+            x: el.x + el.width / 2,
+            y: el.y + el.height / 2
+        };
+        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+    }
+
+    resizeHandlePointerDown(ev) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        const el = this.findElementById(this.selectedElementId);
+        if (!el || el.static === true) return;
+        this.activeGesture = "resize-element";
+        this.container.setPointerCapture(ev.pointerId);
+        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+        this.elementStartSize = { width: el.width, height: el.height };
+        this.elementStartPos = { x: el.x, y: el.y };
+    }
+
+    scaleHandlePointerDown(ev) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        const el = this.findElementById(this.selectedElementId);
+        if (!el) return;
+        this.activeGesture = "scale-element";
+        this.container.setPointerCapture(ev.pointerId);
+        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+        this.elementStartSize = { width: el.width, height: el.height };
+        this.elementStartPos = { x: el.x, y: el.y };
+    }
+
+    reorderHandlePointerDown(ev) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        const el = this.findElementById(this.selectedElementId);
+        if (!el) return;
+        this.activeGesture = "reorder-element";
+        this.container.setPointerCapture(ev.pointerId);
+        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+        this.elementStartSize = { width: el.width, height: el.height };
+        this.elementStartPos = { x: el.x, y: el.y };
+    }
+
+    typeHandlePointerDown(ev) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        if (!this.selectedElementId) return;
+        const rect = this.canvas.getBoundingClientRect();
+        this.buildContextMenu(this.selectedElementId);
+        this.showContextMenu(ev.clientX - rect.left, ev.clientY - rect.top);
+    }
+
+    edgeHandlePointerDown(ev, type) {
+        ev.stopPropagation();
+        if (this.mode !== 'direct') return;
+        if (!this.selectedElementId) return;
+        console.log("starting edge creation...")
+        // Start the edge creation gesture.
+        this.activeGesture = type;
+        this.activeEdgeCreation = { sourceId: this.selectedElementId, tempLine: null };
+        const sourceEl = this.findElementById(this.activeEdgeCreation.sourceId);
+        if (sourceEl) {
+            // Create a temporary dashed line element.
+            const tempLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            tempLine.setAttribute("stroke", type === 'create-edge' ? 'blue' : 'green');
+            tempLine.setAttribute("stroke-width", "4");
+            tempLine.setAttribute("stroke-dasharray", "5,5");
+            tempLine.setAttribute("x1", sourceEl.x);
+            tempLine.setAttribute("y1", sourceEl.y);
+            tempLine.setAttribute("x2", sourceEl.x);
+            tempLine.setAttribute("y2", sourceEl.y);
+            this.activeEdgeCreation.tempLine = tempLine;
+            this.edgesLayer.appendChild(tempLine);
+        }
+        // Add global pointermove and pointerup listeners for the edge gesture.
+        document.addEventListener("pointermove", this.edgePointerMoveHandler = (ev) => this.onEdgePointerMove(ev, type));
+        document.addEventListener("pointerup", this.edgePointerUpHandler = (ev) => this.onEdgePointerUp(ev, type));
+    }
+
+    onEdgePointerMove(ev, type) {
+        console.log("onEdgePointerMove(ev)")
+        if (this.activeGesture !== type || !this.activeEdgeCreation) return;
+        const pt = this.screenToCanvas(ev.clientX, ev.clientY);
+        this.activeEdgeCreation.tempLine.setAttribute("x2", pt.x);
+        this.activeEdgeCreation.tempLine.setAttribute("y2", pt.y);
+    }
+
+    async onEdgePointerUp(ev, type) {
+        console.log("onEdgePointerUp(ev)", this.activeGesture, this.activeEdgeCreation)
+        if (this.activeGesture !== type || !this.activeEdgeCreation) return;
+        let targetEl, targetElement, targetId;
+        if (type === 'create-edge') {
+            targetEl = document.elementFromPoint(ev.clientX, ev.clientY);
+            targetElement = targetEl && targetEl.closest(".canvas-element");
+        }
+        console.log("targetEl", targetEl, targetElement)
+        if (targetElement) {
+            const targetId = targetElement.dataset.elId;
+            if (targetId && targetId !== this.activeEdgeCreation.sourceId) {
+                this.createNewEdge(this.activeEdgeCreation.sourceId, targetId, "");
+            } else {
+                console.warn("Invalid target element or self-reference");
+            }
+        } else {
+            console.warn("No target element found");
+        }
+        if (this.activeEdgeCreation.tempLine) {
+            this.activeEdgeCreation.tempLine.remove();
+        }
+
+        if (type === 'create-node') {
+            const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
+            const textPrompt = prompt("Enter text for the new element:", "");
+            if (textPrompt) {
+                const elId = this.createNewElement(canvasPt.x, canvasPt.y, "markdown", "generating...", false);
+                const el = this.findElementById(elId);
+                const edge = this.createNewEdge(this.activeEdgeCreation.sourceId, elId, textPrompt);
+                this.activeEdgeCreation = null;
+                const resp = await this.generateContent(textPrompt, el);
+                el.content = resp;
+                console.log({ el, edge, resp, textPrompt });
+                this.updateElementNode(this.elementNodesMap[el.id], el, true);
+            }
+        }
+
+        this.activeEdgeCreation = null;
+        this.activeGesture = null;
+
+        document.removeEventListener("pointermove", this.edgePointerMoveHandler);
+        document.removeEventListener("pointerup", this.edgePointerUpHandler);
+        this.renderElements();
+        this.saveCanvas();
+    }
+
+    createEditElement(ev, el, prop) {
+        const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
+        const elId = this.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", el[prop], false, {
+            target: el.id,
+            property: prop,
+        });
+        this.switchMode('direct');
+        this.createNewEdge(elId, el.id, "Editing...", { meta: true });
+    }
+
+    clickCapture(btn, handler) {
+        btn.addEventListener("pointerdown", (ev) => {
+            ev.stopPropagation();
+            btn.setPointerCapture(ev.pointerId);
+        });
+        btn.onclick = handler;
+    }
+
+    toggleStatic(el) {
+        const node = this.elementNodesMap[el.id];
+        if (!node) return;
+        if (!el.static) {
+            const rect = node.getBoundingClientRect();
+            const topPct = (rect.top / window.innerHeight) * 100;
+            const leftPct = (rect.left / window.innerWidth) * 100;
+            el.fixedTop = topPct;
+            el.fixedLeft = leftPct;
+            el.static = true;
+        } else {
+            const rect = node.getBoundingClientRect();
+            const centerCanvas = this.screenToCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2);
+            el.x = centerCanvas.x - (el.width * (el.scale || 1)) / 2;
+            el.y = centerCanvas.y - (el.height * (el.scale || 1)) / 2;
+            el.static = false;
+        }
+    }
+
+    screenToCanvas(px, py) {
+        const dx = px - this.canvas.offsetLeft;
+        const dy = py - this.canvas.offsetTop;
+        return {
+            x: (dx - this.viewState.translateX) / this.viewState.scale,
+            y: (dy - this.viewState.translateY) / this.viewState.scale
+        };
+    }
+
+    setElementContent(node, el) {
+        const currentType = node.dataset.type || "";
+        const currentContent = node.dataset.content || "";
+        const currentSrc = node.dataset.src || "";
+        const desiredSrc = el.src || "";
+        if (
+            currentType === el.type &&
+            currentContent === el.content &&
+            currentSrc === desiredSrc
+        ) {
+            return;
+        }
+        // console.log("Setting element content", el.id, el.type)
+        node.dataset.type = el.type;
+        node.dataset.content = el.content;
+        node.dataset.src = desiredSrc;
+        node.innerHTML = "";
+        // Render based on type:
+        if (el.type === "text") {
+            const t = document.createElement('p');
+            t.classList.add('content');
+            t.textContent = el.content;
+            t.style.color = el.color || "#000000";
+            node.appendChild(t);
+        } else if (el.type === "html") {
+            const t = document.createElement('div');
+            t.classList.add('content');
+            t.innerHTML = el.content;
+            node.appendChild(t);
+            this.executeScriptElements(el, t);
+        } else if (el.type === "markdown") {
+            const t = document.createElement('div');
+            t.classList.add('content');
+            t.innerHTML = marked.parse(el.content);
+            t.style.color = el.color || "#000000";
+            node.appendChild(t);
+        } else if (el.type === "img") {
+            const i = document.createElement("img");
+            i.classList.add("content");
+            i.dataset.image_id = el.imgId || "";
+            i.title = el.content;
+            i.onerror = (err) => {
+                console.warn("Image failed to load", err);
+            };
+
+            if (!el.src && !i.src) {
+                this.regenerateImage(el);
+            }
+            i.src = el.src || `https://placehold.co/${Math.round(el.width)}x${Math.round(el.height)}?text=${encodeURIComponent(el.content)}&font=lora`;
+
+            node.appendChild(i);
+        } else if (el.type === "canvas-container") {
+            // Create a container to render the child canvas snapshot and a drill-in button.
+            const containerDiv = document.createElement('div');
+            containerDiv.classList.add('content');
+            containerDiv.style.position = 'relative';
+            containerDiv.style.display = 'flex';
+            containerDiv.style.flexDirection = 'column';
+            containerDiv.style.alignItems = 'center';
+            containerDiv.style.justifyContent = 'center';
+            containerDiv.style.width = '100%';
+            containerDiv.style.height = '100%';
+            containerDiv.style.border = '1px dotted #ccc';
+            containerDiv.style.fontStyle = 'italic';
+            if (el.childCanvasState && el.childCanvasState.elements && el.childCanvasState.elements.length > 0) {
+                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Child Canvas Content Rendered</div>";
+            } else {
+                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Empty Child Canvas</div>";
+            }
+            const drillInBtn = document.createElement('button');
+            drillInBtn.textContent = "Drill In";
+            drillInBtn.style.position = "absolute";
+            drillInBtn.style.bottom = "5px";
+            drillInBtn.style.right = "5px";
+            drillInBtn.style.zIndex = "10";
+            drillInBtn.onclick = (ev) => {
+                ev.stopPropagation();
+                const childController = new CanvasController(el.childCanvasState, this);
+                this.detach();
+                activeCanvasController = childController;
+                window.history.pushState({}, "", "?canvas=" + el.childCanvasState.canvasId);
+            };
+            containerDiv.appendChild(drillInBtn);
+            node.appendChild(containerDiv);
+        } else if (el.type === "edit-prompt") {
+            // Render a prompt element for editing using a mini CodeMirror editor.
+            const container = document.createElement('div');
+            container.classList.add('content');
+            node.appendChild(container);
+            if (!node.editor) {
+                node.editor = CodeMirror(container, {
+                    value: el.content || "",
+                    lineNumbers: false,
+                    mode: "text",
+                    theme: "default",
+                    lineWrapping: true,
+                    viewportMargin: Infinity
+                });
+            }
+            // Add Save and Cancel buttons beneath the editor.
+            const btnContainer = document.createElement('div');
+            btnContainer.classList.add('actions')
+            node.appendChild(btnContainer);
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = "Save";
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = "Delete";
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = "Cancel";
+            btnContainer.appendChild(cancelBtn);
+            btnContainer.appendChild(saveBtn);
+            btnContainer.appendChild(deleteBtn);
+
+            deleteBtn.onclick = () => {
+                console.log("edit-prompt delete target")
+                const target = this.findElementOrEdgeById(el.target);
+                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== target?.id && e.id !== el.id);
+                this.canvasState.edges = this.canvasState.edges.filter(e => e.id !== target?.id);
+                this.renderElements();
+                this.saveCanvas();
+            }
+
+            saveBtn.onclick = () => {
+                const val = node.editor.getValue();
+                const target = this.findElementOrEdgeById(el.target);
+                if (target) {
+                    console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el)
+                    if (target) {
+                        target[el.property] = val;
+                        this.renderEdges();
+                        this.saveCanvas();
+                    }
+                }
+                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
+                this.renderElements();
+            };
+            cancelBtn.onclick = () => {
+                this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
+                this.renderElements();
+                this.saveCanvas();
+            };
+        }
+        const c = node.querySelector('.content');
+        if (c.clientHeight < c.scrollHeight) {
+            c.classList.add('scroller')
+        } else {
+            c.classList.remove('scroller')
+        }
+    }
+
+    buildHandles(node, el) {
+        const corners = [
+            { className: "type-handle element-handle", icon: "fa-solid fa-font", handler: (ev) => this.typeHandlePointerDown(ev) },
+            { className: "scale-handle element-handle top-right", icon: "fa-solid fa-up-down-left-right", handler: (ev) => this.scaleHandlePointerDown(ev) },
+            { className: "reorder-handle bottom-left element-handle", icon: "fa-solid fa-layer-group", handler: (ev) => this.reorderHandlePointerDown(ev) },
+            { className: "resize-handle bottom-right element-handle", icon: "fa-solid fa-up-right-and-down-left-from-center", handler: (ev) => this.resizeHandlePointerDown(ev) }
+        ];
+        corners.forEach(c => {
+            const h = document.createElement("div");
+            h.className = c.className;
+            const i = document.createElement("i");
+            i.className = c.icon;
+            h.appendChild(i);
+            h.addEventListener("pointerdown", c.handler);
+            node.appendChild(h);
+        });
+        // Add rotate handle
+        const rotateHandle = document.createElement("div");
+        rotateHandle.className = "rotate-handle rotate-handle-position element-handle";
+        const rotateIcon = document.createElement("i");
+        rotateIcon.className = "fa-solid fa-rotate";
+        rotateHandle.appendChild(rotateIcon);
+        rotateHandle.addEventListener("pointerdown", (ev) => this.rotateHandlePointerDown(ev));
+        node.appendChild(rotateHandle);
+
+        // Add an edge handle for connecting elements.
+        const edgeHandle = document.createElement("div");
+        edgeHandle.className = "edge-handle element-handle";
+        const edgeIcon = document.createElement("i");
+        edgeIcon.className = "fa-solid fa-link";
+        edgeHandle.appendChild(edgeIcon);
+        edgeHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-edge'));
+        node.appendChild(edgeHandle);
+
+        // Add an new node handle for creating linked element.
+        const createHandle = document.createElement("div");
+        createHandle.className = "create-handle element-handle";
+        const createIcon = document.createElement("i");
+        createIcon.className = "fa-solid fa-plus";
+        createHandle.appendChild(createIcon);
+        createHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-node'));
+        node.appendChild(createHandle);
+    }
+
+    applyPositionStyles(node, el) {
+        const scale = el.scale || 1;
+        const rotation = el.rotation || 0;
+        const zIndex = Math.floor(el.zIndex) || 1;
+        const blendMode = el.blendMode || 'normal';
+        if (el.static) {
+            node.style.position = 'fixed';
+            node.style.left = (el.fixedLeft || 0) + '%';
+            node.style.top = (el.fixedTop || 0) + '%';
+            node.style.width = (el.width * scale) + "px";
+            node.style.height = (el.height * scale) + "px";
+            node.style.setProperty('--scale', zIndex);
+            node.style.setProperty('--scale', scale);
+            node.style.setProperty('--width', (el.width * scale) + "px");
+            node.style.setProperty('--height', (el.height * scale) + "px");
+            node.style.setProperty('--blend-mode', blendMode);
+            node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
+        } else {
+            node.style.position = 'absolute';
+            node.style.left = (el.x - (el.width * scale) / 2) + "px";
+            node.style.top = (el.y - (el.height * scale) / 2) + "px";
+            node.style.width = (el.width * scale) + "px";
+            node.style.height = (el.height * scale) + "px";
+            node.style.setProperty('--scale', zIndex);
+            node.style.setProperty('--scale', scale);
+            node.style.setProperty('--width', (el.width * scale) + "px");
+            node.style.setProperty('--height', (el.height * scale) + "px");
+            node.style.setProperty('--blend-mode', blendMode);
+            node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
+        }
+        const edges = this.findEdgesByElementId(el.id) || [];
+        this.renderEdges();
+    }
+
+    computeIntersection(el, otherEl) {
+        // Our elements' x and y represent the center coordinates.
+        const cx = el.x;
+        const cy = el.y;
+        // IMPORTANT: Factor in the element's scale to compute its visible dimensions.
+        const scaleFactor = el.scale || 1;
+        const w = (el.width || 10) * scaleFactor;
+        const h = (el.height || 10) * scaleFactor;
+
+        // Compute the vector from el's center toward the other element.
+        let dx = otherEl.x - cx;
+        let dy = otherEl.y - cy;
+
+        // If the centers coincide, return the center.
+        if (dx === 0 && dy === 0) {
+            return { x: cx, y: cy };
+        }
+
+        const halfW = w / 2;
+        const halfH = h / 2;
+
+        // Compute scale factors for hitting the vertical and horizontal borders.
+        let scaleX = Infinity, scaleY = Infinity;
+        if (dx !== 0) {
+            scaleX = halfW / Math.abs(dx);
+        }
+        if (dy !== 0) {
+            scaleY = halfH / Math.abs(dy);
+        }
+
+        // The proper scale is the smaller one, ensuring we hit the closest border.
+        const scale = Math.min(scaleX, scaleY);
+
+        // The intersection point is computed by scaling the direction vector.
+        const ix = cx + dx * scale;
+        const iy = cy + dy * scale;
+        return { x: ix, y: iy };
     }
 
     buildContextMenu(elId) {
@@ -1310,50 +1505,14 @@ class CanvasController {
 
     }
 
-    createEditElement(ev, el, prop) {
-        const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
-        const elId = this.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", el[prop], false, {
-            target: el.id,
-            property: prop,
-        });
-        this.switchMode('direct');
-        this.createNewEdge(elId, el.id, "Editing...", { meta: true });
+    hideContextMenu() {
+        this.contextMenu.style.display = "none";
     }
 
-    clickCapture(btn, handler) {
-        btn.addEventListener("pointerdown", (ev) => {
-            ev.stopPropagation();
-            btn.setPointerCapture(ev.pointerId);
-        });
-        btn.onclick = handler;
-    }
-
-    toggleStatic(el) {
-        const node = this.elementNodesMap[el.id];
-        if (!node) return;
-        if (!el.static) {
-            const rect = node.getBoundingClientRect();
-            const topPct = (rect.top / window.innerHeight) * 100;
-            const leftPct = (rect.left / window.innerWidth) * 100;
-            el.fixedTop = topPct;
-            el.fixedLeft = leftPct;
-            el.static = true;
-        } else {
-            const rect = node.getBoundingClientRect();
-            const centerCanvas = this.screenToCanvas(rect.left + rect.width / 2, rect.top + rect.height / 2);
-            el.x = centerCanvas.x - (el.width * (el.scale || 1)) / 2;
-            el.y = centerCanvas.y - (el.height * (el.scale || 1)) / 2;
-            el.static = false;
-        }
-    }
-
-    screenToCanvas(px, py) {
-        const dx = px - this.canvas.offsetLeft;
-        const dy = py - this.canvas.offsetTop;
-        return {
-            x: (dx - this.viewState.translateX) / this.viewState.scale,
-            y: (dy - this.viewState.translateY) / this.viewState.scale
-        };
+    showContextMenu(x, y) {
+        this.contextMenu.style.left = x + "px";
+        this.contextMenu.style.top = y + "px";
+        this.contextMenu.style.display = "flex";
     }
 
     async regenerateImage(el) {
@@ -1561,165 +1720,6 @@ ${content}
             console.error('Error fetching AI response (old fallback):', error);
             return null;
         }
-    }
-
-    rotateHandlePointerDown(ev) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        const el = this.findElementById(this.selectedElementId);
-        if (!el) return;
-        this.activeGesture = "rotate-element";
-        this.container.setPointerCapture(ev.pointerId);
-        this.elementStartRotation = el.rotation;
-        this.centerForRotation = {
-            x: el.x + el.width / 2,
-            y: el.y + el.height / 2
-        };
-        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-    }
-
-    resizeHandlePointerDown(ev) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        const el = this.findElementById(this.selectedElementId);
-        if (!el || el.static === true) return;
-        this.activeGesture = "resize-element";
-        this.container.setPointerCapture(ev.pointerId);
-        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-        this.elementStartSize = { width: el.width, height: el.height };
-        this.elementStartPos = { x: el.x, y: el.y };
-    }
-
-    scaleHandlePointerDown(ev) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        const el = this.findElementById(this.selectedElementId);
-        if (!el) return;
-        this.activeGesture = "scale-element";
-        this.container.setPointerCapture(ev.pointerId);
-        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-        this.elementStartSize = { width: el.width, height: el.height };
-        this.elementStartPos = { x: el.x, y: el.y };
-    }
-
-    reorderHandlePointerDown(ev) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        const el = this.findElementById(this.selectedElementId);
-        if (!el) return;
-        this.activeGesture = "reorder-element";
-        this.container.setPointerCapture(ev.pointerId);
-        this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-        this.elementStartSize = { width: el.width, height: el.height };
-        this.elementStartPos = { x: el.x, y: el.y };
-    }
-
-    typeHandlePointerDown(ev) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        if (!this.selectedElementId) return;
-        const rect = this.canvas.getBoundingClientRect();
-        this.buildContextMenu(this.selectedElementId);
-        this.showContextMenu(ev.clientX - rect.left, ev.clientY - rect.top);
-    }
-
-    edgeHandlePointerDown(ev, type) {
-        ev.stopPropagation();
-        if (this.mode !== 'direct') return;
-        if (!this.selectedElementId) return;
-        console.log("starting edge creation...")
-        // Start the edge creation gesture.
-        this.activeGesture = type;
-        this.activeEdgeCreation = { sourceId: this.selectedElementId, tempLine: null };
-        const sourceEl = this.findElementById(this.activeEdgeCreation.sourceId);
-        if (sourceEl) {
-            // Create a temporary dashed line element.
-            const tempLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            tempLine.setAttribute("stroke", type === 'create-edge' ? 'blue' : 'green');
-            tempLine.setAttribute("stroke-width", "4");
-            tempLine.setAttribute("stroke-dasharray", "5,5");
-            tempLine.setAttribute("x1", sourceEl.x);
-            tempLine.setAttribute("y1", sourceEl.y);
-            tempLine.setAttribute("x2", sourceEl.x);
-            tempLine.setAttribute("y2", sourceEl.y);
-            this.activeEdgeCreation.tempLine = tempLine;
-            this.edgesLayer.appendChild(tempLine);
-        }
-        // Add global pointermove and pointerup listeners for the edge gesture.
-        document.addEventListener("pointermove", this.edgePointerMoveHandler = (ev) => this.onEdgePointerMove(ev, type));
-        document.addEventListener("pointerup", this.edgePointerUpHandler = (ev) => this.onEdgePointerUp(ev, type));
-    }
-
-    onEdgePointerMove(ev, type) {
-        console.log("onEdgePointerMove(ev)")
-        if (this.activeGesture !== type || !this.activeEdgeCreation) return;
-        const pt = this.screenToCanvas(ev.clientX, ev.clientY);
-        this.activeEdgeCreation.tempLine.setAttribute("x2", pt.x);
-        this.activeEdgeCreation.tempLine.setAttribute("y2", pt.y);
-    }
-
-    async onEdgePointerUp(ev, type) {
-        console.log("onEdgePointerUp(ev)", this.activeGesture, this.activeEdgeCreation)
-        if (this.activeGesture !== type || !this.activeEdgeCreation) return;
-        let targetEl, targetElement, targetId;
-        if (type === 'create-edge') {
-            targetEl = document.elementFromPoint(ev.clientX, ev.clientY);
-            targetElement = targetEl && targetEl.closest(".canvas-element");
-        }
-        console.log("targetEl", targetEl, targetElement)
-        if (targetElement) {
-            const targetId = targetElement.dataset.elId;
-            if (targetId && targetId !== this.activeEdgeCreation.sourceId) {
-                this.createNewEdge(this.activeEdgeCreation.sourceId, targetId, "");
-            } else {
-                console.warn("Invalid target element or self-reference");
-            }
-        } else {
-            console.warn("No target element found");
-        }
-        if (this.activeEdgeCreation.tempLine) {
-            this.activeEdgeCreation.tempLine.remove();
-        }
-
-        if (type === 'create-node') {
-            const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
-            const textPrompt = prompt("Enter text for the new element:", "");
-            if (textPrompt) {
-              const elId = this.createNewElement(canvasPt.x, canvasPt.y, "markdown", "generating...", false);
-              const el = this.findElementById(elId);
-              const edge = this.createNewEdge(this.activeEdgeCreation.sourceId, elId, textPrompt);
-              this.activeEdgeCreation = null;
-              const resp = await this.generateContent(textPrompt, el);
-              el.content = resp;
-              console.log({el, edge, resp, textPrompt});
-              this.updateElementNode(this.elementNodesMap[el.id], el, true);
-            }
-        }
-
-        this.activeEdgeCreation = null;
-        this.activeGesture = null;
-
-        document.removeEventListener("pointermove", this.edgePointerMoveHandler);
-        document.removeEventListener("pointerup", this.edgePointerUpHandler);
-        this.renderElements();
-        this.saveCanvas();
-    }
-
-    createNewEdge(sourceId, targetId, label, data = {}, style = {}) {
-        // Create a new edge object.
-        const newEdge = {
-            id: "edge-" + Date.now(),
-            source: sourceId,
-            target: targetId,
-            label: label,
-            style: {
-                ...style,
-            },
-            data: {
-                ...data,
-            }
-        };
-        this.canvasState.edges.push(newEdge);
     }
 
     serializeCanvas() {

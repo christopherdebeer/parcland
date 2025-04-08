@@ -129,7 +129,7 @@ class CanvasController {
 
         this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
         this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
-        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false }));
+        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
         this.staticContainer.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
 
         this.edgesLayer.addEventListener("pointerdown", this.blockPropagation);

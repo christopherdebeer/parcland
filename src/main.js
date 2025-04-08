@@ -109,16 +109,16 @@ class CanvasController {
             }
         };
 
-        this.canvas.addEventListener("pointerdown", ((ev) => this.onPointerDownCanvas(ev), { passive: false }));
-        this.canvas.addEventListener("pointermove", ((ev) => this.onPointerMoveCanvas(ev), { passive: false }));
-        this.canvas.addEventListener("pointerup", ((ev) => this.onPointerUpCanvas(ev), { passive: false }));
-        this.canvas.addEventListener("pointercancel", ((ev) => this.onPointerUpCanvas(ev), { passive: false }));
-        this.canvas.addEventListener("wheel", ((ev) => this.onWheelCanvas(ev), { passive: false }));
+        this.canvas.addEventListener("pointerdown", ((ev) => this.onPointerDownCanvas(ev)), { passive: false });
+        this.canvas.addEventListener("pointermove", ((ev) => this.onPointerMoveCanvas(ev)), { passive: false });
+        this.canvas.addEventListener("pointerup", ((ev) => this.onPointerUpCanvas(ev)), { passive: false });
+        this.canvas.addEventListener("pointercancel", ((ev) => this.onPointerUpCanvas(ev)), { passive: false });
+        this.canvas.addEventListener("wheel", ((ev) => this.onWheelCanvas(ev)), { passive: false });
 
-        this.container.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev), { passive: false }));
-        this.container.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev), { passive: false }));
-        this.container.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev), { passive: false }));
-        this.container.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev), { passive: false }));
+        this.container.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
+        this.container.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
+        this.container.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
+        this.container.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
 
         [this.canvas, this.container, this.edgesLayer, this.staticContainer].map(el => {
             el.addEventListener('gesturestart', function (e) {
@@ -127,14 +127,14 @@ class CanvasController {
             });
         });
 
-        this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev), { passive: false }));
-        this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev), { passive: false }));
-        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev), { passive: false }));
-        this.staticContainer.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev), { passive: false }));
+        this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
+        this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
+        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false }));
+        this.staticContainer.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
 
         this.edgesLayer.addEventListener("pointerdown", this.blockPropagation);
         this.edgesLayer.addEventListener("pointerup", this.blockPropagation);
-        this.edgesLayer.addEventListener("pointerup", () => this.onPointerUpEdges(ev));
+        this.edgesLayer.addEventListener("pointerup", ((ev) => this.onPointerUpEdges(ev)), { passive: false });
 
         this.contextMenu.addEventListener("pointerdown", (ev) => {
             console.log("contextMenu")

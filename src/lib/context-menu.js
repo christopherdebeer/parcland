@@ -128,13 +128,15 @@ if (!el.refCanvasId && el.type !== 'canvas-container') {
         const newCanvasId = "canvas-" + Date.now();
         el.type = "canvas-container";
         el.refCanvasId = newCanvasId;
-        el.label = el.label || "Nested Canvas";
+        el.label = el.label || "Nested Canvas"; 
         controller.saveCanvasLocalOnly();
         await controller.setBackpackItem(newCanvasId, JSON.stringify({
             canvasId: newCanvasId,
-            elements: [],
+            elements: [{...el, x: 50, y: 50}],
             edges: [],
-            versionHistory: []
+            versionHistory: [],
+            parentCanvas: controller.canvasState.canvasId,
+            parentElement: el.id,
         }));
         controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
         controller.saveCanvas();

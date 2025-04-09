@@ -1125,39 +1125,34 @@ class CanvasController {
 
             node.appendChild(i);
         } else if (el.type === "canvas-container") {
-            // Create a container to render the child canvas snapshot and a drill-in button.
-            const containerDiv = document.createElement('div');
-            containerDiv.classList.add('content');
-            containerDiv.style.position = 'relative';
-            containerDiv.style.display = 'flex';
-            containerDiv.style.flexDirection = 'column';
-            containerDiv.style.alignItems = 'center';
-            containerDiv.style.justifyContent = 'center';
-            containerDiv.style.width = '100%';
-            containerDiv.style.height = '100%';
-            containerDiv.style.border = '1px dotted #ccc';
-            containerDiv.style.fontStyle = 'italic';
-            if (el.childCanvasState && el.childCanvasState.elements && el.childCanvasState.elements.length > 0) {
-                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Child Canvas Content Rendered</div>";
-            } else {
-                containerDiv.innerHTML = "<div style='font-size:0.8em; color: #555;'>Empty Child Canvas</div>";
-            }
-            const drillInBtn = document.createElement('button');
-            drillInBtn.textContent = "Drill In";
-            drillInBtn.style.position = "absolute";
-            drillInBtn.style.bottom = "5px";
-            drillInBtn.style.right = "5px";
-            drillInBtn.style.zIndex = "10";
-            drillInBtn.onclick = (ev) => {
-                ev.stopPropagation();
-                const childController = new CanvasController(el.childCanvasState, this);
-                this.detach();
-                activeCanvasController = childController;
-                window.history.pushState({}, "", "?canvas=" + el.childCanvasState.canvasId);
-            };
-            containerDiv.appendChild(drillInBtn);
-            node.appendChild(containerDiv);
-        } else if (el.type === "edit-prompt") {
+    const containerDiv = document.createElement('div');
+    containerDiv.classList.add('content');
+    containerDiv.style.position = 'relative';
+    containerDiv.innerHTML = `<div style='font-size:0.8em; color:#555;'>Ref: ${el.refCanvasId || "none"}</div>`;
+
+    const drillInBtn = document.createElement('button');
+    drillInBtn.textContent = "Drill In";
+    drillInBtn.style.position = "absolute";
+    drillInBtn.style.bottom = "5px";
+    drillInBtn.style.right = "5px";
+    drillInBtn.style.zIndex = "10";
+    drillInBtn.onclick = async (ev) => {
+        ev.stopPropagation();
+        if (!el.refCanvasId) return alert("No canvas reference found.");
+        const canvasState = await loadInitialCanvas({
+            canvasId: el.refCanvasId,
+            elements: [],
+            edges: [],
+            versionHistory: []
+        });
+        const childController = new CanvasController(canvasState, this);
+        this.detach();
+        activeCanvasController = childController;
+        window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+    };
+    containerDiv.appendChild(drillInBtn);
+    node.appendChild(containerDiv);
+} else if (el.type === "edit-prompt") {
             // Render a prompt element for editing using a mini CodeMirror editor.
             const container = document.createElement('div');
             container.classList.add('content');

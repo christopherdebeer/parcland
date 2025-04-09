@@ -83,6 +83,7 @@ function buildContextMenu(el, controller) {
         } else {
             controller.container.appendChild(node);
         }
+        controller.renderElements();
         controller.saveCanvas();
         controller.hideContextMenu();
     });

@@ -600,6 +600,7 @@ class CanvasController {
     }
 
     onPointerDownCanvas(ev) {
+        console.log('onPointerDownCanvas(ev)', ev)
         // Hide menus on pointer down
         this.hideContextMenu();
         // If tap is not on a canvas element, deselect
@@ -637,6 +638,7 @@ class CanvasController {
     }
 
     onPointerMoveCanvas(ev) {
+        console.log('onPointerMoveCanvas(ev)', ev)
         if (!this.activeGesture) return;
         if (this.activeGesture === 'pan' && this.initialTouches.length === 1) {
             const touch = this.initialTouches[0];
@@ -685,12 +687,12 @@ class CanvasController {
     }
 
     onPointerUpCanvas(ev) {
+        console.log('onPointerUpCanvas(ev)', ev)
         if (ev.target.closest('.canvas-element')) return;
         if (this.activeGesture === "create-edge" || this.activeGesture === 'create-node') {
             console.log("[ DEBUG] Edge/node creation in progress exiting canvas pointer up handler")
             return;
         }
-        console.log('onPointerUpCanvas(ev)', ev)
         this.onPointerUpDoubleTap(ev, 'canvas');
         this.activeGesture = null;
         this.initialTouches = [];
@@ -766,6 +768,7 @@ class CanvasController {
     }
 
     onPointerDownElement(ev) {
+        console.log("onPointerDownElement(ev)", ev.target)
         const target = ev.target;
         const targetEl = target.closest(".canvas-element");
         if (!targetEl) return;
@@ -791,6 +794,7 @@ class CanvasController {
     }
 
     onPointerMoveElement(ev) {
+        console.log("onPointerMoveElement(ev)", ev.target)
         if (!this.activeGesture) return;
         if (this.activeGesture === "move-element") {
             ev.stopPropagation();
@@ -853,11 +857,11 @@ class CanvasController {
     }
 
     onPointerUpElement(ev) {
+        console.log("onPointerUpElement(ev)", ev.target)
         if (this.activeGesture === "create-edge" || this.activeGesture === 'create-node') {
             console.log("edge/node creation in progress exiting element pointer up handler")
             return;
         }
-        console.log("onPointerUpElement(ev)", ev.target)
         this.onPointerUpDoubleTap(ev, 'element');
         if ([
             "move-element", "resize-element", "rotate-element",
@@ -870,7 +874,7 @@ class CanvasController {
     }
 
     onPointerUpEdges(ev) {
-        console.log("[DEBUG] Edges layer pointerup", ev.target.dataset.id, ev.target);
+        console.log("onPointerUpEdges(ev)", ev.target)
         const id = ev.target.dataset.id;
         if (id) {
             this.onPointerUpDoubleTap(ev, "edge", (ev) => {

@@ -248,17 +248,7 @@ class CanvasController {
             document.getElementById("editor-content").style.display = "none";
         };
     }
-
-    detach() {
-        this.canvas.style.display = 'none';
-    }
-
-    reattach() {
-        this.canvas.style.display = 'block';
-        this.updateCanvasTransform();
-        this.renderElements();
-    }
-
+    
     switchMode(m) {
         this.mode = m;
         this.canvas.setAttribute("mode", this.mode);
@@ -1143,10 +1133,11 @@ class CanvasController {
             canvasId: el.refCanvasId,
             elements: [],
             edges: [],
-            versionHistory: []
+            versionHistory: [],
+            parentCanvas: this.canvasState.canvasId,
         });
         const childController = new CanvasController(canvasState, this);
-        this.detach();
+        // this.detach();
         activeCanvasController = childController;
         window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
     };

@@ -382,15 +382,12 @@ body {
     cursor: pointer;
 }
 
-.modal-versions {
-    margin-bottom: 0.5em;
-}
-
 .versions-nav {
     display: flex;
     align-items: center;
     gap: 1em;
-    margin-bottom: 0.5em;
+    justify-content: center;
+    padding: 0.5em;
 }
 
 .versions-nav button {
@@ -400,9 +397,11 @@ body {
 
 #modal-error {
     color: red;
-    min-height: 1.5em;
-    margin-bottom: 0.5em;
     font-weight: 500;
+    padding: 0.5em;
+}
+#modal-error:emtpy {
+    padding: 0;
 }
 
 @media only screen and (max-width: 600px) {
@@ -417,6 +416,7 @@ body {
         justify-content: center;
         align-content: center;
         align-items: stretch;
+        height: 100%;
     }
 
     .CodeMirror {

@@ -122,13 +122,6 @@ class CanvasController {
         this.container.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
         this.container.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
 
-        [this.canvas, this.container, this.edgesLayer, this.staticContainer].map(el => {
-            el.addEventListener('gesturestart', function (e) {
-                console.log("[DEBUG] preventing gesture start on", el);
-                e.preventDefault();
-            });
-        });
-
         this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
         this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
         this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
@@ -638,7 +631,7 @@ class CanvasController {
     }
 
     onPointerMoveCanvas(ev) {
-        console.log('onPointerMoveCanvas(ev)', ev)
+        // console.log('onPointerMoveCanvas(ev)', ev)
         if (!this.activeGesture) return;
         if (this.activeGesture === 'pan' && this.initialTouches.length === 1) {
             const touch = this.initialTouches[0];
@@ -794,7 +787,7 @@ class CanvasController {
     }
 
     onPointerMoveElement(ev) {
-        console.log("onPointerMoveElement(ev)", ev.target)
+        // console.log("onPointerMoveElement(ev)", ev.target)
         if (!this.activeGesture) return;
         if (this.activeGesture === "move-element") {
             ev.stopPropagation();

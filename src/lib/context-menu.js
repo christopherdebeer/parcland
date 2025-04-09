@@ -121,7 +121,27 @@ function buildContextMenu(el, controller) {
     controller.contextMenu.appendChild(editIllineBtn);
 
 
-
+if (!el.refCanvasId && el.type !== 'canvas-container') {
+    const convertBtn = document.createElement("button");
+    convertBtn.textContent = "Convert to Nested Canvas";
+    controller.clickCapture(convertBtn, async () => {
+        const newCanvasId = "canvas-" + Date.now();
+        el.type = "canvas-container";
+        el.refCanvasId = newCanvasId;
+        el.label = el.label || "Nested Canvas";
+        controller.saveCanvasLocalOnly();
+        await controller.setBackpackItem(newCanvasId, JSON.stringify({
+            canvasId: newCanvasId,
+            elements: [],
+            edges: [],
+            versionHistory: []
+        }));
+        controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
+        controller.saveCanvas();
+        controller.hideContextMenu();
+    });
+    controller.contextMenu.appendChild(convertBtn);
+}
 
     // Delete button
     const deleteBtn = document.createElement("button");

@@ -1276,20 +1276,27 @@ class CanvasController {
             node.style.position = 'fixed';
             node.style.left = (el.fixedLeft || 0) + '%';
             node.style.top = (el.fixedTop || 0) + '%';
-            node.style.width = (el.width * scale) + "px";
-            node.style.height = (el.height * scale) + "px";
+            // node.style.width = (el.width * scale) + "px";
+            // node.style.height = (el.height * scale) + "px";
             node.style.setProperty('--translateX', this.viewState.translateX);
             node.style.setProperty('--translateY', this.viewState.translateY);
             node.style.setProperty('--zoom', this.viewState.scale);
-            node.style.zIndex = zIndex;
+            
+node.style.setProperty('--width',  (el.width  * scale) + 'px');
+node.style.setProperty('--height', (el.height * scale) + 'px');
+node.style.setProperty('--scale',  scale);   // used by CSS for .content
+node.style.zIndex = zIndex;                  // plain style, not a CSS var
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         } else {
             node.style.position = 'absolute';
             node.style.left = (el.x - (el.width * scale) / 2) + "px";
             node.style.top = (el.y - (el.height * scale) / 2) + "px";
-            node.style.width = (el.width * scale) + "px";
-            node.style.height = (el.height * scale) + "px";
-            node.style.zIndex = zIndex;
+            // node.style.width = (el.width * scale) + "px";
+            // node.style.height = (el.height * scale) + "px";
+            node.style.setProperty('--width',  (el.width  * scale) + 'px');
+node.style.setProperty('--height', (el.height * scale) + 'px');
+node.style.setProperty('--scale',  scale);   // used by CSS for .content
+node.style.zIndex = zIndex;
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         }
         const edges = this.findEdgesByElementId(el.id) || [];

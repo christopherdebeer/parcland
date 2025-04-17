@@ -1,4 +1,4 @@
-import {buildContextMenu} from './lib/context-menu';
+import { buildContextMenu } from './lib/context-menu';
 
 class CanvasController {
     constructor(canvasState, parentController = null) {
@@ -91,8 +91,18 @@ class CanvasController {
     }
 
     blockPropagation(ev) {
-        console.log("[DEBUG] Blocking event propagation on", ev.target)
-        ev.stopPropagation()
+        console.log("[DEBUG] Blocking event propagation on", ev.target);
+        ev.stopPropagation();
+    }
+
+    // --- NEW FIX: keep touches in sync and abort false pinches ---
+    removeActivePointer(pointerId) {
+        // Remove this pointer from the active touches list
+        this.initialTouches = this.initialTouches.filter(t => t.id !== pointerId);
+        // If we're in a pinch gesture but now have fewer than 2 touches, cancel it
+        if (this.initialTouches.length < 2 && this.activeGesture && this.activeGesture.startsWith("pinch")) {
+            this.activeGesture = null;
+        }
     }
 
     setupEventListeners() {
@@ -111,30 +121,30 @@ class CanvasController {
             }
         };
 
-        this.canvas.addEventListener("pointerdown", ((ev) => this.onPointerDownCanvas(ev)), { passive: false });
-        this.canvas.addEventListener("pointermove", ((ev) => this.onPointerMoveCanvas(ev)), { passive: false });
-        this.canvas.addEventListener("pointerup", ((ev) => this.onPointerUpCanvas(ev)), { passive: false });
-        this.canvas.addEventListener("pointercancel", ((ev) => this.onPointerUpCanvas(ev)), { passive: false });
-        this.canvas.addEventListener("wheel", ((ev) => this.onWheelCanvas(ev)), { passive: false });
+        this.canvas.addEventListener("pointerdown", (ev) => this.onPointerDownCanvas(ev), { passive: false });
+        this.canvas.addEventListener("pointermove", (ev) => this.onPointerMoveCanvas(ev), { passive: false });
+        this.canvas.addEventListener("pointerup", (ev) => this.onPointerUpCanvas(ev), { passive: false });
+        this.canvas.addEventListener("pointercancel", (ev) => this.onPointerUpCanvas(ev), { passive: false });
+        this.canvas.addEventListener("wheel", (ev) => this.onWheelCanvas(ev), { passive: false });
 
-        this.container.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
-        this.container.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
-        this.container.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
-        this.container.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
+        this.container.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev), { passive: false });
+        this.container.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev), { passive: false });
+        this.container.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev), { passive: false });
+        this.container.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev), { passive: false });
 
-        this.staticContainer.addEventListener("pointerdown", ((ev) => this.onPointerDownElement(ev)), { passive: false });
-        this.staticContainer.addEventListener("pointermove", ((ev) => this.onPointerMoveElement(ev)), { passive: false });
-        this.staticContainer.addEventListener("pointerup", ((ev) => this.onPointerUpElement(ev)), { passive: false });
-        this.staticContainer.addEventListener("pointercancel", ((ev) => this.onPointerUpElement(ev)), { passive: false });
+        this.staticContainer.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev), { passive: false });
+        this.staticContainer.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev), { passive: false });
+        this.staticContainer.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev), { passive: false });
+        this.staticContainer.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev), { passive: false });
 
-        this.edgesLayer.addEventListener("pointerdown", this.blockPropagation);
-        this.edgesLayer.addEventListener("pointerup", this.blockPropagation);
-        this.edgesLayer.addEventListener("pointerup", ((ev) => this.onPointerUpEdges(ev)), { passive: false });
+        this.edgesLayer.addEventListener("pointerdown", this.blockPropagation.bind(this));
+        this.edgesLayer.addEventListener("pointerup", this.blockPropagation.bind(this));
+        this.edgesLayer.addEventListener("pointerup", (ev) => this.onPointerUpEdges(ev), { passive: false });
 
         this.contextMenu.addEventListener("pointerdown", (ev) => {
-            console.log("contextMenu")
+            console.log("contextMenu");
             ev.stopPropagation();
-        })
+        });
 
         this.modalCancelBtn.onclick = () => {
             this.editModal.style.display = "none";
@@ -248,12 +258,11 @@ class CanvasController {
             document.getElementById("editor-content").style.display = "none";
         };
     }
-    
+
     switchMode(m) {
         this.mode = m;
         this.canvas.setAttribute("mode", this.mode);
-        this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'
-            }"></i> ${this.mode}`;
+        this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'}"></i> ${this.mode}`;
     }
 
     loadLocalViewState() {
@@ -456,7 +465,7 @@ class CanvasController {
             textEl.textContent = labelText;
 
         } else {
-            this.canvasState.edges = this.canvasState.edges.filter(ed => ed.id !== edge.id)
+            this.canvasState.edges = this.canvasState.edges.filter(ed => ed.id !== edge.id);
             line.remove();
         }
     }
@@ -487,7 +496,7 @@ class CanvasController {
     executeScriptElements(el, node) {
         const scriptElements = Array.from(node.querySelectorAll('script'));
         const loadScript = (script) => {
-            console.log("Loading script", script)
+            console.log("Loading script", script);
             return new Promise((resolve, reject) => {
                 script.onload = () => resolve();
                 script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
@@ -514,7 +523,7 @@ class CanvasController {
     }
 
     findElementOrEdgeById(id) {
-        console.log(`[DEBUG] findElementOrEdgeById("${id}")`)
+        console.log(`[DEBUG] findElementOrEdgeById("${id}")`);
         return this.findElementById(id) || this.findEdgeElementById(id);
     }
 
@@ -583,7 +592,7 @@ class CanvasController {
     }
 
     onPointerDownCanvas(ev) {
-        console.log('onPointerDownCanvas(ev)', ev)
+        console.log('onPointerDownCanvas(ev)', ev);
         // Hide menus on pointer down
         this.hideContextMenu();
         // If tap is not on a canvas element, deselect
@@ -670,14 +679,15 @@ class CanvasController {
     }
 
     onPointerUpCanvas(ev) {
-        console.log('onPointerUpCanvas(ev)', ev)
+        console.log('onPointerUpCanvas(ev)', ev);
         if (ev.target.closest('.canvas-element')) return;
         if (this.activeGesture === "create-edge" || this.activeGesture === 'create-node') {
-            console.log("[ DEBUG] Edge/node creation in progress exiting canvas pointer up handler")
+            console.log("[ DEBUG] Edge/node creation in progress exiting canvas pointer up handler");
             return;
         }
         this.onPointerUpDoubleTap(ev, 'canvas');
         this.activeGesture = null;
+        // clear all touches on canvas up
         this.initialTouches = [];
         if (this.mode === 'direct') this.switchMode("navigate");
     }
@@ -689,7 +699,6 @@ class CanvasController {
         const lastTapTime = this[`lastTapTime-${context}`] || 0;
         const timeDiff = now - lastTapTime;
         const dist = Math.hypot(tapX - this.lastTapPosition.x, tapY - this.lastTapPosition.y);
-        //console.log(`[DEBUG] onPointerUpDoubleTap: context=${context}, now=${now}, tapX=${tapX}, tapY=${tapY}, lastTapTime=${lastTapTime}, timeDiff=${timeDiff}, lastTapPosition=${JSON.stringify(this.lastTapPosition)}, dist=${dist}`, ev.target);
         const DOUBLE_TAP_THRESHOLD = 300;
         const TAP_MOVE_TOLERANCE = 10;
         if (timeDiff < DOUBLE_TAP_THRESHOLD && dist < TAP_MOVE_TOLERANCE) {
@@ -697,33 +706,31 @@ class CanvasController {
             ev.preventDefault();
             ev.stopPropagation();
             if (handler && typeof handler === 'function') {
-                handler(ev, context)
+                handler(ev, context);
             } else if (ev.target.closest("text")) {
                 const canvasPt = this.screenToCanvas(tapX, tapY);
                 console.log("[DEBUG] Double tap on edge label. Canvas coordinates:", canvasPt);
                 this.addMenuTapPosX = canvasPt.x;
                 this.addMenuTapPosY = canvasPt.y;
                 // TODO
-            } else
-                if (!ev.target.closest(".canvas-element")) {
-                    const canvasPt = this.screenToCanvas(tapX, tapY);
-                    console.log("[DEBUG] Double tap on canvas background. Canvas coordinates:", canvasPt);
-                    this.addMenuTapPosX = canvasPt.x;
-                    this.addMenuTapPosY = canvasPt.y;
-                    const c = prompt("Quick create markdown content?");
-                    if (c) {
-                        this.createNewElement(canvasPt.x, canvasPt.y, "markdown", c);
-                    }
-                } else {
-                    //console.log("[DEBUG] Double tap on canvas element.");
-                    if (this.mode === 'navigate') {
-                        this.switchMode("direct");
-                    } else {
-                        const rect = this.canvas.getBoundingClientRect();
-                        this.buildContextMenu(this.selectedElementId);
-                        this.showContextMenu(ev.clientX - rect.left, ev.clientY - rect.top);
-                    }
+            } else if (!ev.target.closest(".canvas-element")) {
+                const canvasPt = this.screenToCanvas(tapX, tapY);
+                console.log("[DEBUG] Double tap on canvas background. Canvas coordinates:", canvasPt);
+                this.addMenuTapPosX = canvasPt.x;
+                this.addMenuTapPosY = canvasPt.y;
+                const c = prompt("Quick create markdown content?");
+                if (c) {
+                    this.createNewElement(canvasPt.x, canvasPt.y, "markdown", c);
                 }
+            } else {
+                if (this.mode === 'navigate') {
+                    this.switchMode("direct");
+                } else {
+                    const rect = this.canvas.getBoundingClientRect();
+                    this.buildContextMenu(this.selectedElementId);
+                    this.showContextMenu(ev.clientX - rect.left, ev.clientY - rect.top);
+                }
+            }
         }
         this[`lastTapTime-${context}`] = now;
         this.lastTapPosition = { x: tapX, y: tapY };
@@ -741,7 +748,7 @@ class CanvasController {
         const scale = Math.min(Math.max(newScale, this.MIN_SCALE), this.MAX_SCALE);
         const scaleDelta = scale - prevScale;
         const zoomCenter = this.screenToCanvas(ev.clientX, ev.clientY);
-        console.log("[DEBUG] Wheel event fired on canvas", { ev, scale, prevScale, zoomCenter })
+        console.log("[DEBUG] Wheel event fired on canvas", { ev, scale, prevScale, zoomCenter });
         this.viewState.scale = scale;
 
         this.viewState.translateX -= zoomCenter.x * scaleDelta;
@@ -751,7 +758,10 @@ class CanvasController {
     }
 
     onPointerDownElement(ev) {
-        console.log("onPointerDownElement(ev)", ev.target)
+        // --- NEW: register this pointer for multi-touch tracking ---
+        this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+
+        console.log("onPointerDownElement(ev)", ev.target);
         const target = ev.target;
         const targetEl = target.closest(".canvas-element");
         if (!targetEl) return;
@@ -840,9 +850,9 @@ class CanvasController {
     }
 
     onPointerUpElement(ev) {
-        console.log("onPointerUpElement(ev)", ev.target)
+        console.log("onPointerUpElement(ev)", ev.target);
         if (this.activeGesture === "create-edge" || this.activeGesture === 'create-node') {
-            console.log("edge/node creation in progress exiting element pointer up handler")
+            console.log("edge/node creation in progress exiting element pointer up handler");
             return;
         }
         this.onPointerUpDoubleTap(ev, 'element');
@@ -853,15 +863,17 @@ class CanvasController {
             ev.stopPropagation();
             this.saveCanvas();
         }
+        // --- NEW: clean up this pointer from tracking ---
+        this.removeActivePointer(ev.pointerId);
         this.activeGesture = null;
     }
 
     onPointerUpEdges(ev) {
-        console.log("onPointerUpEdges(ev)", ev.target)
+        console.log("onPointerUpEdges(ev)", ev.target);
         const id = ev.target.dataset.id;
         if (id) {
             this.onPointerUpDoubleTap(ev, "edge", (ev) => {
-                console.log(`[DEBUG] Double click on edge (label?)`, ev.target)
+                console.log(`[DEBUG] Double click on edge (label?)`, ev.target);
                 this.selectedElementId = id;
                 const edge = this.findEdgeElementById(ev.target.dataset.id);
                 const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
@@ -871,8 +883,10 @@ class CanvasController {
                 });
                 this.switchMode('direct');
                 this.createNewEdge(elId, edge.id, "Editing...", { meta: true });
-            })
+            });
         }
+        // --- NEW: remove this pointer from tracking ---
+        this.removeActivePointer(ev.pointerId);
     }
 
     rotateHandlePointerDown(ev) {
@@ -939,7 +953,7 @@ class CanvasController {
         ev.stopPropagation();
         if (this.mode !== 'direct') return;
         if (!this.selectedElementId) return;
-        console.log("starting edge creation...")
+        console.log("starting edge creation...");
         // Start the edge creation gesture.
         this.activeGesture = type;
         this.activeEdgeCreation = { sourceId: this.selectedElementId, tempLine: null };
@@ -963,7 +977,7 @@ class CanvasController {
     }
 
     onEdgePointerMove(ev, type) {
-        console.log("onEdgePointerMove(ev)")
+        console.log("onEdgePointerMove(ev)");
         if (this.activeGesture !== type || !this.activeEdgeCreation) return;
         const pt = this.screenToCanvas(ev.clientX, ev.clientY);
         this.activeEdgeCreation.tempLine.setAttribute("x2", pt.x);
@@ -971,14 +985,14 @@ class CanvasController {
     }
 
     async onEdgePointerUp(ev, type) {
-        console.log("onEdgePointerUp(ev)", this.activeGesture, this.activeEdgeCreation)
+        console.log("onEdgePointerUp(ev)", this.activeGesture, this.activeEdgeCreation);
         if (this.activeGesture !== type || !this.activeEdgeCreation) return;
         let targetEl, targetElement, targetId;
         if (type === 'create-edge') {
             targetEl = document.elementFromPoint(ev.clientX, ev.clientY);
             targetElement = targetEl && targetEl.closest(".canvas-element");
         }
-        console.log("targetEl", targetEl, targetElement)
+        console.log("targetEl", targetEl, targetElement);
         if (targetElement) {
             const targetId = targetElement.dataset.elId;
             if (targetId && targetId !== this.activeEdgeCreation.sourceId) {
@@ -1115,35 +1129,35 @@ class CanvasController {
 
             node.appendChild(i);
         } else if (el.type === "canvas-container") {
-    const containerDiv = document.createElement('div');
-    containerDiv.classList.add('content');
-    containerDiv.style.position = 'relative';
-    containerDiv.innerHTML = `<div style='font-size:0.8em; color:#555;'>Ref: ${el.refCanvasId || "none"}</div>`;
+            const containerDiv = document.createElement('div');
+            containerDiv.classList.add('content');
+            containerDiv.style.position = 'relative';
+            containerDiv.innerHTML = `<div style='font-size:0.8em; color:#555;'>Ref: ${el.refCanvasId || "none"}</div>`;
 
-    const drillInBtn = document.createElement('button');
-    drillInBtn.textContent = "Drill In";
-    drillInBtn.style.position = "absolute";
-    drillInBtn.style.bottom = "5px";
-    drillInBtn.style.right = "5px";
-    drillInBtn.style.zIndex = "10";
-    drillInBtn.onclick = async (ev) => {
-        ev.stopPropagation();
-        if (!el.refCanvasId) return alert("No canvas reference found.");
-        const canvasState = await loadInitialCanvas({
-            canvasId: el.refCanvasId,
-            elements: [],
-            edges: [],
-            versionHistory: [],
-            parentCanvas: this.canvasState.canvasId,
-        });
-        const childController = new CanvasController(canvasState, this);
-        // this.detach();
-        activeCanvasController = childController;
-        window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
-    };
-    containerDiv.appendChild(drillInBtn);
-    node.appendChild(containerDiv);
-} else if (el.type === "edit-prompt") {
+            const drillInBtn = document.createElement('button');
+            drillInBtn.textContent = "Drill In";
+            drillInBtn.style.position = "absolute";
+            drillInBtn.style.bottom = "5px";
+            drillInBtn.style.right = "5px";
+            drillInBtn.style.zIndex = "10";
+            drillInBtn.onclick = async (ev) => {
+                ev.stopPropagation();
+                if (!el.refCanvasId) return alert("No canvas reference found.");
+                const canvasState = await loadInitialCanvas({
+                    canvasId: el.refCanvasId,
+                    elements: [],
+                    edges: [],
+                    versionHistory: [],
+                    parentCanvas: this.canvasState.canvasId,
+                });
+                const childController = new CanvasController(canvasState, this);
+                // this.detach();
+                activeCanvasController = childController;
+                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+            };
+            containerDiv.appendChild(drillInBtn);
+            node.appendChild(containerDiv);
+        } else if (el.type === "edit-prompt") {
             // Render a prompt element for editing using a mini CodeMirror editor.
             const container = document.createElement('div');
             container.classList.add('content');
@@ -1160,7 +1174,7 @@ class CanvasController {
             }
             // Add Save and Cancel buttons beneath the editor.
             const btnContainer = document.createElement('div');
-            btnContainer.classList.add('actions')
+            btnContainer.classList.add('actions');
             node.appendChild(btnContainer);
             const saveBtn = document.createElement('button');
             saveBtn.textContent = "Save";
@@ -1173,19 +1187,19 @@ class CanvasController {
             btnContainer.appendChild(deleteBtn);
 
             deleteBtn.onclick = () => {
-                console.log("edit-prompt delete target")
+                console.log("edit-prompt delete target");
                 const target = this.findElementOrEdgeById(el.target);
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== target?.id && e.id !== el.id);
                 this.canvasState.edges = this.canvasState.edges.filter(e => e.id !== target?.id);
                 this.renderElements();
                 this.saveCanvas();
-            }
+            };
 
             saveBtn.onclick = () => {
                 const val = node.editor.getValue();
                 const target = this.findElementOrEdgeById(el.target);
                 if (target) {
-                    console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el)
+                    console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el);
                     if (target) {
                         target[el.property] = val;
                         this.renderEdges();
@@ -1203,9 +1217,9 @@ class CanvasController {
         }
         const c = node.querySelector('.content');
         if (c.clientHeight < c.scrollHeight) {
-            c.classList.add('scroller')
+            c.classList.add('scroller');
         } else {
-            c.classList.remove('scroller')
+            c.classList.remove('scroller');
         }
     }
 
@@ -1216,13 +1230,13 @@ class CanvasController {
             { className: "reorder-handle bottom-left element-handle", icon: "fa-solid fa-layer-group", handler: (ev) => this.reorderHandlePointerDown(ev) },
             { className: "resize-handle bottom-right element-handle", icon: "fa-solid fa-up-right-and-down-left-from-center", handler: (ev) => this.resizeHandlePointerDown(ev) }
         ];
-        corners.forEach(c => {
+        corners.forEach(corner => {
             const h = document.createElement("div");
-            h.className = c.className;
+            h.className = corner.className;
             const i = document.createElement("i");
-            i.className = c.icon;
+            i.className = corner.icon;
             h.appendChild(i);
-            h.addEventListener("pointerdown", c.handler);
+            h.addEventListener("pointerdown", corner.handler);
             node.appendChild(h);
         });
         // Add rotate handle
@@ -1264,11 +1278,10 @@ class CanvasController {
             node.style.top = (el.fixedTop || 0) + '%';
             node.style.width = (el.width * scale) + "px";
             node.style.height = (el.height * scale) + "px";
-            node.style.setProperty('--scale', zIndex);
-            node.style.setProperty('--scale', scale);
-            node.style.setProperty('--width', (el.width * scale) + "px");
-            node.style.setProperty('--height', (el.height * scale) + "px");
-            node.style.setProperty('--blend-mode', blendMode);
+            node.style.setProperty('--translateX', this.viewState.translateX);
+            node.style.setProperty('--translateY', this.viewState.translateY);
+            node.style.setProperty('--zoom', this.viewState.scale);
+            node.style.zIndex = zIndex;
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         } else {
             node.style.position = 'absolute';
@@ -1276,11 +1289,7 @@ class CanvasController {
             node.style.top = (el.y - (el.height * scale) / 2) + "px";
             node.style.width = (el.width * scale) + "px";
             node.style.height = (el.height * scale) + "px";
-            node.style.setProperty('--scale', zIndex);
-            node.style.setProperty('--scale', scale);
-            node.style.setProperty('--width', (el.width * scale) + "px");
-            node.style.setProperty('--height', (el.height * scale) + "px");
-            node.style.setProperty('--blend-mode', blendMode);
+            node.style.zIndex = zIndex;
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         }
         const edges = this.findEdgesByElementId(el.id) || [];
@@ -1328,7 +1337,7 @@ class CanvasController {
 
     buildContextMenu(elId) {
         const el = this.findElementById(elId) || this.findEdgeElementById(elId);
-        buildContextMenu(el, this)
+        buildContextMenu(el, this);
     }
 
     hideContextMenu() {
@@ -1445,8 +1454,8 @@ class CanvasController {
 
     async generateContent(content, el) {
         const { type, id } = el;
-        const edges = this.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: this.findElementById(e.source) }))
-        console.log("Relevent edges", edges)
+        const edges = this.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: this.findElementById(e.source) }));
+        console.log("Relevant edges", edges);
         const token = this.getAuthToken();
         if (!token || token === 'TBC') return await this.generateContentOld(content, type);
         try {
@@ -1626,7 +1635,7 @@ let activeCanvasController = null;
 (async function main() {
     const params = new URLSearchParams(window.location.search);
     const canvasId = params.get("canvas") || "canvas-002";
-    const token = params.get("token")
+    const token = params.get("token");
     let rootCanvasState = {
         canvasId: canvasId,
         elements: [],

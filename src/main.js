@@ -758,8 +758,7 @@ class CanvasController {
     }
 
     onPointerDownElement(ev) {
-        // --- NEW: register this pointer for multi-touch tracking ---
-        this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+        if (this.mode === 'direct') this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
 
         console.log("onPointerDownElement(ev)", ev.target);
         const target = ev.target;

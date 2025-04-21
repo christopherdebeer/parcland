@@ -1637,6 +1637,7 @@ ${content}
 }
 
 let activeCanvasController = null;
+window.CC = activeCanvasController;
 
 (async function main() {
     const params = new URLSearchParams(window.location.search);

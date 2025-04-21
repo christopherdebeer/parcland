@@ -10,6 +10,7 @@ class CanvasController {
         this.parentController = parentController;
         this.selectedElementId = null;
         this.activeGesture = null;
+        this.suppressTap = false;
         this.initialTouches = [];
         this.activeEditTab = "content"; // "content" or "src"
         // For edge modal editing:
@@ -615,6 +616,7 @@ class CanvasController {
             this.pinchCenterCanvas = this.screenToCanvas(this.pinchCenterScreen.x, this.pinchCenterScreen.y);
             if (this.mode === 'direct' && this.selectedElementId) {
                 this.activeGesture = "pinch-element";
+                this.supressTap = true;
                 const el = this.findElementById(this.selectedElementId);
                 if (el) {
                     this.elementPinchStartSize.width = el.width;
@@ -624,6 +626,7 @@ class CanvasController {
                     this.pinchCenterStartCanvas = { x: this.pinchCenterCanvas.x, y: this.pinchCenterCanvas.y };
                 }
             } else {
+                this.supressTap = true;
                 this.activeGesture = "pinch-canvas";
                 this.initialCanvasScale = this.viewState.scale;
             }
@@ -692,6 +695,7 @@ class CanvasController {
         }
         this.onPointerUpDoubleTap(ev, 'canvas');
         this.activeGesture = null;
+        this.supressTap = false;
         this.initialPinchAngle = 0;
         // clear all touches on canvas up
         this.initialTouches = [];
@@ -699,6 +703,7 @@ class CanvasController {
     }
 
     onPointerUpDoubleTap(ev, context, handler) {
+        if (this.supressTap) return;
         const now = Date.now();
         const tapX = ev.clientX;
         const tapY = ev.clientY;
@@ -871,6 +876,7 @@ class CanvasController {
         // --- NEW: clean up this pointer from tracking ---
         this.removeActivePointer(ev.pointerId);
         this.activeGesture = null;
+        this.supressTap = false;
     }
 
     onPointerUpEdges(ev) {

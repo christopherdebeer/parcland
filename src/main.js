@@ -53,6 +53,7 @@ class CanvasController {
         this.elementStartRotation = 0;
         this.centerForRotation = { x: 0, y: 0 };
         this.initialPinchDistance = 0;
+        this.initialPinchAngle     = 0;
         this.elementPinchStartSize = { width: 0, height: 0 };
         this.elementPinchStartCenter = { x: 0, y: 0 };
         this.pinchCenterStartCanvas = { x: 0, y: 0 };
@@ -609,6 +610,7 @@ class CanvasController {
             const t1 = this.initialTouches[0];
             const t2 = this.initialTouches[1];
             this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+            this.initialPinchAngle = Math.atan2(t2.y - t1.y, t2.x - t1.x);
             this.pinchCenterScreen = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
             this.pinchCenterCanvas = this.screenToCanvas(this.pinchCenterScreen.x, this.pinchCenterScreen.y);
             if (this.mode === 'direct' && this.selectedElementId) {
@@ -617,6 +619,7 @@ class CanvasController {
                 if (el) {
                     this.elementPinchStartSize.width = el.width;
                     this.elementPinchStartSize.height = el.height;
+                    this.elementStartRotation    = el.rotation || 0;
                     this.elementPinchStartCenter = { x: el.x, y: el.y };
                     this.pinchCenterStartCanvas = { x: this.pinchCenterCanvas.x, y: this.pinchCenterCanvas.y };
                 }
@@ -670,6 +673,10 @@ class CanvasController {
                     el.y = this.pinchCenterStartCanvas.y + scaledDy;
                     el.width = this.elementPinchStartSize.width * scaleFactor;
                     el.height = this.elementPinchStartSize.height * scaleFactor;
+                    const [t1, t2] = this.initialTouches;
+                    const currentAngle  = Math.atan2(t2.y - t1.y, t2.x - t1.x);
+                    const deltaAngleRad = currentAngle - this.initialPinchAngle;
+                    el.rotation = this.elementStartRotation + (deltaAngleRad * 180 / Math.PI);
                     this.renderElements();
                 }
             }
@@ -685,6 +692,7 @@ class CanvasController {
         }
         this.onPointerUpDoubleTap(ev, 'canvas');
         this.activeGesture = null;
+        this.initialPinchAngle = 0;
         // clear all touches on canvas up
         this.initialTouches = [];
         if (this.mode === 'direct') this.switchMode("navigate");

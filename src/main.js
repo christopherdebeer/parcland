@@ -10,7 +10,7 @@ class CanvasController {
         this.parentController = parentController;
         this.selectedElementId = null;
         this.activeGesture = null;
-        this.suppressTap = false;
+        this.supressTap = false;
         this.initialTouches = [];
         this.activeEditTab = "content"; // "content" or "src"
         // For edge modal editing:

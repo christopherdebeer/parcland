@@ -2,7 +2,7 @@ import { buildContextMenu } from './lib/context-menu';
 
 class CanvasController {
     constructor(canvasState, parentController = null) {
-        activeCanvasController = this;
+        updateCanvasController(this)
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
@@ -114,9 +114,7 @@ class CanvasController {
 
         this.drillUpBtn.onclick = () => {
             if (this.parentController) {
-                this.detach();
-                activeCanvasController = this.parentController;
-                activeCanvasController.reattach();
+                updateCanvasController(this.parentController)
                 window.history.pushState({}, "", "?canvas=" + activeCanvasController.canvasState.canvasId);
             }
         };
@@ -1150,8 +1148,7 @@ class CanvasController {
                     parentCanvas: this.canvasState.canvasId,
                 });
                 const childController = new CanvasController(canvasState, this);
-                // this.detach();
-                activeCanvasController = childController;
+                updateCanvasController(childController);
                 window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
             };
             containerDiv.appendChild(drillInBtn);
@@ -1637,7 +1634,11 @@ ${content}
 }
 
 let activeCanvasController = null;
-window.CC = activeCanvasController;
+
+function updateCanvasController(controller) {
+    activeCanvasController = window.CC = controller
+}
+
 
 (async function main() {
     const params = new URLSearchParams(window.location.search);
@@ -1650,7 +1651,7 @@ window.CC = activeCanvasController;
         versionHistory: []
     };
     rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
-    activeCanvasController = new CanvasController(rootCanvasState, null);
+    updateCanvasController( new CanvasController(rootCanvasState, null) );
 })();
 
 async function loadInitialCanvas(defaultState, paramToken) {

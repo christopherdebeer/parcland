@@ -1,4 +1,6 @@
 import { buildContextMenu } from './lib/context-menu';
+import { generateContent, regenerateImage } from './lib/generation';
+import { getAuthToken, loadInitialCanvas, saveCanvas } from './lib/storage';
 
 class CanvasController {
     constructor(canvasState, parentController = null) {
@@ -54,7 +56,7 @@ class CanvasController {
         this.elementStartRotation = 0;
         this.centerForRotation = { x: 0, y: 0 };
         this.initialPinchDistance = 0;
-        this.initialPinchAngle     = 0;
+        this.initialPinchAngle = 0;
         this.elementPinchStartSize = { width: 0, height: 0 };
         this.elementPinchStartCenter = { x: 0, y: 0 };
         this.pinchCenterStartCanvas = { x: 0, y: 0 };
@@ -69,9 +71,6 @@ class CanvasController {
 
         this.codeMirrorContent = null;
         this.codeMirrorSrc = null;
-
-        this.saveTimeout = null;
-        this.debounceSaveDelay = 500;
 
         this.tokenKey = "PARC.LAND/BKPK_TOKEN";
 
@@ -168,7 +167,7 @@ class CanvasController {
                     el.src = newSrc;
                 }
                 this.updateElementNode(this.elementNodesMap[el.id], el, true);
-                this.saveCanvas();
+                this.saveCanvas(this.canvasState);
             }
             this.editModal.style.display = "none";
         };
@@ -187,7 +186,7 @@ class CanvasController {
                 } else {
                     currentContent = this.codeMirrorSrc.getValue();
                 }
-                const generatedContent = await this.generateContent(currentContent, el);
+                const generatedContent = await generateContent(currentContent, el);
                 if (generatedContent) {
                     if (this.activeEditTab === "content") {
                         this.codeMirrorContent.setValue(generatedContent);
@@ -570,7 +569,7 @@ class CanvasController {
         this.canvasState.elements.push(elObj);
         this.selectElement(newId);
         this.renderElements();
-        this.saveCanvas();
+        saveCanvas(this.canvasState);
         return newId;
     }
 
@@ -621,7 +620,7 @@ class CanvasController {
                 if (el) {
                     this.elementPinchStartSize.width = el.width;
                     this.elementPinchStartSize.height = el.height;
-                    this.elementStartRotation    = el.rotation || 0;
+                    this.elementStartRotation = el.rotation || 0;
                     this.elementPinchStartCenter = { x: el.x, y: el.y };
                     this.pinchCenterStartCanvas = { x: this.pinchCenterCanvas.x, y: this.pinchCenterCanvas.y };
                 }
@@ -677,7 +676,7 @@ class CanvasController {
                     el.width = this.elementPinchStartSize.width * scaleFactor;
                     el.height = this.elementPinchStartSize.height * scaleFactor;
                     const [t1, t2] = this.initialTouches;
-                    const currentAngle  = Math.atan2(t2.y - t1.y, t2.x - t1.x);
+                    const currentAngle = Math.atan2(t2.y - t1.y, t2.x - t1.x);
                     const deltaAngleRad = currentAngle - this.initialPinchAngle;
                     el.rotation = this.elementStartRotation + (deltaAngleRad * 180 / Math.PI);
                     this.renderElements();
@@ -871,7 +870,7 @@ class CanvasController {
             "reorder-element", "scale-element"
         ].includes(this.activeGesture)) {
             ev.stopPropagation();
-            this.saveCanvas();
+            saveCanvas(this.canvasState);
         }
         // --- NEW: clean up this pointer from tracking ---
         this.removeActivePointer(ev.pointerId);
@@ -1026,7 +1025,7 @@ class CanvasController {
                 const el = this.findElementById(elId);
                 const edge = this.createNewEdge(this.activeEdgeCreation.sourceId, elId, textPrompt);
                 this.activeEdgeCreation = null;
-                const resp = await this.generateContent(textPrompt, el);
+                const resp = await generateContent(textPrompt, el);
                 el.content = resp;
                 console.log({ el, edge, resp, textPrompt });
                 this.updateElementNode(this.elementNodesMap[el.id], el, true);
@@ -1039,7 +1038,7 @@ class CanvasController {
         document.removeEventListener("pointermove", this.edgePointerMoveHandler);
         document.removeEventListener("pointerup", this.edgePointerUpHandler);
         this.renderElements();
-        this.saveCanvas();
+        saveCanvas(this.canvasState);
     }
 
     createEditElement(ev, el, prop) {
@@ -1134,7 +1133,10 @@ class CanvasController {
             };
 
             if (!el.src && !i.src) {
-                this.regenerateImage(el);
+                regenerateImage(el).then( () => {
+                    this.saveCanvasLocalOnly();
+                    this.renderElements();
+                });
             }
             i.src = el.src || `https://placehold.co/${Math.round(el.width)}x${Math.round(el.height)}?text=${encodeURIComponent(el.content)}&font=lora`;
 
@@ -1202,7 +1204,7 @@ class CanvasController {
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== target?.id && e.id !== el.id);
                 this.canvasState.edges = this.canvasState.edges.filter(e => e.id !== target?.id);
                 this.renderElements();
-                this.saveCanvas();
+                saveCanvas(this.canvasState);
             };
 
             saveBtn.onclick = () => {
@@ -1213,7 +1215,7 @@ class CanvasController {
                     if (target) {
                         target[el.property] = val;
                         this.renderEdges();
-                        this.saveCanvas();
+                        saveCanvas(this.canvasState);
                     }
                 }
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
@@ -1222,7 +1224,7 @@ class CanvasController {
             cancelBtn.onclick = () => {
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
                 this.renderElements();
-                this.saveCanvas();
+                saveCanvas(this.canvasState);
             };
         }
         const c = node.querySelector('.content');
@@ -1367,28 +1369,6 @@ class CanvasController {
         this.contextMenu.style.display = "flex";
     }
 
-    async regenerateImage(el) {
-        try {
-            const response = await fetch("https://c15r-replicate_base.web.val.run/generate", {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${this.getAuthToken()}`
-                },
-                body: JSON.stringify({
-                    prompt: el.content,
-                    width: el.width,
-                    height: el.height,
-                })
-            });
-            const newImg = await response.json();
-            el.src = newImg.imageUrl;
-            this.saveCanvasLocalOnly();
-            this.renderElements();
-        } catch (err) {
-            console.error("Failed to regenerate image", err);
-        }
-    }
-
     openEditModal(el) {
         this.editModal.style.display = "block";
         this.currentElForVersions = el;
@@ -1468,183 +1448,6 @@ class CanvasController {
             default: return 'javascript';
         }
     }
-
-    async generateContent(content, el) {
-        const { type, id } = el;
-        const edges = this.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: this.findElementById(e.source) }));
-        console.log("Relevant edges", edges);
-        const token = this.getAuthToken();
-        if (!token || token === 'TBC') return await this.generateContentOld(content, type);
-        try {
-            const response = await fetch('https://c15r--2ac72f16e02411efa75ee6cdfca9ef9f.web.val.run', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    model: "claude-3-5-sonnet-20241022",
-                    max_tokens: 4096,
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                {
-                                    type: "text",
-                                    text: `You will be given an element which is rendered into visual canvas. Either follow the user request or improve the provided content. The element content type should be <type>${type}</type>.
-
-Please provide your response in two parts:
-1. Your thought process about how to handle this request
-2. The actual result/content
-
-Here is the user request or content to process:
-
-<related-context>
-${edges.map(e => `<relation><label>${e.label || "undefined"}</label><content>${e.el.content}</content>`).join("\n")}
-<related-context>
-
-<current-content>
-${content}
-</current-content>
-
-Respond only with valid json (do not wrap in code block) following the ApiResponse schema:
-
-<schema>
-interface ApiResponse {
-  thoughts: string;
-  result: string;
-}
-<schema>
-`
-                                }
-                            ]
-                        }
-                    ]
-                }),
-            });
-            console.log("response.ok", response.ok);
-            const data = await response.text();
-            console.log("AI response:", data);
-            try {
-                const resp = JSON.parse(data);
-                return resp.result;
-            } catch (e) {
-                console.error("Failed to parse json response", e);
-                return null;
-            }
-        } catch (error) {
-            console.error('Error fetching AI response:', error);
-            return null;
-        }
-    }
-
-    async generateContentOld(content, type) {
-        try {
-            const response = await fetch('/api/ai_completion', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    instructions: `You will be given an element which is rendered into a visual canvas. 
-Either follow the user request or improve the provided content. 
-The element content type should be <content-type>${type}</content-type>.
-
-Response should be valid JSON conforming to response schema:
-
-<schema>
-interface Response {
-  thinking: string;
-  result: string;
-}
-</schema>
-
-<user_request_or_content>
-${content}
-</user_request_or_content>`
-                }),
-            });
-            const data = await response.json();
-            return data.result;
-        } catch (error) {
-            console.error('Error fetching AI response (old fallback):', error);
-            return null;
-        }
-    }
-
-    serializeCanvas() {
-        return JSON.stringify(this.canvasState);
-    }
-
-    async saveCanvas() {
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(() => {
-            this._saveCanvas();
-        }, this.debounceSaveDelay);
-    }
-
-    async _saveCanvas() {
-        this.saveCanvasLocalOnly();
-        const token = this.getAuthToken();
-        if (!token) {
-            console.warn("No auth token found, skipping API save");
-            return;
-        }
-        const canvasId = this.canvasState.canvasId;
-        const namespace = "websim";
-        try {
-            const response = await fetch(`https://c15r-parcland_backpack.web.val.run/${namespace}/${canvasId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: this.serializeCanvas()
-            });
-            const result = await response.json();
-            console.log(`Canvas ${canvasId} saved to API`, result);
-        } catch (error) {
-            console.error(`Error saving canvas ${canvasId} to API:`, error);
-        }
-    }
-
-    async setBackpackItem(key, val) {
-        const token = this.getAuthToken();
-        if (!token) {
-            console.warn("No auth token found, skipping API save");
-            return;
-        }
-        try {
-            const response = await fetch(`https://c15r-parcland_backpack.web.val.run/websim/${key}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: val,
-            });
-            const result = await response.json();
-            console.log(`Backpack item ${key} saved to API`, result);
-        } catch (error) {
-            console.error(`Error saving backpack item ${key} to API:`, error);
-        }
-    }
-
-    saveCanvasLocalOnly() {
-        localStorage.setItem("myCanvasData_" + this.canvasState.canvasId, this.serializeCanvas());
-    }
-
-    getAuthToken() {
-        const key = this.tokenKey;
-        let token = localStorage.getItem(key);
-        if (!token) {
-            localStorage.setItem(key, "TBC");
-            token = "TBC";
-        }
-        return token;
-    }
 }
 
 let activeCanvasController = null;
@@ -1665,41 +1468,7 @@ function updateCanvasController(controller) {
         versionHistory: []
     };
     rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
-    updateCanvasController( new CanvasController(rootCanvasState, null) );
+    updateCanvasController(new CanvasController(rootCanvasState, null));
 })();
 
-async function loadInitialCanvas(defaultState, paramToken) {
-    const tokenKey = "PARC.LAND/BKPK_TOKEN";
-    let token = paramToken || localStorage.getItem(tokenKey);
-    if (!token) {
-        token = "TBC";
-    }
-    localStorage.setItem(tokenKey, token);
-    const savedLocal = localStorage.getItem("myCanvasData_" + defaultState.canvasId);
-    try {
-        const namespace = "websim";
-        const response = await fetch(`https://c15r-parcland_backpack.web.val.run/${namespace}/${defaultState.canvasId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            return data;
-        } else {
-            console.warn("Failed to load from API, fallback local");
-            if (savedLocal) {
-                return JSON.parse(savedLocal);
-            } else {
-                return defaultState;
-            }
-        }
-    } catch (error) {
-        console.error("Error loading from API", error);
-        if (savedLocal) {
-            return JSON.parse(savedLocal);
-        } else {
-            return defaultState;
-        }
-    }
-}
+

@@ -91,6 +91,65 @@ class CanvasController {
         this.renderElements();
     }
 
+    /**
+   * Fully detach this controller:
+   * - Remove all element & edge nodes from the DOM
+   * - Clear the main containers
+   * - Unregister global handlers (edge creation, etc.)
+   * - Clear modal button callbacks
+   * - Hide context menu and reset active controller
+   */
+  detach() {
+    // 1) Remove all element nodes
+    Object.values(this.elementNodesMap).forEach(node => node.remove());
+    this.elementNodesMap = {};
+
+    // 2) Remove all edge lines
+    Object.values(this.edgeNodesMap).forEach(line => line.remove());
+    this.edgeNodesMap = {};
+
+    // 3) Remove all edge labels
+    if (this.edgeLabelNodesMap) {
+      Object.values(this.edgeLabelNodesMap).forEach(label => label.remove());
+      this.edgeLabelNodesMap = {};
+    }
+
+    // 4) Clear the containers entirely
+    this.container.innerHTML = '';
+    this.staticContainer.innerHTML = '';
+    this.edgesLayer.innerHTML = '';
+
+    // 5) Unbind any global edge‐creation handlers
+    if (this.edgePointerMoveHandler) {
+      document.removeEventListener('pointermove', this.edgePointerMoveHandler);
+      this.edgePointerMoveHandler = null;
+    }
+    if (this.edgePointerUpHandler) {
+      document.removeEventListener('pointerup', this.edgePointerUpHandler);
+      this.edgePointerUpHandler = null;
+    }
+
+    // 6) Clear out the modal callbacks so they don’t linger
+    this.modalCancelBtn.onclick    = null;
+    this.modalSaveBtn.onclick      = null;
+    this.modalGenerateBtn.onclick  = null;
+    document.getElementById('modal-clear').onclick = null;
+    document.getElementById('modal-copy').onclick  = null;
+    this.modalVersionsPrevBtn.onclick = null;
+    this.modalVersionsNextBtn.onclick = null;
+    document.getElementById('tab-content').onclick = null;
+    document.getElementById('tab-src').onclick     = null;
+
+    // 7) Hide the context menu if it’s open
+    this.hideContextMenu();
+
+    // 8) Reset the global active controller reference
+    if (window.CC === this) {
+      window.CC = null;
+      activeCanvasController = null;
+    }
+  }
+
     blockPropagation(ev) {
         console.log("[DEBUG] Blocking event propagation on", ev.target);
         ev.stopPropagation();
@@ -1163,9 +1222,7 @@ class CanvasController {
                     versionHistory: [],
                     parentCanvas: this.canvasState.canvasId,
                 });
-                
-                Object.keys(this.elementNodesMap).forEach(elId => this.elementNodesMap[elId].remove() );
-                Object.keys(this.edgeNodesMap).forEach(edgeId => this.edgeNodesMap[edgeId].remove() );
+                this.detach()
                 
                 const childController = new CanvasController(canvasState, this);
                 updateCanvasController(childController);

@@ -83,6 +83,27 @@ class CanvasController {
 
         if (this.parentController) {
             this.drillUpBtn.style.display = 'block';
+            // inside CanvasController constructor, after setupEventListeners:
+this.drillUpBtn.onclick = () => {
+  if (!this.parentController) return;
+
+  // 1) clean up *this* controller completely:
+  this.detach();
+
+  // 2) swap back to parent:
+  updateCanvasController(this.parentController);
+
+  // 3) re‑render the parent’s elements & transform:
+  this.parentController.updateCanvasTransform();
+  this.parentController.renderElements();
+
+  // 4) update history
+  window.history.pushState(
+    {},
+    "",
+    "?canvas=" + this.parentController.canvasState.canvasId
+  );
+};
         } else {
             this.drillUpBtn.style.display = 'none';
         }

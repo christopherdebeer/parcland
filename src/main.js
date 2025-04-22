@@ -1163,6 +1163,10 @@ class CanvasController {
                     versionHistory: [],
                     parentCanvas: this.canvasState.canvasId,
                 });
+                
+                Object.keys(this.elementNodesMap).forEach(elId => this.elementNodesMap[elId].remove() );
+                Object.keys(this.edgeNodesMap).forEach(edgeId => this.edgeNodesMap[edgeId].remove() );
+                
                 const childController = new CanvasController(canvasState, this);
                 updateCanvasController(childController);
                 window.history.pushState({}, "", "?canvas=" + el.refCanvasId);

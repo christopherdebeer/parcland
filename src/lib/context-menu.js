@@ -95,7 +95,7 @@ function buildContextMenu(el, controller) {
         openCanvasBtn.textContent = "Open Child Canvas";
         controller.clickCapture(openCanvasBtn, () => {
             controller.hideContextMenu();
-            const childController = new CanvasController(el.childCanvasState, this);
+            const childController = new CanvasController(el.childCanvasState, controller);
             controller.detach();
             activeCanvasController = childController;
             window.history.pushState({}, "", "?canvas=" + el.childCanvasState.canvasId);

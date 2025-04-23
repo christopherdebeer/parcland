@@ -84,7 +84,7 @@ class CanvasController {
         if (this.canvasState.parentCanvas) {
             this.drillUpBtn.style.display = 'block';
             // inside CanvasController constructor, after setupEventListeners:
-this.drillUpBtn.onclick = () => {
+this.drillUpBtn.onclick = async () => {
   if (!this.canvasState.parentCanvas) return;
 
 

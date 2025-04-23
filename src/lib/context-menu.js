@@ -1,4 +1,4 @@
-import { setBackpackItem} from './storage.js';
+import { setBackpackItem, saveCanvasLocalOnly, saveCanvas} from './storage.js';
 
 function buildContextMenu(el, controller) {
     if (!el) return;
@@ -100,7 +100,7 @@ if (!el.refCanvasId) {
     const newCanvasId = "canvas-" + Date.now();
 
     // save the new nested canvas state
-    await controller.setBackpackItem(newCanvasId, JSON.stringify({
+    await setBackpackItem(newCanvasId, JSON.stringify({
       canvasId: newCanvasId,
       elements: [ { ...el, x: 50, y: 50 } ],
       edges: [],
@@ -111,9 +111,9 @@ if (!el.refCanvasId) {
 
     // don’t touch el.type—just tag it
     el.refCanvasId = newCanvasId;
-    controller.saveCanvasLocalOnly();
+    saveCanvasLocalOnly();
     controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
-    controller.saveCanvas();
+    saveCanvas();
     controller.hideContextMenu();
   });
   controller.contextMenu.appendChild(convertBtn);

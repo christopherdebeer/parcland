@@ -148,7 +148,7 @@ class CanvasController {
             this.switchMode(newMode);
         };
 
-        this.drillUpBtn.onclick = this.handleDrillUp;
+        this.drillUpBtn.onclick = this.handleDrillUp.bind(this);
 
         this.canvas.addEventListener("pointerdown", (ev) => this.onPointerDownCanvas(ev), { passive: false });
         this.canvas.addEventListener("pointermove", (ev) => this.onPointerMoveCanvas(ev), { passive: false });
@@ -1182,12 +1182,9 @@ class CanvasController {
             drillInBtn.style.bottom = "5px";
             drillInBtn.style.right = "5px";
             drillInBtn.style.zIndex = "10";
-            drillInBtn.onclick = async (ev) => {
-                console.log("-----")
+            drillInBtn.onclick = (ev) => {
                 ev.stopPropagation();
-                debugger
                 this.handleDrillIn(el);
-                return false;
             };
             containerDiv.appendChild(drillInBtn);
             node.appendChild(containerDiv);

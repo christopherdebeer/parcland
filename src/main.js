@@ -87,6 +87,8 @@ class CanvasController {
             this.drillUpBtn.style.display = 'none';
         }
 
+        this.canvas.controller = this;
+
         this.updateCanvasTransform();
         this.renderElements();
     }
@@ -318,6 +320,8 @@ class CanvasController {
     }
 
     updateCanvasTransform() {
+        if (this.canvas.controller !== this) return;
+
         this.container.style.transform = `translate(${this.viewState.translateX}px, ${this.viewState.translateY}px) scale(${this.viewState.scale})`;
         this.container.style.setProperty('--translateX', this.viewState.translateX);
         this.container.style.setProperty('--translateY', this.viewState.translateY);
@@ -341,6 +345,7 @@ class CanvasController {
     }
 
     renderElements() {
+        if (this.canvas.controller !== this) return;
         console.log(`renderElements()`);
         const existingIds = new Set(Object.keys(this.elementNodesMap));
         const usedIds = new Set();
@@ -1182,10 +1187,9 @@ class CanvasController {
             drillInBtn.style.bottom = "5px";
             drillInBtn.style.right = "5px";
             drillInBtn.style.zIndex = "10";
-            drillInBtn.onclick = (ev) => {
-                ev.stopPropagation();
+            this.clickCapture(drillInBtn, (ev) => {
                 this.handleDrillIn(el);
-            };
+            });
             containerDiv.appendChild(drillInBtn);
             node.appendChild(containerDiv);
         } else if (el.type === "edit-prompt") {

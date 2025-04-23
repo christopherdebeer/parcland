@@ -89,19 +89,54 @@ function buildContextMenu(el, controller) {
     });
     controller.contextMenu.appendChild(staticBtn);
 
-    // Open child canvas if applicable
-    if (el.type === 'canvas-container' && el.childCanvasState) {
-        const openCanvasBtn = document.createElement("button");
-        openCanvasBtn.textContent = "Open Child Canvas";
-        controller.clickCapture(openCanvasBtn, () => {
-            controller.hideContextMenu();
-            const childController = new CanvasController(el.childCanvasState, controller);
-            controller.detach();
-            activeCanvasController = childController;
-            window.history.pushState({}, "", "?canvas=" + el.childCanvasState.canvasId);
-        });
-        controller.contextMenu.appendChild(openCanvasBtn);
-    }
+    // ⋮
+// “Convert to Nested Canvas” is now available on _any_ element
+if (!el.refCanvasId) {
+  const convertBtn = document.createElement("button");
+  convertBtn.textContent = "Convert to Nested Canvas";
+  controller.clickCapture(convertBtn, async () => {
+    const newCanvasId = "canvas-" + Date.now();
+
+    // save the new nested canvas state
+    await controller.setBackpackItem(newCanvasId, JSON.stringify({
+      canvasId: newCanvasId,
+      elements: [ { ...el, x: 50, y: 50 } ],
+      edges: [],
+      versionHistory: [],
+      parentCanvas: controller.canvasState.canvasId,
+      parentElement: el.id,
+    }));
+
+    // don’t touch el.type—just tag it
+    el.refCanvasId = newCanvasId;
+    controller.saveCanvasLocalOnly();
+    controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
+    controller.saveCanvas();
+    controller.hideContextMenu();
+  });
+  controller.contextMenu.appendChild(convertBtn);
+}
+
+// ⋮
+// replace the old “if (el.type === 'canvas-container')” block with:
+if (el.refCanvasId) {
+  const openCanvasBtn = document.createElement("button");
+  openCanvasBtn.textContent = "Open Nested Canvas";
+  controller.clickCapture(openCanvasBtn, () => {
+    controller.hideContextMenu();
+    // load the nested canvas
+    loadInitialCanvas({
+      canvasId: el.refCanvasId,
+      elements: [], edges: [], versionHistory: [],
+      parentCanvas: controller.canvasState.canvasId
+    }).then(childState => {
+      const childController = new CanvasController(childState, controller);
+      updateCanvasController(childController);
+      window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+    });
+  });
+  controller.contextMenu.appendChild(openCanvasBtn);
+}
 
     // Edit button
     const editBtn = document.createElement("button");
@@ -119,34 +154,6 @@ function buildContextMenu(el, controller) {
         controller.hideContextMenu();
     });
     controller.contextMenu.appendChild(editIllineBtn);
-
-
-    if (!el.refCanvasId && el.type !== 'canvas-container') {
-        const convertBtn = document.createElement("button");
-        convertBtn.textContent = "Convert to Nested Canvas";
-        controller.clickCapture(convertBtn, async () => {
-            const newCanvasId = "canvas-" + Date.now();
-            
-            await controller.setBackpackItem(newCanvasId, JSON.stringify({
-                canvasId: newCanvasId,
-                elements: [{ ...el, x: 50, y: 50 }],
-                edges: [],
-                versionHistory: [],
-                parentCanvas: controller.canvasState.canvasId,
-                parentElement: el.id,
-            }));
-            
-            el.type = "canvas-container";
-            el.refCanvasId = newCanvasId;
-            el.label = el.label || "Nested Canvas";
-            controller.saveCanvasLocalOnly();
-
-            controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
-            controller.saveCanvas();
-            controller.hideContextMenu();
-        });
-        controller.contextMenu.appendChild(convertBtn);
-    }
 
     // Delete button
     const deleteBtn = document.createElement("button");

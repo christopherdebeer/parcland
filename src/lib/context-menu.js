@@ -1,3 +1,5 @@
+import { setBackpackItem} from './storage.js';
+
 function buildContextMenu(el, controller) {
     if (!el) return;
     controller.contextMenu.innerHTML = "";

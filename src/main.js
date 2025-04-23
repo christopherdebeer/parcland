@@ -1200,23 +1200,6 @@ class CanvasController {
             i.src = el.src || `https://placehold.co/${Math.round(el.width)}x${Math.round(el.height)}?text=${encodeURIComponent(el.content)}&font=lora`;
 
             node.appendChild(i);
-        } else if (el.type === "canvas-container") {
-            const containerDiv = document.createElement('div');
-            containerDiv.classList.add('content');
-            containerDiv.style.position = 'relative';
-            containerDiv.innerHTML = `<div style='font-size:0.8em; color:#555;'>Ref: ${el.refCanvasId || "none"}</div>`;
-
-            const drillInBtn = document.createElement('button');
-            drillInBtn.textContent = "Drill In";
-            drillInBtn.style.position = "absolute";
-            drillInBtn.style.bottom = "5px";
-            drillInBtn.style.right = "5px";
-            drillInBtn.style.zIndex = "10";
-            this.clickCapture(drillInBtn, (ev) => {
-                this.handleDrillIn(el);
-            });
-            containerDiv.appendChild(drillInBtn);
-            node.appendChild(containerDiv);
         } else if (el.type === "edit-prompt") {
             // Render a prompt element for editing using a mini CodeMirror editor.
             const container = document.createElement('div');
@@ -1281,6 +1264,24 @@ class CanvasController {
         } else {
             c.classList.remove('scroller');
         }
+// only if someone has previously “converted” it
+if (el.refCanvasId) {
+  const drillInBtn = document.createElement('button');
+  drillInBtn.textContent = "Drill In";
+  drillInBtn.style.marginTop = '0.5em';
+  drillInBtn.onclick = async (ev) => {
+    ev.stopPropagation();
+    const childState = await loadInitialCanvas({
+      canvasId: el.refCanvasId,
+      elements: [], edges: [], versionHistory: [],
+      parentCanvas: this.canvasState.canvasId
+    });
+    const childController = new CanvasController(childState, this);
+    updateCanvasController(childController);
+    window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+  };
+  c.appendChild(drillInBtn);
+}
     }
 
     async handleDrillIn(el) {

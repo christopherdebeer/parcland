@@ -1,4 +1,4 @@
-import { setBackpackItem, saveCanvasLocalOnly, saveCanvas} from './storage.js';
+import { setBackpackItem, saveCanvas} from './storage.js';
 
 function buildContextMenu(el, controller) {
     if (!el) return;
@@ -24,7 +24,7 @@ function buildContextMenu(el, controller) {
         controller.clickCapture(btn, () => {
             el.type = t.type;
             controller.updateElementNode(controller.elementNodesMap[el.id], el, (el.id === controller.selectedElementId));
-            controller.saveCanvas();
+            saveCanvas(controller.canvasState);
         });
         typesContainer.appendChild(btn);
     });
@@ -46,7 +46,7 @@ function buildContextMenu(el, controller) {
     blendSelect.onchange = (ev) => {
         el.blendMode = ev.target.value;
         controller.updateElementNode(controller.elementNodesMap[el.id], el, (el.id === controller.selectedElementId));
-        controller.saveCanvas();
+        saveCanvas(controller.canvasState);
     };
 
     // Regen button for images (in context menu only)
@@ -68,7 +68,7 @@ function buildContextMenu(el, controller) {
         colorInput.addEventListener('change', (ev) => {
             el.color = ev.target.value;
             controller.updateElementNode(controller.elementNodesMap[el.id], el, (el.id === controller.selectedElementId));
-            controller.saveCanvas();
+            saveCanvas(controller.canvasState);
         });
         controller.contextMenu.appendChild(colorInput);
     }
@@ -86,7 +86,7 @@ function buildContextMenu(el, controller) {
             controller.container.appendChild(node);
         }
         controller.renderElements();
-        controller.saveCanvas();
+        saveCanvas(controller.canvasState);
         controller.hideContextMenu();
     });
     controller.contextMenu.appendChild(staticBtn);
@@ -111,9 +111,9 @@ if (!el.refCanvasId) {
 
     // don’t touch el.type—just tag it
     el.refCanvasId = newCanvasId;
-    saveCanvasLocalOnly();
+    
     controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
-    saveCanvas();
+    saveCanvas(controller.canvasState);
     controller.hideContextMenu();
   });
   controller.contextMenu.appendChild(convertBtn);
@@ -168,7 +168,7 @@ if (el.refCanvasId) {
         }
         controller.selectedElementId = null;
         controller.hideContextMenu();
-        controller.saveCanvas();
+        saveCanvas(controller.canvasState);
     });
     controller.contextMenu.appendChild(deleteBtn);
 
@@ -184,7 +184,7 @@ if (el.refCanvasId) {
         controller.selectElement(newEl.id);
         controller.hideContextMenu();
         controller.renderElements();
-        controller.saveCanvas();
+        saveCanvas(controller.canvasState);
     });
     controller.contextMenu.appendChild(duplicateBtn);
 

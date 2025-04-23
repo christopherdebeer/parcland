@@ -9,7 +9,7 @@ class CanvasController {
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
         }
-        
+
         this.selectedElementId = null;
         this.activeGesture = null;
         this.supressTap = false;
@@ -83,23 +83,6 @@ class CanvasController {
 
         if (this.canvasState.parentCanvas) {
             this.drillUpBtn.style.display = 'block';
-            // inside CanvasController constructor, after setupEventListeners:
-this.drillUpBtn.onclick = async () => {
-  if (!this.canvasState.parentCanvas) return;
-
-
-                 const canvasState = await loadInitialCanvas({
-                    canvasId: this.canvasState.parentCanvas,
-                    elements: [],
-                    edges: [],
-                    versionHistory: [],
-                });
-                this.detach()
-                
-                const controller = new CanvasController(canvasState);
-                updateCanvasController(controller);
-                window.history.pushState({}, "", "?canvas=" + this.canvasState.parentCanvas);
-};
         } else {
             this.drillUpBtn.style.display = 'none';
         }
@@ -108,75 +91,51 @@ this.drillUpBtn.onclick = async () => {
         this.renderElements();
     }
 
-    /**
-   * Fully detach this controller:
-   * - Remove all element & edge nodes from the DOM
-   * - Clear the main containers
-   * - Unregister global handlers (edge creation, etc.)
-   * - Clear modal button callbacks
-   * - Hide context menu and reset active controller
-   */
-  detach() {
-    // 1) Remove all element nodes
-    Object.values(this.elementNodesMap).forEach(node => node.remove());
-    this.elementNodesMap = {};
+    detach() {
+        Object.values(this.elementNodesMap).forEach(node => node.remove());
+        this.elementNodesMap = {};
+        Object.values(this.edgeNodesMap).forEach(line => line.remove());
+        this.edgeNodesMap = {};
+        if (this.edgeLabelNodesMap) {
+            Object.values(this.edgeLabelNodesMap).forEach(label => label.remove());
+            this.edgeLabelNodesMap = {};
+        }
+        this.container.innerHTML = '';
+        this.staticContainer.innerHTML = '';
+        this.edgesLayer.innerHTML = '';
+        if (this.edgePointerMoveHandler) {
+            document.removeEventListener('pointermove', this.edgePointerMoveHandler);
+            this.edgePointerMoveHandler = null;
+        }
+        if (this.edgePointerUpHandler) {
+            document.removeEventListener('pointerup', this.edgePointerUpHandler);
+            this.edgePointerUpHandler = null;
+        }
+        this.modalCancelBtn.onclick = null;
+        this.modalSaveBtn.onclick = null;
+        this.modalGenerateBtn.onclick = null;
+        document.getElementById('modal-clear').onclick = null;
+        document.getElementById('modal-copy').onclick = null;
+        this.modalVersionsPrevBtn.onclick = null;
+        this.modalVersionsNextBtn.onclick = null;
+        document.getElementById('tab-content').onclick = null;
+        document.getElementById('tab-src').onclick = null;
 
-    // 2) Remove all edge lines
-    Object.values(this.edgeNodesMap).forEach(line => line.remove());
-    this.edgeNodesMap = {};
+        this.hideContextMenu();
 
-    // 3) Remove all edge labels
-    if (this.edgeLabelNodesMap) {
-      Object.values(this.edgeLabelNodesMap).forEach(label => label.remove());
-      this.edgeLabelNodesMap = {};
+        if (window.CC === this) {
+            window.CC = null;
+            activeCanvasController = null;
+        }
     }
-
-    // 4) Clear the containers entirely
-    this.container.innerHTML = '';
-    this.staticContainer.innerHTML = '';
-    this.edgesLayer.innerHTML = '';
-
-    // 5) Unbind any global edge‐creation handlers
-    if (this.edgePointerMoveHandler) {
-      document.removeEventListener('pointermove', this.edgePointerMoveHandler);
-      this.edgePointerMoveHandler = null;
-    }
-    if (this.edgePointerUpHandler) {
-      document.removeEventListener('pointerup', this.edgePointerUpHandler);
-      this.edgePointerUpHandler = null;
-    }
-
-    // 6) Clear out the modal callbacks so they don’t linger
-    this.modalCancelBtn.onclick    = null;
-    this.modalSaveBtn.onclick      = null;
-    this.modalGenerateBtn.onclick  = null;
-    document.getElementById('modal-clear').onclick = null;
-    document.getElementById('modal-copy').onclick  = null;
-    this.modalVersionsPrevBtn.onclick = null;
-    this.modalVersionsNextBtn.onclick = null;
-    document.getElementById('tab-content').onclick = null;
-    document.getElementById('tab-src').onclick     = null;
-
-    // 7) Hide the context menu if it’s open
-    this.hideContextMenu();
-
-    // 8) Reset the global active controller reference
-    if (window.CC === this) {
-      window.CC = null;
-      activeCanvasController = null;
-    }
-  }
 
     blockPropagation(ev) {
         console.log("[DEBUG] Blocking event propagation on", ev.target);
         ev.stopPropagation();
     }
 
-    // --- NEW FIX: keep touches in sync and abort false pinches ---
     removeActivePointer(pointerId) {
-        // Remove this pointer from the active touches list
         this.initialTouches = this.initialTouches.filter(t => t.id !== pointerId);
-        // If we're in a pinch gesture but now have fewer than 2 touches, cancel it
         if (this.initialTouches.length < 2 && this.activeGesture && this.activeGesture.startsWith("pinch")) {
             this.activeGesture = null;
         }
@@ -189,12 +148,7 @@ this.drillUpBtn.onclick = async () => {
             this.switchMode(newMode);
         };
 
-        this.drillUpBtn.onclick = () => {
-            if (this.parentController) {
-                updateCanvasController(this.parentController)
-                window.history.pushState({}, "", "?canvas=" + activeCanvasController.canvasState.canvasId);
-            }
-        };
+        this.drillUpBtn.onclick = this.handleDrillUp;
 
         this.canvas.addEventListener("pointerdown", (ev) => this.onPointerDownCanvas(ev), { passive: false });
         this.canvas.addEventListener("pointermove", (ev) => this.onPointerMoveCanvas(ev), { passive: false });
@@ -317,7 +271,6 @@ this.drillUpBtn.onclick = async () => {
             }
         };
 
-        // Modal tab switching
         document.getElementById("tab-content").onclick = () => {
             this.activeEditTab = "content";
             document.getElementById("tab-content").classList.add("active");
@@ -1209,7 +1162,7 @@ this.drillUpBtn.onclick = async () => {
             };
 
             if (!el.src && !i.src) {
-                regenerateImage(el).then( () => {
+                regenerateImage(el).then(() => {
                     this.saveCanvasLocalOnly();
                     this.renderElements();
                 });
@@ -1230,20 +1183,11 @@ this.drillUpBtn.onclick = async () => {
             drillInBtn.style.right = "5px";
             drillInBtn.style.zIndex = "10";
             drillInBtn.onclick = async (ev) => {
+                console.log("-----")
                 ev.stopPropagation();
-                if (!el.refCanvasId) return alert("No canvas reference found.");
-                const canvasState = await loadInitialCanvas({
-                    canvasId: el.refCanvasId,
-                    elements: [],
-                    edges: [],
-                    versionHistory: [],
-                    parentCanvas: this.canvasState.canvasId,
-                });
-                this.detach()
-                
-                const childController = new CanvasController(canvasState, this);
-                updateCanvasController(childController);
-                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+                debugger
+                this.handleDrillIn(el);
+                return false;
             };
             containerDiv.appendChild(drillInBtn);
             node.appendChild(containerDiv);
@@ -1312,6 +1256,38 @@ this.drillUpBtn.onclick = async () => {
             c.classList.remove('scroller');
         }
     }
+
+    async handleDrillIn(el) {
+        console.log("handleDrillIn()", el)
+        if (!el.refCanvasId) return alert("No canvas reference found.");
+        const canvasState = await loadInitialCanvas({
+            canvasId: el.refCanvasId,
+            elements: [],
+            edges: [],
+            versionHistory: [],
+            parentCanvas: this.canvasState.canvasId,
+        });
+        this.detach()
+        const childController = new CanvasController(canvasState, this);
+        updateCanvasController(childController);
+        window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+    }
+
+    async handleDrillUp(ev) {
+        ev.stopPropagation();
+        const canvasId = this.canvasState.parentCanvas;
+        if (!canvasId) return;
+        const canvasState = await loadInitialCanvas({
+            canvasId: canvasId,
+            elements: [],
+            edges: [],
+            versionHistory: [],
+        });
+        this.detach();
+        const controller = new CanvasController(canvasState);
+        updateCanvasController(controller);
+        window.history.pushState({}, "", "?canvas=" + canvasId);
+    };
 
     buildHandles(node, el) {
         const corners = [

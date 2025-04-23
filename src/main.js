@@ -89,7 +89,7 @@ this.drillUpBtn.onclick = async () => {
 
 
                  const canvasState = await loadInitialCanvas({
-                    canvasId: el.refCanvasId,
+                    canvasId: this.canvasState.parentCanvas,
                     elements: [],
                     edges: [],
                     versionHistory: [],
@@ -98,7 +98,7 @@ this.drillUpBtn.onclick = async () => {
                 
                 const controller = new CanvasController(canvasState);
                 updateCanvasController(controller);
-                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+                window.history.pushState({}, "", "?canvas=" + this.canvasState.parentCanvas);
 };
         } else {
             this.drillUpBtn.style.display = 'none';

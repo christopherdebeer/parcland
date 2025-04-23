@@ -94,6 +94,46 @@ class CanvasController {
     }
 
     detach() {
+        // Remove all event listeners from canvas
+        if (this.onPointerDownCanvasHandler) {
+            this.canvas.removeEventListener("pointerdown", this.onPointerDownCanvasHandler);
+            this.canvas.removeEventListener("pointermove", this.onPointerMoveCanvasHandler);
+            this.canvas.removeEventListener("pointerup", this.onPointerUpCanvasHandler);
+            this.canvas.removeEventListener("pointercancel", this.onPointerUpCanvasHandler);
+            this.canvas.removeEventListener("wheel", this.onWheelCanvasHandler);
+        }
+
+        // Remove all event listeners from container
+        if (this.onPointerDownElementHandler) {
+            this.container.removeEventListener("pointerdown", this.onPointerDownElementHandler);
+            this.container.removeEventListener("pointermove", this.onPointerMoveElementHandler);
+            this.container.removeEventListener("pointerup", this.onPointerUpElementHandler);
+            this.container.removeEventListener("pointercancel", this.onPointerUpElementHandler);
+        }
+
+        // Remove all event listeners from static container
+        if (this.onPointerDownElementHandler) {
+            this.staticContainer.removeEventListener("pointerdown", this.onPointerDownElementHandler);
+            this.staticContainer.removeEventListener("pointermove", this.onPointerMoveElementHandler);
+            this.staticContainer.removeEventListener("pointerup", this.onPointerUpElementHandler);
+            this.staticContainer.removeEventListener("pointercancel", this.onPointerUpElementHandler);
+        }
+
+        // Remove all event listeners from edges layer
+        if (this.blockPropagationHandler) {
+            this.edgesLayer.removeEventListener("pointerdown", this.blockPropagationHandler);
+            this.edgesLayer.removeEventListener("pointerup", this.blockPropagationHandler);
+        }
+        if (this.onPointerUpEdgesHandler) {
+            this.edgesLayer.removeEventListener("pointerup", this.onPointerUpEdgesHandler);
+        }
+
+        // Remove context menu event listener
+        if (this.contextMenuPointerDownHandler) {
+            this.contextMenu.removeEventListener("pointerdown", this.contextMenuPointerDownHandler);
+        }
+
+        // Clean up DOM nodes
         Object.values(this.elementNodesMap).forEach(node => node.remove());
         this.elementNodesMap = {};
         Object.values(this.edgeNodesMap).forEach(line => line.remove());
@@ -113,6 +153,10 @@ class CanvasController {
             document.removeEventListener('pointerup', this.edgePointerUpHandler);
             this.edgePointerUpHandler = null;
         }
+
+        // Remove button click handlers
+        this.modeBtn.onclick = null;
+        this.drillUpBtn.onclick = null;
         this.modalCancelBtn.onclick = null;
         this.modalSaveBtn.onclick = null;
         this.modalGenerateBtn.onclick = null;
@@ -144,38 +188,60 @@ class CanvasController {
     }
 
     setupEventListeners() {
+        // Store bound event handlers as instance properties so they can be removed later
+        this.onPointerDownCanvasHandler = this.onPointerDownCanvas.bind(this);
+        this.onPointerMoveCanvasHandler = this.onPointerMoveCanvas.bind(this);
+        this.onPointerUpCanvasHandler = this.onPointerUpCanvas.bind(this);
+        this.onWheelCanvasHandler = this.onWheelCanvas.bind(this);
+
+        this.onPointerDownElementHandler = this.onPointerDownElement.bind(this);
+        this.onPointerMoveElementHandler = this.onPointerMoveElement.bind(this);
+        this.onPointerUpElementHandler = this.onPointerUpElement.bind(this);
+
+        this.blockPropagationHandler = this.blockPropagation.bind(this);
+        this.onPointerUpEdgesHandler = (ev) => this.onPointerUpEdges(ev);
+
+        this.contextMenuPointerDownHandler = (ev) => {
+            console.log("contextMenu");
+            ev.stopPropagation();
+        };
+
+        // Add canvas event listeners
+        this.canvas.addEventListener("pointerdown", this.onPointerDownCanvasHandler, { passive: false });
+        this.canvas.addEventListener("pointermove", this.onPointerMoveCanvasHandler, { passive: false });
+        this.canvas.addEventListener("pointerup", this.onPointerUpCanvasHandler, { passive: false });
+        this.canvas.addEventListener("pointercancel", this.onPointerUpCanvasHandler, { passive: false });
+        this.canvas.addEventListener("wheel", this.onWheelCanvasHandler, { passive: false });
+
+        // Add container event listeners
+        this.container.addEventListener("pointerdown", this.onPointerDownElementHandler, { passive: false });
+        this.container.addEventListener("pointermove", this.onPointerMoveElementHandler, { passive: false });
+        this.container.addEventListener("pointerup", this.onPointerUpElementHandler, { passive: false });
+        this.container.addEventListener("pointercancel", this.onPointerUpElementHandler, { passive: false });
+
+        // Add static container event listeners
+        this.staticContainer.addEventListener("pointerdown", this.onPointerDownElementHandler, { passive: false });
+        this.staticContainer.addEventListener("pointermove", this.onPointerMoveElementHandler, { passive: false });
+        this.staticContainer.addEventListener("pointerup", this.onPointerUpElementHandler, { passive: false });
+        this.staticContainer.addEventListener("pointercancel", this.onPointerUpElementHandler, { passive: false });
+
+        // Add edges layer event listeners
+        this.edgesLayer.addEventListener("pointerdown", this.blockPropagationHandler);
+        this.edgesLayer.addEventListener("pointerup", this.blockPropagationHandler);
+        this.edgesLayer.addEventListener("pointerup", this.onPointerUpEdgesHandler, { passive: false });
+
+        // Add context menu event listener
+        this.contextMenu.addEventListener("pointerdown", this.contextMenuPointerDownHandler);
+
+        // Add mode button click handler
         this.modeBtn.onclick = (ev) => {
             ev.stopPropagation();
             const newMode = (this.mode === 'direct') ? 'navigate' : 'direct';
             this.switchMode(newMode);
         };
 
+        // Add drill up button click handler
         this.drillUpBtn.onclick = this.handleDrillUp.bind(this);
-
-        this.canvas.addEventListener("pointerdown", (ev) => this.onPointerDownCanvas(ev), { passive: false });
-        this.canvas.addEventListener("pointermove", (ev) => this.onPointerMoveCanvas(ev), { passive: false });
-        this.canvas.addEventListener("pointerup", (ev) => this.onPointerUpCanvas(ev), { passive: false });
-        this.canvas.addEventListener("pointercancel", (ev) => this.onPointerUpCanvas(ev), { passive: false });
-        this.canvas.addEventListener("wheel", (ev) => this.onWheelCanvas(ev), { passive: false });
-
-        this.container.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev), { passive: false });
-        this.container.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev), { passive: false });
-        this.container.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev), { passive: false });
-        this.container.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev), { passive: false });
-
-        this.staticContainer.addEventListener("pointerdown", (ev) => this.onPointerDownElement(ev), { passive: false });
-        this.staticContainer.addEventListener("pointermove", (ev) => this.onPointerMoveElement(ev), { passive: false });
-        this.staticContainer.addEventListener("pointerup", (ev) => this.onPointerUpElement(ev), { passive: false });
-        this.staticContainer.addEventListener("pointercancel", (ev) => this.onPointerUpElement(ev), { passive: false });
-
-        this.edgesLayer.addEventListener("pointerdown", this.blockPropagation.bind(this));
-        this.edgesLayer.addEventListener("pointerup", this.blockPropagation.bind(this));
-        this.edgesLayer.addEventListener("pointerup", (ev) => this.onPointerUpEdges(ev), { passive: false });
-
-        this.contextMenu.addEventListener("pointerdown", (ev) => {
-            console.log("contextMenu");
-            ev.stopPropagation();
-        });
 
         this.modalCancelBtn.onclick = () => {
             this.editModal.style.display = "none";

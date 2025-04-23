@@ -3,13 +3,13 @@ import { generateContent, regenerateImage } from './lib/generation';
 import { getAuthToken, loadInitialCanvas, saveCanvas } from './lib/storage';
 
 class CanvasController {
-    constructor(canvasState, parentController = null) {
+    constructor(canvasState) {
         updateCanvasController(this)
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
         }
-        this.parentController = parentController;
+        
         this.selectedElementId = null;
         this.activeGesture = null;
         this.supressTap = false;
@@ -81,28 +81,24 @@ class CanvasController {
         this.loadLocalViewState();
         this.setupEventListeners();
 
-        if (this.parentController) {
+        if (this.canvasState.parentCanvas) {
             this.drillUpBtn.style.display = 'block';
             // inside CanvasController constructor, after setupEventListeners:
 this.drillUpBtn.onclick = () => {
-  if (!this.parentController) return;
+  if (!this.canvasState.parentCanvas) return;
 
-  // 1) clean up *this* controller completely:
-  this.detach();
 
-  // 2) swap back to parent:
-  updateCanvasController(this.parentController);
-
-  // 3) re‑render the parent’s elements & transform:
-  this.parentController.updateCanvasTransform();
-  this.parentController.renderElements();
-
-  // 4) update history
-  window.history.pushState(
-    {},
-    "",
-    "?canvas=" + this.parentController.canvasState.canvasId
-  );
+                 const canvasState = await loadInitialCanvas({
+                    canvasId: el.refCanvasId,
+                    elements: [],
+                    edges: [],
+                    versionHistory: [],
+                });
+                this.detach()
+                
+                const controller = new CanvasController(canvasState);
+                updateCanvasController(controller);
+                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
 };
         } else {
             this.drillUpBtn.style.display = 'none';

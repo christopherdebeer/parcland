@@ -344,6 +344,31 @@ class CanvasController {
         // console.log("[DEBUG] SVG viewBox updated to:", visibleX, visibleY, visibleWidth, visibleHeight);
     }
 
+    recenterOnElement(elId) {
+    const el = this.findElementById(elId);
+    if (!el) {
+        console.warn(`Element with ID "${elId}" not found.`);
+        return;
+    }
+
+    // Compute the center of the element in canvas coordinates
+    const scale = this.viewState.scale || 1;
+    const elCenterX = el.x;
+    const elCenterY = el.y;
+
+    // Get canvas size in pixels
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const canvasCenterX = canvasRect.width / 2;
+    const canvasCenterY = canvasRect.height / 2;
+
+    // Compute new translation to center the element
+    this.viewState.translateX = canvasCenterX - (elCenterX * scale);
+    this.viewState.translateY = canvasCenterY - (elCenterY * scale);
+
+    this.updateCanvasTransform();
+    this.saveLocalViewState();
+}
+
     renderElements() {
         if (this.canvas.controller !== this) return;
         console.log(`renderElements()`);

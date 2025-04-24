@@ -1330,24 +1330,24 @@ class CanvasController {
         } else {
             c.classList.remove('scroller');
         }
-// only if someone has previously “converted” it
-if (el.refCanvasId) {
-  const drillInBtn = document.createElement('button');
-  drillInBtn.textContent = "Drill In";
-  drillInBtn.style.marginTop = '0.5em';
-  drillInBtn.onclick = async (ev) => {
-    ev.stopPropagation();
-    const childState = await loadInitialCanvas({
-      canvasId: el.refCanvasId,
-      elements: [], edges: [], versionHistory: [],
-      parentCanvas: this.canvasState.canvasId
-    });
-    const childController = new CanvasController(childState, this);
-    updateCanvasController(childController);
-    window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
-  };
-  c.appendChild(drillInBtn);
-}
+        // only if someone has previously “converted” it
+        if (el.refCanvasId) {
+            const drillInBtn = document.createElement('button');
+            drillInBtn.textContent = "Drill In";
+            drillInBtn.style.marginTop = '0.5em';
+            drillInBtn.onclick = async (ev) => {
+                ev.stopPropagation();
+                const childState = await loadInitialCanvas({
+                    canvasId: el.refCanvasId,
+                    elements: [], edges: [], versionHistory: [],
+                    parentCanvas: this.canvasState.canvasId
+                });
+                const childController = new CanvasController(childState, this);
+                updateCanvasController(childController);
+                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+            };
+            c.appendChild(drillInBtn);
+        }
     }
 
     async handleDrillIn(el) {
@@ -1607,7 +1607,6 @@ function updateCanvasController(controller) {
     activeCanvasController = window.CC = controller
 }
 
-
 (async function main() {
     const params = new URLSearchParams(window.location.search);
     const canvasId = params.get("canvas") || "canvas-002";
@@ -1621,5 +1620,3 @@ function updateCanvasController(controller) {
     rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
     updateCanvasController(new CanvasController(rootCanvasState, null));
 })();
-
-

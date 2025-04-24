@@ -73,7 +73,7 @@ export function getAuthToken() {
 }
 
 export async function loadInitialCanvas(defaultState, paramToken) {
-    
+
     let token = paramToken || localStorage.getItem(TOKEN_KEY);
     if (!token) {
         token = "TBC";

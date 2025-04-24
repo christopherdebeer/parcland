@@ -85,7 +85,7 @@ export async function regenerateImage(el) {
         });
         const newImg = await response.json();
         el.src = newImg.imageUrl;
-        
+
     } catch (err) {
         console.error("Failed to regenerate image", err);
     }

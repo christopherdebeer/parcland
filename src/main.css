@@ -400,6 +400,7 @@ body {
     font-weight: 500;
     padding: 0.5em;
 }
+
 #modal-error:emtpy {
     padding: 0;
 }

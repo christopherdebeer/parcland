@@ -1,4 +1,4 @@
-import { setBackpackItem, saveCanvas } from './storage.js';
+import { setBackpackItem, saveCanvas, loadInitialCanvas } from './storage.js';
 
 function buildContextMenu(el, controller) {
     if (!el) return;
@@ -91,14 +91,11 @@ function buildContextMenu(el, controller) {
     });
     controller.contextMenu.appendChild(staticBtn);
 
-    // ⋮
-    // “Convert to Nested Canvas” is now available on _any_ element
     if (!el.refCanvasId) {
         const convertBtn = document.createElement("button");
         convertBtn.textContent = "Convert to Nested Canvas";
         controller.clickCapture(convertBtn, async () => {
             const newCanvasId = "canvas-" + Date.now();
-
             // save the new nested canvas state
             await setBackpackItem(newCanvasId, JSON.stringify({
                 canvasId: newCanvasId,
@@ -108,10 +105,7 @@ function buildContextMenu(el, controller) {
                 parentCanvas: controller.canvasState.canvasId,
                 parentElement: el.id,
             }));
-
-            // don’t touch el.type—just tag it
             el.refCanvasId = newCanvasId;
-
             controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
             saveCanvas(controller.canvasState);
             controller.hideContextMenu();
@@ -119,14 +113,11 @@ function buildContextMenu(el, controller) {
         controller.contextMenu.appendChild(convertBtn);
     }
 
-    // ⋮
-    // replace the old “if (el.type === 'canvas-container')” block with:
     if (el.refCanvasId) {
         const openCanvasBtn = document.createElement("button");
         openCanvasBtn.textContent = "Open Nested Canvas";
         controller.clickCapture(openCanvasBtn, () => {
             controller.hideContextMenu();
-            // load the nested canvas
             loadInitialCanvas({
                 canvasId: el.refCanvasId,
                 elements: [], edges: [], versionHistory: [],

@@ -789,74 +789,106 @@ getGroupBBox() {
     }
 
     onPointerDownCanvas(ev) {
-        console.log('onPointerDownCanvas(ev)', ev);
-        // Hide menus on pointer down
-        this.hideContextMenu();
+  console.log('onPointerDownCanvas', ev);
 
-        /* deselect if tap on blank canvas (one finger) */
-  if (!ev.target.closest('.canvas-element') && this.mode === 'direct') {
-    this.clearSelection();
-  }
-
+  /* ------------------------------------------------------------------
+   * 0.  House-keeping
+   * ---------------------------------------------------------------- */
+  this.hideContextMenu();
   const blankArea = !ev.target.closest('.canvas-element');
 
-  /* ---------- Navigate mode ---------- */
+  /* Deselect on single tap of blank canvas while in direct mode */
+  if (blankArea && this.mode === 'direct') this.clearSelection();
+
+  /* ------------------------------------------------------------------
+   * 1.  Navigate-mode behaviour (pan / pinch canvas)
+   * ---------------------------------------------------------------- */
   if (this.mode === 'navigate') {
-    /* original pan / pinch‑canvas code – unchanged */
-    /* … */
+    this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+    /* … keep the legacy pan / pinch-canvas logic here … */
     return;
   }
 
-  /* ---------- Direct mode ---------- */
-  /* Lasso selection starts on blank area with primary button */
+  /* ------------------------------------------------------------------
+   * 2.  DIRECT-mode – start lasso on blank primary-button press
+   * ---------------------------------------------------------------- */
   if (blankArea && ev.button === 0) {
-    this.activeGesture = 'lasso-select';
+    this.activeGesture  = 'lasso-select';
     this.lassoStartScreen = { x: ev.clientX, y: ev.clientY };
     this.createSelectionBox(ev.clientX, ev.clientY);
     this.canvas.setPointerCapture(ev.pointerId);
     return;
   }
-  /* otherwise fall back to old behaviour (move‑element, etc.) */
-  /* (no change needed here) */
 
-        
-        // If tap is not on a canvas element, deselect
-        if (!ev.target.closest(".canvas-element") && this.selectedElementId) {
-            this.selectedElementId = null;
-            this.renderElements();
-        }
-        this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
-        if (this.initialTouches.length === 1 && !this.activeGesture) {
-            this.activeGesture = "pan";
-            this.initialTranslateX = this.viewState.translateX;
-            this.initialTranslateY = this.viewState.translateY;
-            this.canvas.setPointerCapture(ev.pointerId);
-            this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-        } else if (this.initialTouches.length === 2) {
-            const t1 = this.initialTouches[0];
-            const t2 = this.initialTouches[1];
-            this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-            this.initialPinchAngle = Math.atan2(t2.y - t1.y, t2.x - t1.x);
-            this.pinchCenterScreen = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
-            this.pinchCenterCanvas = this.screenToCanvas(this.pinchCenterScreen.x, this.pinchCenterScreen.y);
-            if (this.mode === 'direct' && this.selectedElementId) {
-                this.activeGesture = "pinch-element";
-                this.supressTap = true;
-                const el = this.findElementById(this.selectedElementId);
-                if (el) {
-                    this.elementPinchStartSize.width = el.width;
-                    this.elementPinchStartSize.height = el.height;
-                    this.elementStartRotation = el.rotation || 0;
-                    this.elementPinchStartCenter = { x: el.x, y: el.y };
-                    this.pinchCenterStartCanvas = { x: this.pinchCenterCanvas.x, y: this.pinchCenterCanvas.y };
-                }
-            } else {
-                this.supressTap = true;
-                this.activeGesture = "pinch-canvas";
-                this.initialCanvasScale = this.viewState.scale;
-            }
-        }
+  /* ------------------------------------------------------------------
+   * 3.  Record this pointer for gesture analysis
+   * ---------------------------------------------------------------- */
+  this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+
+  /* ----  single-finger canvas pan  --------------------------------- */
+  if (this.initialTouches.length === 1 && !this.activeGesture) {
+    this.activeGesture     = 'pan';
+    this.initialTranslateX = this.viewState.translateX;
+    this.initialTranslateY = this.viewState.translateY;
+    this.dragStartPos      = { x: ev.clientX, y: ev.clientY };
+    this.canvas.setPointerCapture(ev.pointerId);
+    return;
+  }
+
+  /* ------------------------------------------------------------------
+   * 4.  Two-finger pinch gestures
+   * ---------------------------------------------------------------- */
+  if (this.initialTouches.length === 2) {
+    const [t1, t2] = this.initialTouches;
+    this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+    this.initialPinchAngle    = Math.atan2(t2.y - t1.y, t2.x - t1.x);
+    this.pinchCenterScreen    = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+    this.pinchCenterCanvas    = this.screenToCanvas(
+                                   this.pinchCenterScreen.x,
+                                   this.pinchCenterScreen.y
+                                 );
+    this.supressTap = true;   // don’t fire double-tap after pinch
+
+    /* --- STEP 9 : pinch-to-scale an existing multi-selection ------- */
+    if (this.mode === 'direct' && this.selectedElementIds.size > 1) {
+      this.activeGesture = 'pinch-group';
+
+      /* cache group transform info for onPointerMoveCanvas */
+      const bbox = this.getGroupBBox();
+      this.groupTransform = {
+        bboxCenter     : bbox,            // {cx,cy,x1,y1,x2,y2}
+        startPositions : new Map()
+      };
+      this.selectedElementIds.forEach(id => {
+        const el = this.findElementById(id);
+        this.groupTransform.startPositions.set(id, {
+          x: el.x, y: el.y, width: el.width, height: el.height
+        });
+      });
+      return;
     }
+
+    /* --- pinch single selected element ----------------------------- */
+    if (this.mode === 'direct' && this.selectedElementId) {
+      this.activeGesture          = 'pinch-element';
+      const el                    = this.findElementById(this.selectedElementId);
+      this.elementPinchStartSize  = { width: el.width, height: el.height };
+      this.elementPinchStartCenter= { x: el.x, y: el.y };
+      this.pinchCenterStartCanvas = { ...this.pinchCenterCanvas };
+      this.elementStartRotation   = el.rotation || 0;
+      return;
+    }
+
+    /* --- otherwise: pinch-zoom the whole canvas -------------------- */
+    this.activeGesture      = 'pinch-canvas';
+    this.initialCanvasScale = this.viewState.scale;
+    return;
+  }
+
+  /* ------------------------------------------------------------------
+   * fall-through: nothing else to start here
+   * ---------------------------------------------------------------- */
+}
 
     onPointerMoveCanvas(ev) {
         // console.log('onPointerMoveCanvas(ev)', ev)

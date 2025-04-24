@@ -1337,14 +1337,7 @@ class CanvasController {
             drillInBtn.style.marginTop = '0.5em';
             drillInBtn.onclick = async (ev) => {
                 ev.stopPropagation();
-                const childState = await loadInitialCanvas({
-                    canvasId: el.refCanvasId,
-                    elements: [], edges: [], versionHistory: [],
-                    parentCanvas: this.canvasState.canvasId
-                });
-                const childController = new CanvasController(childState, this);
-                updateCanvasController(childController);
-                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
+                this.handleDrillIn(el);
             };
             c.appendChild(drillInBtn);
         }

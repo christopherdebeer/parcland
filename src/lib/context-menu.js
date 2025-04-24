@@ -117,16 +117,7 @@ function buildContextMenu(el, controller) {
         const openCanvasBtn = document.createElement("button");
         openCanvasBtn.textContent = "Open Nested Canvas";
         controller.clickCapture(openCanvasBtn, () => {
-            controller.hideContextMenu();
-            loadInitialCanvas({
-                canvasId: el.refCanvasId,
-                elements: [], edges: [], versionHistory: [],
-                parentCanvas: controller.canvasState.canvasId
-            }).then(childState => {
-                const childController = new CanvasController(childState, controller);
-                updateCanvasController(childController);
-                window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
-            });
+            controller.handleDrillIn(el);
         });
         controller.contextMenu.appendChild(openCanvasBtn);
     }

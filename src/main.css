@@ -458,3 +458,9 @@ body {
     /* Opera doesn't support this in the shorthand */
     background-attachment: local, local, scroll, scroll;
 }
+
+#lasso-box {
+  --zoom: var(--zoom, 1);
+  transform: scale(calc(1 / var(--zoom)));
+  transform-origin: top left;
+}

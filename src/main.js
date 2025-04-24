@@ -265,7 +265,7 @@ class CanvasController {
                     el.src = newSrc;
                 }
                 this.updateElementNode(this.elementNodesMap[el.id], el, true);
-                this.saveCanvas(this.canvasState);
+                saveCanvas(this.canvasState);
             }
             this.editModal.style.display = "none";
         };

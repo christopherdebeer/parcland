@@ -1120,7 +1120,7 @@ console.log("onPointerDownElement(ev)", ev.target);
 
   /* ---------- fallback to original single‑element logic ---------- */
   /* (keep your existing move/resize/etc. code) */
-}
+
         if (this.mode === 'direct') this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
 
         console.log("onPointerDownElement(ev)", ev.target);

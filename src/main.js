@@ -92,6 +92,13 @@ class CanvasController {
         this.switchMode('navigate');
 
         this.loadLocalViewState();
+        this.fsmService     = interpret(gestureMachine).start();
+        this.uninstallAdapter = installPointerAdapter(
+          this.canvas,
+          this.fsmService,
+          () => ({ ...this.viewState }),
+          this.screenToCanvas.bind(this)
+        );
         this.setupEventListeners();
 
         if (this.canvasState.parentCanvas) {

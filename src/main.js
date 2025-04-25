@@ -1,6 +1,6 @@
 import { buildContextMenu } from './lib/context-menu';
 import { generateContent, regenerateImage } from './lib/generation';
-import { loadInitialCanvas, saveCanvas } from './lib/storage';
+import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 
 class CanvasController {
     constructor(canvasState) {
@@ -715,11 +715,6 @@ class CanvasController {
         }
     }
 
-    selectElement(id) {
-        this.selectedElementId = id;
-        this.renderElements();
-    }
-
     findElementOrEdgeById(id) {
         console.log(`[DEBUG] findElementOrEdgeById("${id}")`);
         return this.findElementById(id) || this.findEdgeElementById(id);
@@ -811,19 +806,19 @@ class CanvasController {
                 this.activeGesture = 'pan';
                 this.initialTranslateX = this.viewState.translateX;
                 this.initialTranslateY = this.viewState.translateY;
-                this.dragStartPos     = { x: ev.clientX, y: ev.clientY };
+                this.dragStartPos = { x: ev.clientX, y: ev.clientY };
                 this.canvas.setPointerCapture(ev.pointerId);
             }
-        
+
             // 2 pointers → start a pinch-zoom
             if (this.initialTouches.length === 2) {
-                const [t1, t2]       = this.initialTouches;
+                const [t1, t2] = this.initialTouches;
                 this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-                this.pinchCenterScreen    = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
-                this.pinchCenterCanvas    = this.screenToCanvas(
+                this.pinchCenterScreen = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+                this.pinchCenterCanvas = this.screenToCanvas(
                     this.pinchCenterScreen.x, this.pinchCenterScreen.y);
-                this.initialCanvasScale   = this.viewState.scale;
-                this.activeGesture        = 'pinch-canvas';
+                this.initialCanvasScale = this.viewState.scale;
+                this.activeGesture = 'pinch-canvas';
             }
             return;
         }
@@ -1153,7 +1148,7 @@ class CanvasController {
             target.classList.contains("type-handle") ||
             target.classList.contains("edge-handle");
         if (isHandle) return;
-        
+
         if (this.selectedElementId !== elementId) {
             this.selectElement(elementId);
         }
@@ -1522,7 +1517,7 @@ class CanvasController {
 
             if (!el.src && !i.src) {
                 regenerateImage(el).then(() => {
-                    this.saveCanvasLocalOnly();
+                    saveCanvasLocalOnly();
                     this.renderElements();
                 });
             }

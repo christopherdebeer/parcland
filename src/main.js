@@ -1,6 +1,6 @@
 import { buildContextMenu } from './lib/context-menu';
 import { generateContent, regenerateImage } from './lib/generation';
-import { getAuthToken, loadInitialCanvas, saveCanvas } from './lib/storage';
+import { loadInitialCanvas, saveCanvas } from './lib/storage';
 
 class CanvasController {
     constructor(canvasState) {
@@ -1839,7 +1839,6 @@ console.log("onPointerDownElement(ev)", ev.target);
 }
 
 let activeCanvasController = null;
-
 function updateCanvasController(controller) {
     activeCanvasController = window.CC = controller
 }
@@ -1855,5 +1854,5 @@ function updateCanvasController(controller) {
         versionHistory: []
     };
     rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
-    updateCanvasController(new CanvasController(rootCanvasState, null));
+    updateCanvasController(new CanvasController(rootCanvasState));
 })();

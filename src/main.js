@@ -806,7 +806,25 @@ class CanvasController {
          * ---------------------------------------------------------------- */
         if (this.mode === 'navigate') {
             this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
-            /* … keep the legacy pan / pinch-canvas logic here … */
+            // 1 pointer → start a pan
+            if (this.initialTouches.length === 1) {
+                this.activeGesture = 'pan';
+                this.initialTranslateX = this.viewState.translateX;
+                this.initialTranslateY = this.viewState.translateY;
+                this.dragStartPos     = { x: ev.clientX, y: ev.clientY };
+                this.canvas.setPointerCapture(ev.pointerId);
+            }
+        
+            // 2 pointers → start a pinch-zoom
+            if (this.initialTouches.length === 2) {
+                const [t1, t2]       = this.initialTouches;
+                this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+                this.pinchCenterScreen    = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+                this.pinchCenterCanvas    = this.screenToCanvas(
+                    this.pinchCenterScreen.x, this.pinchCenterScreen.y);
+                this.initialCanvasScale   = this.viewState.scale;
+                this.activeGesture        = 'pinch-canvas';
+            }
             return;
         }
 

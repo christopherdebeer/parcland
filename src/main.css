@@ -18,6 +18,10 @@ body {
     cursor: grab;
 }
 
+#canvas.direct {
+    cursor: crosshair;
+}
+
 /* The main container for elements – note that we apply transform to it */
 #canvas-container {
     position: absolute;

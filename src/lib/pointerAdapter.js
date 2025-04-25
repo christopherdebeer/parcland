@@ -1,9 +1,8 @@
 // Thin DOM ⇄ FSM bridge.
 // Keeps an `active` map of live pointers, turns DOM events into
 //   {type:'POINTER_*', active:{}, xy:{x,y}, hitElement:Boolean, elementId?, view:{}, ev }
-import { screenToCanvas } from './screenUtils';  // helper you already have
 
-export function installPointerAdapter(rootEl, service, getViewState) {
+export function installPointerAdapter(rootEl, service, getViewState, screenToCanvas) {
 
   const active = new Map();         // pointerId ➜ {x,y}
 

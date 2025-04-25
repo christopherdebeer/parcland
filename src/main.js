@@ -1,3 +1,6 @@
+import { interpret } from 'xstate';
+import { gestureMachine } from './lib/gestureMachine.js';
+import { installPointerAdapter } from './lib/pointerAdapter.js';
 import { buildContextMenu } from './lib/context-menu';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';

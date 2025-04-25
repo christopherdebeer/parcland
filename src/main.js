@@ -10,18 +10,17 @@ class CanvasController {
             this.canvasState.edges = [];
         }
 
-        this.selectedElementId = null;
         this.selectedElementIds = new Set();   // multiselect aware
-  Object.defineProperty(this, 'selectedElementId', {  // legacy shim
-    get : () => (this.selectedElementIds.size === 1 ? [...this.selectedElementIds][0] : null),
-    set : (v)  => { this.selectedElementIds.clear(); if (v) this.selectedElementIds.add(v); }
-  });
+        Object.defineProperty(this, 'selectedElementId', {  // legacy shim
+            get: () => (this.selectedElementIds.size === 1 ? [...this.selectedElementIds][0] : null),
+            set: (v) => { this.selectedElementIds.clear(); if (v) this.selectedElementIds.add(v); }
+        });
 
-  this.selectionBox = null;              // DOM element for the rubber‑band rectangle
-  this.groupTransform = null;            // cached positions for group move/scale
+        this.selectionBox = null;              // DOM element for the rubber‑band rectangle
+        this.groupTransform = null;            // cached positions for group move/scale
 
 
-        
+
         this.activeGesture = null;
         this.supressTap = false;
         this.initialTouches = [];
@@ -367,75 +366,75 @@ class CanvasController {
     }
 
     /* ------------------------------------------------------------------ */
-/* Multiselect & lasso utilities                                      */
-/* ------------------------------------------------------------------ */
-createSelectionBox(startX, startY) {
-  this.selectionBox = document.createElement('div');
-  this.selectionBox.id = 'lasso-box';
-  Object.assign(this.selectionBox.style, {
-    position: 'absolute',
-    border: '1px dashed #00aaff',
-    background: 'rgba(0,170,255,0.05)',
-    left: `${startX}px`,
-    top:  `${startY}px`,
-    width: '0px',
-    height:'0px',
-    zIndex: 10000,
-    pointerEvents: 'none'
-  });
-  this.canvas.appendChild(this.selectionBox);
-}
+    /* Multiselect & lasso utilities                                      */
+    /* ------------------------------------------------------------------ */
+    createSelectionBox(startX, startY) {
+        this.selectionBox = document.createElement('div');
+        this.selectionBox.id = 'lasso-box';
+        Object.assign(this.selectionBox.style, {
+            position: 'absolute',
+            border: '1px dashed #00aaff',
+            background: 'rgba(0,170,255,0.05)',
+            left: `${startX}px`,
+            top: `${startY}px`,
+            width: '0px',
+            height: '0px',
+            zIndex: 10000,
+            pointerEvents: 'none'
+        });
+        this.canvas.appendChild(this.selectionBox);
+    }
 
-updateSelectionBox(startX, startY, curX, curY) {
-  const x = Math.min(startX, curX);
-  const y = Math.min(startY, curY);
-  const w = Math.abs(curX - startX);
-  const h = Math.abs(curY - startY);
-  Object.assign(this.selectionBox.style, {
-    left: `${x}px`, top: `${y}px`,
-    width: `${w}px`, height: `${h}px`
-  });
-}
+    updateSelectionBox(startX, startY, curX, curY) {
+        const x = Math.min(startX, curX);
+        const y = Math.min(startY, curY);
+        const w = Math.abs(curX - startX);
+        const h = Math.abs(curY - startY);
+        Object.assign(this.selectionBox.style, {
+            left: `${x}px`, top: `${y}px`,
+            width: `${w}px`, height: `${h}px`
+        });
+    }
 
-removeSelectionBox() {
-  if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null; }
-}
+    removeSelectionBox() {
+        if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null; }
+    }
 
-selectElement(id, additive = false) {
-  if (!additive) this.selectedElementIds.clear();
-  if (this.selectedElementIds.has(id) && additive) {
-    this.selectedElementIds.delete(id);  // toggle off
-  } else {
-    this.selectedElementIds.add(id);
-  }
-  this.renderElements();
-}
+    selectElement(id, additive = false) {
+        if (!additive) this.selectedElementIds.clear();
+        if (this.selectedElementIds.has(id) && additive) {
+            this.selectedElementIds.delete(id);  // toggle off
+        } else {
+            this.selectedElementIds.add(id);
+        }
+        this.renderElements();
+    }
 
-clearSelection() {
-  if (this.selectedElementIds.size) {
-    this.selectedElementIds.clear();
-    this.renderElements();
-  }
-}
+    clearSelection() {
+        if (this.selectedElementIds.size) {
+            this.selectedElementIds.clear();
+            this.renderElements();
+        }
+    }
 
-isElementSelected(id) {
-  return this.selectedElementIds.has(id);
-}
+    isElementSelected(id) {
+        return this.selectedElementIds.has(id);
+    }
 
-getGroupBBox() {
-  if (this.selectedElementIds.size === 0) return null;
-  const els = [...this.selectedElementIds].map(id => this.findElementById(id));
-  const xs = els.map(e => e.x - (e.width  * (e.scale || 1)) / 2);
-  const ys = els.map(e => e.y - (e.height * (e.scale || 1)) / 2);
-  const xe = els.map(e => e.x + (e.width  * (e.scale || 1)) / 2);
-  const ye = els.map(e => e.y + (e.height * (e.scale || 1)) / 2);
-  return {
-    x1: Math.min(...xs), y1: Math.min(...ys),
-    x2: Math.max(...xe), y2: Math.max(...ye),
-    cx: (Math.min(...xs) + Math.max(...xe)) / 2,
-    cy: (Math.min(...ys) + Math.max(...ye)) / 2
-  };
-}
+    getGroupBBox() {
+        if (this.selectedElementIds.size === 0) return null;
+        const els = [...this.selectedElementIds].map(id => this.findElementById(id));
+        const xs = els.map(e => e.x - (e.width * (e.scale || 1)) / 2);
+        const ys = els.map(e => e.y - (e.height * (e.scale || 1)) / 2);
+        const xe = els.map(e => e.x + (e.width * (e.scale || 1)) / 2);
+        const ye = els.map(e => e.y + (e.height * (e.scale || 1)) / 2);
+        return {
+            x1: Math.min(...xs), y1: Math.min(...ys),
+            x2: Math.max(...xe), y2: Math.max(...ye),
+            cx: (Math.min(...xs) + Math.max(...xe)) / 2,
+            cy: (Math.min(...ys) + Math.max(...ye)) / 2
+        };
+    }
 
     switchMode(m) {
         this.mode = m;
@@ -521,27 +520,29 @@ getGroupBBox() {
         if (this.canvas.controller !== this) return;
         console.log(`renderElements()`);
         const existingIds = new Set(Object.keys(this.elementNodesMap));
-  const usedIds     = new Set();
+        const usedIds = new Set();
 
-  this.canvasState.elements.forEach(el => {
-    usedIds.add(el.id);
-    let node = this.elementNodesMap[el.id];
-    if (!node) {
-      node = this.createElementNode(el);
-      (el.static ? this.staticContainer : this.container).appendChild(node);
-      this.elementNodesMap[el.id] = node;
+        this.canvasState.elements.forEach(el => {
+            usedIds.add(el.id);
+            let node = this.elementNodesMap[el.id];
+            if (!node) {
+                node = this.createElementNode(el);
+                (el.static ? this.staticContainer : this.container).appendChild(node);
+                this.elementNodesMap[el.id] = node;
+            }
+            const isSel = this.selectedElementIds.has(el.id);
+            this.updateElementNode(node, el, isSel);
+        });
+
+        existingIds.forEach(id => {
+            if (!usedIds.has(id)) {
+                this.elementNodesMap[id].remove();
+                delete this.elementNodesMap[id];
+            }
+        });
+
+        this.renderEdges();
     }
-    const isSel = this.selectedElementIds.has(el.id);
-    this.updateElementNode(node, el, isSel);
-  });
-
-  existingIds.forEach(id => { if (!usedIds.has(id)) {
-    this.elementNodesMap[id].remove();
-    delete this.elementNodesMap[id];
-  }});
-
-  this.renderEdges();
-}
 
     renderEdges() {
         // console.log("renderEdges()");
@@ -789,143 +790,143 @@ getGroupBBox() {
     }
 
     onPointerDownCanvas(ev) {
-  console.log('onPointerDownCanvas', ev);
+        console.log('onPointerDownCanvas', ev);
 
-  /* ------------------------------------------------------------------
-   * 0.  House-keeping
-   * ---------------------------------------------------------------- */
-  this.hideContextMenu();
-  const blankArea = !ev.target.closest('.canvas-element');
+        /* ------------------------------------------------------------------
+         * 0.  House-keeping
+         * ---------------------------------------------------------------- */
+        this.hideContextMenu();
+        const blankArea = !ev.target.closest('.canvas-element');
 
-  /* Deselect on single tap of blank canvas while in direct mode */
-  if (blankArea && this.mode === 'direct') this.clearSelection();
+        /* Deselect on single tap of blank canvas while in direct mode */
+        if (blankArea && this.mode === 'direct') this.clearSelection();
 
-  /* ------------------------------------------------------------------
-   * 1.  Navigate-mode behaviour (pan / pinch canvas)
-   * ---------------------------------------------------------------- */
-  if (this.mode === 'navigate') {
-    this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
-    /* … keep the legacy pan / pinch-canvas logic here … */
-    return;
-  }
+        /* ------------------------------------------------------------------
+         * 1.  Navigate-mode behaviour (pan / pinch canvas)
+         * ---------------------------------------------------------------- */
+        if (this.mode === 'navigate') {
+            this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+            /* … keep the legacy pan / pinch-canvas logic here … */
+            return;
+        }
 
-  /* ------------------------------------------------------------------
-   * 2.  DIRECT-mode – start lasso on blank primary-button press
-   * ---------------------------------------------------------------- */
-  if (blankArea && ev.button === 0) {
-    this.activeGesture  = 'lasso-select';
-    this.lassoStartScreen = { x: ev.clientX, y: ev.clientY };
-    this.createSelectionBox(ev.clientX, ev.clientY);
-    this.canvas.setPointerCapture(ev.pointerId);
-    return;
-  }
+        /* ------------------------------------------------------------------
+         * 2.  DIRECT-mode – start lasso on blank primary-button press
+         * ---------------------------------------------------------------- */
+        if (blankArea && ev.button === 0) {
+            this.activeGesture = 'lasso-select';
+            this.lassoStartScreen = { x: ev.clientX, y: ev.clientY };
+            this.createSelectionBox(ev.clientX, ev.clientY);
+            this.canvas.setPointerCapture(ev.pointerId);
+            return;
+        }
 
-  /* ------------------------------------------------------------------
-   * 3.  Record this pointer for gesture analysis
-   * ---------------------------------------------------------------- */
-  this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+        /* ------------------------------------------------------------------
+         * 3.  Record this pointer for gesture analysis
+         * ---------------------------------------------------------------- */
+        this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
 
-  /* ----  single-finger canvas pan  --------------------------------- */
-  if (this.initialTouches.length === 1 && !this.activeGesture) {
-    this.activeGesture     = 'pan';
-    this.initialTranslateX = this.viewState.translateX;
-    this.initialTranslateY = this.viewState.translateY;
-    this.dragStartPos      = { x: ev.clientX, y: ev.clientY };
-    this.canvas.setPointerCapture(ev.pointerId);
-    return;
-  }
+        /* ----  single-finger canvas pan  --------------------------------- */
+        if (this.initialTouches.length === 1 && !this.activeGesture) {
+            this.activeGesture = 'pan';
+            this.initialTranslateX = this.viewState.translateX;
+            this.initialTranslateY = this.viewState.translateY;
+            this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+            this.canvas.setPointerCapture(ev.pointerId);
+            return;
+        }
 
-  /* ------------------------------------------------------------------
-   * 4.  Two-finger pinch gestures
-   * ---------------------------------------------------------------- */
-  if (this.initialTouches.length === 2) {
-    const [t1, t2] = this.initialTouches;
-    this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-    this.initialPinchAngle    = Math.atan2(t2.y - t1.y, t2.x - t1.x);
-    this.pinchCenterScreen    = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
-    this.pinchCenterCanvas    = this.screenToCanvas(
-                                   this.pinchCenterScreen.x,
-                                   this.pinchCenterScreen.y
-                                 );
-    this.supressTap = true;   // don’t fire double-tap after pinch
+        /* ------------------------------------------------------------------
+         * 4.  Two-finger pinch gestures
+         * ---------------------------------------------------------------- */
+        if (this.initialTouches.length === 2) {
+            const [t1, t2] = this.initialTouches;
+            this.initialPinchDistance = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+            this.initialPinchAngle = Math.atan2(t2.y - t1.y, t2.x - t1.x);
+            this.pinchCenterScreen = { x: (t1.x + t2.x) / 2, y: (t1.y + t2.y) / 2 };
+            this.pinchCenterCanvas = this.screenToCanvas(
+                this.pinchCenterScreen.x,
+                this.pinchCenterScreen.y
+            );
+            this.supressTap = true;   // don’t fire double-tap after pinch
 
-    /* --- STEP 9 : pinch-to-scale an existing multi-selection ------- */
-    if (this.mode === 'direct' && this.selectedElementIds.size > 1) {
-      this.activeGesture = 'pinch-group';
+            /* --- STEP 9 : pinch-to-scale an existing multi-selection ------- */
+            if (this.mode === 'direct' && this.selectedElementIds.size > 1) {
+                this.activeGesture = 'pinch-group';
 
-      /* cache group transform info for onPointerMoveCanvas */
-      const bbox = this.getGroupBBox();
-      this.groupTransform = {
-        bboxCenter     : bbox,            // {cx,cy,x1,y1,x2,y2}
-        startPositions : new Map()
-      };
-      this.selectedElementIds.forEach(id => {
-        const el = this.findElementById(id);
-        this.groupTransform.startPositions.set(id, {
-          x: el.x, y: el.y, width: el.width, height: el.height
-        });
-      });
-      return;
+                /* cache group transform info for onPointerMoveCanvas */
+                const bbox = this.getGroupBBox();
+                this.groupTransform = {
+                    bboxCenter: bbox,            // {cx,cy,x1,y1,x2,y2}
+                    startPositions: new Map()
+                };
+                this.selectedElementIds.forEach(id => {
+                    const el = this.findElementById(id);
+                    this.groupTransform.startPositions.set(id, {
+                        x: el.x, y: el.y, width: el.width, height: el.height
+                    });
+                });
+                return;
+            }
+
+            /* --- pinch single selected element ----------------------------- */
+            if (this.mode === 'direct' && this.selectedElementId) {
+                this.activeGesture = 'pinch-element';
+                const el = this.findElementById(this.selectedElementId);
+                this.elementPinchStartSize = { width: el.width, height: el.height };
+                this.elementPinchStartCenter = { x: el.x, y: el.y };
+                this.pinchCenterStartCanvas = { ...this.pinchCenterCanvas };
+                this.elementStartRotation = el.rotation || 0;
+                return;
+            }
+
+            /* --- otherwise: pinch-zoom the whole canvas -------------------- */
+            this.activeGesture = 'pinch-canvas';
+            this.initialCanvasScale = this.viewState.scale;
+            return;
+        }
+
+        /* ------------------------------------------------------------------
+         * fall-through: nothing else to start here
+         * ---------------------------------------------------------------- */
     }
-
-    /* --- pinch single selected element ----------------------------- */
-    if (this.mode === 'direct' && this.selectedElementId) {
-      this.activeGesture          = 'pinch-element';
-      const el                    = this.findElementById(this.selectedElementId);
-      this.elementPinchStartSize  = { width: el.width, height: el.height };
-      this.elementPinchStartCenter= { x: el.x, y: el.y };
-      this.pinchCenterStartCanvas = { ...this.pinchCenterCanvas };
-      this.elementStartRotation   = el.rotation || 0;
-      return;
-    }
-
-    /* --- otherwise: pinch-zoom the whole canvas -------------------- */
-    this.activeGesture      = 'pinch-canvas';
-    this.initialCanvasScale = this.viewState.scale;
-    return;
-  }
-
-  /* ------------------------------------------------------------------
-   * fall-through: nothing else to start here
-   * ---------------------------------------------------------------- */
-}
 
     onPointerMoveCanvas(ev) {
         // console.log('onPointerMoveCanvas(ev)', ev)
 
         /* ---------- Lasso rectangle ---------- */
-  if (this.activeGesture === 'lasso-select') {
-    this.updateSelectionBox(
-      this.lassoStartScreen.x, this.lassoStartScreen.y,
-      ev.clientX, ev.clientY
-    );
-    return;     // nothing else while drawing box
-  }
+        if (this.activeGesture === 'lasso-select') {
+            this.updateSelectionBox(
+                this.lassoStartScreen.x, this.lassoStartScreen.y,
+                ev.clientX, ev.clientY
+            );
+            return;     // nothing else while drawing box
+        }
 
-  /* ---------- Pinch‑group scaling ---------- */
-  if (this.activeGesture === 'pinch-group' && this.initialTouches.length === 2) {
-    const idx = this.initialTouches.findIndex(t => t.id === ev.pointerId);
-    if (idx !== -1) { this.initialTouches[idx].x = ev.clientX; this.initialTouches[idx].y = ev.clientY; }
-    const [t1, t2] = this.initialTouches;
-    const newDist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
-    const scaleFactor = newDist / this.initialPinchDistance;
+        /* ---------- Pinch‑group scaling ---------- */
+        if (this.activeGesture === 'pinch-group' && this.initialTouches.length === 2) {
+            const idx = this.initialTouches.findIndex(t => t.id === ev.pointerId);
+            if (idx !== -1) { this.initialTouches[idx].x = ev.clientX; this.initialTouches[idx].y = ev.clientY; }
+            const [t1, t2] = this.initialTouches;
+            const newDist = Math.hypot(t2.x - t1.x, t2.y - t1.y);
+            const scaleFactor = newDist / this.initialPinchDistance;
 
-    const bbox = this.groupTransform.bboxCenter;
-    this.selectedElementIds.forEach(id => {
-      const el = this.findElementById(id);
-      const start = this.groupTransform.startPositions.get(id);
-      el.width  = start.width  * scaleFactor;
-      el.height = start.height * scaleFactor;
-      el.x = bbox.x + (start.x - bbox.x) * scaleFactor;
-      el.y = bbox.y + (start.y - bbox.y) * scaleFactor;
-    });
-    this.renderElements();
-    return;
-  }
+            const bbox = this.groupTransform.bboxCenter;
+            this.selectedElementIds.forEach(id => {
+                const el = this.findElementById(id);
+                const start = this.groupTransform.startPositions.get(id);
+                el.width = start.width * scaleFactor;
+                el.height = start.height * scaleFactor;
+                el.x = bbox.x + (start.x - bbox.x) * scaleFactor;
+                el.y = bbox.y + (start.y - bbox.y) * scaleFactor;
+            });
+            this.renderElements();
+            return;
+        }
 
-  /* ---------- existing pan / pinch‑canvas / etc ---------- */
-  /* keep the rest of your original code */
-        
+        /* ---------- existing pan / pinch‑canvas / etc ---------- */
+        /* keep the rest of your original code */
+
         if (!this.activeGesture) return;
         if (this.activeGesture === 'pan' && this.initialTouches.length === 1) {
             const touch = this.initialTouches[0];
@@ -981,29 +982,29 @@ getGroupBBox() {
         console.log('onPointerUpCanvas(ev)', ev);
 
         if (this.activeGesture === 'lasso-select') {
-    /* convert lasso screen rect to *canvas* coordinates */
-    const rect = this.selectionBox.getBoundingClientRect();
-    const tl = this.screenToCanvas(rect.left,  rect.top);
-    const br = this.screenToCanvas(rect.right, rect.bottom);
+            /* convert lasso screen rect to *canvas* coordinates */
+            const rect = this.selectionBox.getBoundingClientRect();
+            const tl = this.screenToCanvas(rect.left, rect.top);
+            const br = this.screenToCanvas(rect.right, rect.bottom);
 
-    this.selectedElementIds.clear();
-    this.canvasState.elements.forEach(el => {
-      const halfW = (el.width  * (el.scale || 1)) / 2;
-      const halfH = (el.height * (el.scale || 1)) / 2;
-      const inX = (el.x + halfW) >= tl.x && (el.x - halfW) <= br.x;
-      const inY = (el.y + halfH) >= tl.y && (el.y - halfH) <= br.y;
-      if (inX && inY) this.selectedElementIds.add(el.id);
-    });
+            this.selectedElementIds.clear();
+            this.canvasState.elements.forEach(el => {
+                const halfW = (el.width * (el.scale || 1)) / 2;
+                const halfH = (el.height * (el.scale || 1)) / 2;
+                const inX = (el.x + halfW) >= tl.x && (el.x - halfW) <= br.x;
+                const inY = (el.y + halfH) >= tl.y && (el.y - halfH) <= br.y;
+                if (inX && inY) this.selectedElementIds.add(el.id);
+            });
 
-    this.removeSelectionBox();
-    this.activeGesture = null;
-    this.renderElements();
-    return;
-  }
+            this.removeSelectionBox();
+            this.activeGesture = null;
+            this.renderElements();
+            return;
+        }
 
-  /* ---------- existing pointer‑up behaviour ---------- */
-  /* … original code … */
-        
+        /* ---------- existing pointer‑up behaviour ---------- */
+        /* … original code … */
+
         if (ev.target.closest('.canvas-element')) return;
         if (this.activeGesture === "create-edge" || this.activeGesture === 'create-node') {
             console.log("[ DEBUG] Edge/node creation in progress exiting canvas pointer up handler");
@@ -1085,47 +1086,47 @@ getGroupBBox() {
     }
 
     onPointerDownElement(ev) {
-console.log("onPointerDownElement(ev)", ev.target);
-        
+        console.log("onPointerDownElement(ev)", ev.target);
+
         const targetEl = ev.target.closest('.canvas-element');
-  if (!targetEl) return;
+        if (!targetEl) return;
 
-  const elementId = targetEl.dataset.elId;
+        const elementId = targetEl.dataset.elId;
 
-  /* Multiselect toggle with Ctrl/Meta key */
-  if (ev.ctrlKey || ev.metaKey) {
-    this.selectElement(elementId, /* additive = */ true);
-  } else if (!this.isElementSelected(elementId)) {
-    this.selectElement(elementId);    // single selection
-  }
+        /* Multiselect toggle with Ctrl/Meta key */
+        if (ev.ctrlKey || ev.metaKey) {
+            this.selectElement(elementId, /* additive = */ true);
+        } else if (!this.isElementSelected(elementId)) {
+            this.selectElement(elementId);    // single selection
+        }
 
-  /* ---------- direct mode group move ---------- */
-  if (this.mode === 'direct') {
-    if (this.selectedElementIds.size > 1) {
-      this.activeGesture = 'move-group';
-      this.groupTransform = {
-        startPositions : new Map(),
-        bboxCenter     : this.getGroupBBox()
-      };
-      this.selectedElementIds.forEach(id => {
-        const el = this.findElementById(id);
-        this.groupTransform.startPositions.set(id, { x: el.x, y: el.y });
-      });
-      this.dragStartPos = { x: ev.clientX, y: ev.clientY };
-      this.container.setPointerCapture(ev.pointerId);
-      ev.stopPropagation();
-      return;
-    }
-  }
+        /* ---------- direct mode group move ---------- */
+        if (this.mode === 'direct') {
+            if (this.selectedElementIds.size > 1) {
+                this.activeGesture = 'move-group';
+                this.groupTransform = {
+                    startPositions: new Map(),
+                    bboxCenter: this.getGroupBBox()
+                };
+                this.selectedElementIds.forEach(id => {
+                    const el = this.findElementById(id);
+                    this.groupTransform.startPositions.set(id, { x: el.x, y: el.y });
+                });
+                this.dragStartPos = { x: ev.clientX, y: ev.clientY };
+                this.container.setPointerCapture(ev.pointerId);
+                ev.stopPropagation();
+                return;
+            }
+        }
 
-  /* ---------- fallback to original single‑element logic ---------- */
-  /* (keep your existing move/resize/etc. code) */
+        /* ---------- fallback to original single‑element logic ---------- */
+        /* (keep your existing move/resize/etc. code) */
 
         if (this.mode === 'direct') this.initialTouches.push({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
 
         console.log("onPointerDownElement(ev)", ev.target);
         const target = ev.target;
-        
+
 
         const isHandle = target.classList.contains("resize-handle") ||
             target.classList.contains("rotate-handle") ||
@@ -1134,7 +1135,7 @@ console.log("onPointerDownElement(ev)", ev.target);
             target.classList.contains("type-handle") ||
             target.classList.contains("edge-handle");
         if (isHandle) return;
-        const elementId = targetEl.dataset.elId;
+        
         if (this.selectedElementId !== elementId) {
             this.selectElement(elementId);
         }
@@ -1149,22 +1150,22 @@ console.log("onPointerDownElement(ev)", ev.target);
 
     onPointerMoveElement(ev) {
         if (this.activeGesture === 'move-group') {
-    ev.stopPropagation();
-    const dx = (ev.clientX - this.dragStartPos.x) / this.viewState.scale;
-    const dy = (ev.clientY - this.dragStartPos.y) / this.viewState.scale;
+            ev.stopPropagation();
+            const dx = (ev.clientX - this.dragStartPos.x) / this.viewState.scale;
+            const dy = (ev.clientY - this.dragStartPos.y) / this.viewState.scale;
 
-    this.selectedElementIds.forEach(id => {
-      const el = this.findElementById(id);
-      const start = this.groupTransform.startPositions.get(id);
-      el.x = start.x + dx;
-      el.y = start.y + dy;
-    });
-    this.renderElements();
-    return;
-  }
+            this.selectedElementIds.forEach(id => {
+                const el = this.findElementById(id);
+                const start = this.groupTransform.startPositions.get(id);
+                el.x = start.x + dx;
+                el.y = start.y + dy;
+            });
+            this.renderElements();
+            return;
+        }
 
-  /* ---------- keep all your previous single‑element logic ---------- */
-  /* … */
+        /* ---------- keep all your previous single‑element logic ---------- */
+        /* … */
         // console.log("onPointerMoveElement(ev)", ev.target)
         if (!this.activeGesture) return;
         if (this.activeGesture === "move-element") {

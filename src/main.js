@@ -258,7 +258,7 @@ class CanvasController {
             ev.stopPropagation();
             const newMode = (this.mode === 'direct') ? 'navigate' : 'direct';
             this.switchMode(newMode);
-            this.fsmService.send('TOGGLE_MODE')
+            
         };
 
         // Add drill up button click handler
@@ -451,6 +451,7 @@ class CanvasController {
         this.mode = m;
         this.canvas.setAttribute("mode", this.mode);
         this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'}"></i> ${this.mode}`;
+        this.fsmService.send('TOGGLE_MODE');
     }
 
     loadLocalViewState() {

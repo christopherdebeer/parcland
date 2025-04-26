@@ -73,7 +73,18 @@ export const gestureMachine = createMachine({
         },
 
         /* … skeletal states – pure logging only …                       */
-        panCanvas:   { on: { POINTER_UP: 'idle', POINTER_MOVE: { actions:'logState'} }, entry:'logState' },
+        panCanvas:   {
+          on: {
+            POINTER_DOWN: {  // <── new
+      cond: 'twoPointersNavigate',
+      target: 'pinchCanvas',
+      actions: ['capturePinchStart','logState']
+    },
+          POINTER_UP: 'idle', 
+          POINTER_MOVE: { actions:'logState'} 
+        }, 
+          entry:'logState' 
+        },
         pinchCanvas:{ on: { POINTER_UP: 'idle', POINTER_MOVE: { actions:'logState'} }, entry:'logState' },
         wheelZoom:   { after: { 0: 'idle' },                                        entry:'logState' },
 

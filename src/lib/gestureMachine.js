@@ -89,10 +89,10 @@ export const gestureMachine = createMachine({
 {
   /* ------------------------ GUARDS ------------------------------------ */
   guards: {
-    twoPointersNavigate:           (ctx, ev) => Object.keys(ev.active).length === 2 && state.matches('mode.navigate'),
-    onePointerBlankNavigate:       (ctx, ev) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.navigate'),
-    onePointerBlankDirect:         (ctx, ev) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.direct'),
-    onePointerElementDirect:       (ctx, ev) => Object.keys(ev.active).length === 1 &&  ev.hitElement && state.matches('mode.direct'),
+    twoPointersNavigate:           (ctx, ev, {state}) => Object.keys(ev.active).length === 2 && state.matches('mode.navigate'),
+    onePointerBlankNavigate:       (ctx, ev, {state}) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.navigate'),
+    onePointerBlankDirect:         (ctx, ev, {state}) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.direct'),
+    onePointerElementDirect:       (ctx, ev, {state}) => Object.keys(ev.active).length === 1 &&  ev.hitElement && state.matches('mode.direct'),
   },
 
   /* ------------------------ ACTIONS ----------------------------------- */

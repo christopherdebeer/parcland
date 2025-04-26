@@ -450,7 +450,7 @@ class CanvasController {
         this.mode = m;
         this.canvas.setAttribute("mode", this.mode);
         this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'}"></i> ${this.mode}`;
-        this.fsmService.send('TOGGLE_MODE');
+        this.fsmService?.send('TOGGLE_MODE');
     }
 
     loadLocalViewState() {

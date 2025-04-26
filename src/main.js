@@ -258,6 +258,7 @@ class CanvasController {
             ev.stopPropagation();
             const newMode = (this.mode === 'direct') ? 'navigate' : 'direct';
             this.switchMode(newMode);
+            this.fsmService.send('TOGGLE_MODE')
         };
 
         // Add drill up button click handler

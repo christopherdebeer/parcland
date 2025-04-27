@@ -1,31 +1,21 @@
 // Thin DOM ⇄ FSM bridge.
-// Turns raw DOM pointer / wheel events into clean XState events with the data
-// that the gestureMachine’s guards expect.
-//
-// installPointerAdapter(rootEl, fsmService, {
-//      getViewState,                    // () → {scale, translateX, …}
-//      screenToCanvas,                  // (clientX,clientY) → {x,y}
-//      isGroupSelected = () => false    // () → Boolean      (optional)
-// });
+// Adds capture-phase listeners so `stopPropagation()` inside the app
+// can’t block us, and annotates events with `handle` for element-handles.
 
-export function installPointerAdapter(
-  rootEl,
-  service,
-  { getViewState, screenToCanvas, isGroupSelected = () => false }
-) {
+export function installPointerAdapter(rootEl, service, getViewState /*, screenToCanvas */) {
 
-  /* live map of active pointers ➜ {pointerId:{x,y}} */
-  const active = new Map();
+  /* -------------------------------------------------------- helpers */
+  const active = new Map();               // pointerId ➜ {x,y}
 
-  /* identify which kind of handle (if any) was pressed */
-  const classifyHandle = target => {
-    if (!target) return null;
-    if (target.closest('.resize-handle'))  return 'resize';
-    if (target.closest('.scale-handle'))   return 'scale';
-    if (target.closest('.rotate-handle'))  return 'rotate';
-    if (target.closest('.reorder-handle')) return 'reorder';
-    if (target.closest('.edge-handle'))    return 'edge';
-    if (target.closest('.create-handle'))  return 'create';
+  const identifyHandle = (target) => {
+    const h = target.closest('.element-handle');
+    if (!h) return null;
+    if (h.classList.contains('resize-handle'))   return 'resize';
+    if (h.classList.contains('scale-handle'))    return 'scale';
+    if (h.classList.contains('rotate-handle'))   return 'rotate';
+    if (h.classList.contains('reorder-handle'))  return 'reorder';
+    if (h.classList.contains('edge-handle'))     return 'createEdge';
+    if (h.classList.contains('create-handle'))   return 'createNode';
     return null;
   };
 
@@ -36,53 +26,39 @@ export function installPointerAdapter(
     service.send({
       type,
       xy,
-      active       : Object.fromEntries(active),
-      hitElement   : !!hit,
-      elementId    : hit ? hit.dataset.elId : null,
-      handle       : classifyHandle(ev.target),      //  ← new
-      groupSelected: isGroupSelected(),              //  ← new
-      view         : getViewState(),
-      ev                                               // raw DOM event (never
+      active : Object.fromEntries(active),
+      hitElement : !!hit,
+      elementId  : hit ? hit.dataset.elId : null,
+      handle     : identifyHandle(ev.target),
+      view       : getViewState(),
+      ev         : ev                // raw DOM event – ignored by the FSM
     });
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  Pointer events                                                    */
-  /* ------------------------------------------------------------------ */
-  rootEl.addEventListener('pointerdown', ev => {
-    active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-    send('POINTER_DOWN', ev);
-  });
-
-  rootEl.addEventListener('pointermove', ev => {
+  /* -------------------------------------------------------- listeners */
+  const onDown = ev => { active.set(ev.pointerId, {x:ev.clientX, y:ev.clientY}); send('POINTER_DOWN', ev); };
+  const onMove = ev => {
     if (active.has(ev.pointerId)) {
-      active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      active.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
       send('POINTER_MOVE', ev);
     }
-  });
-
-  const finish = ev => {
-    active.delete(ev.pointerId);
-    send('POINTER_UP', ev);
   };
-  rootEl.addEventListener('pointerup',     finish);
-  rootEl.addEventListener('pointercancel', finish);
+  const onUpCancel = ev => { active.delete(ev.pointerId); send('POINTER_UP', ev); };
 
-  /* ------------------------------------------------------------------ */
-  /*  Wheel / track-pad zoom                                            */
-  /* ------------------------------------------------------------------ */
-  rootEl.addEventListener(
-    'wheel',
-    ev => {
-      // Prevent native page-scroll unless user is inside scrollable content
-      if (!ev.ctrlKey) ev.preventDefault();
-      send('WHEEL', ev);
-    },
-    { passive: false }
-  );
+  rootEl.addEventListener('pointerdown',   onDown,    { capture:true, passive:false });
+  rootEl.addEventListener('pointermove',   onMove,    { capture:true, passive:false });
+  rootEl.addEventListener('pointerup',     onUpCancel,{ capture:true, passive:false });
+  rootEl.addEventListener('pointercancel', onUpCancel,{ capture:true, passive:false });
 
+  const onWheel = ev => send('WHEEL', ev);
+  rootEl.addEventListener('wheel', onWheel, { capture:true, passive:true });
+
+  /* ------------- return un-installer so CanvasController can clean up */
   return () => {
-    /* uninstall callback returned to the caller */
-    rootEl.replaceWith(rootEl.cloneNode(true));
+    rootEl.removeEventListener('pointerdown',   onDown,    true);
+    rootEl.removeEventListener('pointermove',   onMove,    true);
+    rootEl.removeEventListener('pointerup',     onUpCancel,true);
+    rootEl.removeEventListener('pointercancel', onUpCancel,true);
+    rootEl.removeEventListener('wheel',         onWheel,   true);
   };
 }

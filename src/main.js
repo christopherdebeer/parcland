@@ -21,9 +21,7 @@ class CanvasController {
 
         this.selectionBox = null;              // DOM element for the rubber‑band rectangle
         this.groupTransform = null;            // cached positions for group move/scale
-
-
-
+        
         this.activeGesture = null;
         this.supressTap = false;
         this.initialTouches = [];
@@ -96,7 +94,8 @@ class CanvasController {
         this.uninstallAdapter = installPointerAdapter(
             this.canvas,
             this.fsmService,
-            () => ({ ...this.viewState })
+            () => ({ ...this.viewState }),
+            () => this.selectedElementIds.size > 1
         );
         this.setupEventListeners();
 

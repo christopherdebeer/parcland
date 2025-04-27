@@ -1,135 +1,164 @@
 // ---------------------------------------------------------------------------
-// XState finite-state machine describing   (mode  ╳  gesture)
+//  XState finite-state machine describing      (  mode   ╳   gesture  )
 // ---------------------------------------------------------------------------
-// * Pure data – NO side-effects except   console.log()   in entry actions.
-// * Still “logging only” – real behaviour lives in main.js for now.
+//  • **Pure data** – the only side-effect is   console.log()   in state *entry*
+//  • Designed to mirror every pointer / wheel / double-tap branch
+//    that currently exists in CanvasController.
+//
+//  NOTE:  No duplicate logs – we *only* log on state entry.
 // ---------------------------------------------------------------------------
 
 import { createMachine, assign } from 'xstate';
 
-export const gestureMachine = createMachine(
-{
+export const gestureMachine = createMachine({
+
   id: 'canvas',
   preserveActionOrder: true,
 
   /* --------------------------------------------------------------------- */
   context: {
-    pointers: {},   // { [pointerId]:{x,y} }
-    draft:   {}     // scratch store (start positions, etc.)
+    pointers : {},  // { [pointerId]:{x,y} }
+    draft    : {}   // scratch data captured in entry-actions
   },
 
   /* --------------------------------------------------------------------- */
-  type: 'parallel',
+  type  : 'parallel',
   states: {
 
-    /* --------------------- HIGH-LEVEL MODE (navigate|direct) ------------ */
+    /* ------------------------- 1. HIGH-LEVEL MODE ---------------------- */
     mode: {
       initial: 'navigate',
-      states: {
-        navigate: { entry: 'logState', on: { TOGGLE_MODE: 'direct'  } },
-        direct:   { entry: 'logState', on: { TOGGLE_MODE: 'navigate'} }
+      states : {
+        navigate: { on:{ TOGGLE_MODE:'direct'  }},
+        direct  : { on:{ TOGGLE_MODE:'navigate'}}
       }
     },
 
-    /* ----------------------------- GESTURE ------------------------------ */
+    /* ----------------------------- 2. GESTURE -------------------------- */
     gesture: {
       initial: 'idle',
-      states: {
+      states : {
 
-        /* idle – waiting for first contact -------------------------------- */
+        /*  idle – waiting for first contact  -------------------------------- */
         idle: {
-          entry: 'logState',
-          on: {
-            POINTER_DOWN: [
+          entry:'log',
 
-              /* handles (direct-mode only) */
-              { cond:'resizeHandleDirect',  target:'resizeElement',  actions:'captureResizeStart' },
-              { cond:'scaleHandleDirect',   target:'scaleElement',   actions:'captureScaleStart'  },
-              { cond:'rotateHandleDirect',  target:'rotateElement',  actions:'captureRotateStart' },
-              { cond:'reorderHandleDirect', target:'reorderElement', actions:'captureReorderStart'},
-              { cond:'edgeHandleDirect',    target:'createEdge',     actions:'captureEdgeStart'   },
-              { cond:'createHandleDirect',  target:'createNode',     actions:'captureNodeStart'   },
+          on:{
+            /* ————————————————— POINTER DOWN ————————————————————————— */
+            POINTER_DOWN:[
+              /* canvas navigation ------------------------------------------------ */
+              { cond:'twoPointersNavigate'     , target:'pinchCanvas' , actions:'capPinch' },
+              { cond:'onePointerBlankNavigate' , target:'panCanvas'   , actions:'capPan'   },
 
-              /* main canvas gestures */
-              { cond:'twoPointersNavigate',        target:'pinchCanvas',  actions:'capturePinchStart' },
-              { cond:'onePointerBlankNavigate',    target:'panCanvas',    actions:'capturePanStart'   },
-              { cond:'onePointerBlankDirect',      target:'lasso',        actions:'captureLassoStart' },
-              { cond:'onePointerElementDirect',    target:'moveElement',  actions:'captureMoveStart'  },
+              /* direct-mode blank press / group / element moves ----------------- */
+              { cond:'onePointerBlankDirect'   , target:'lassoSelect' , actions:'capLasso' },
+              { cond:'onePointerGroupDirect'   , target:'moveGroup'   , actions:'capGroupMove' },
+              { cond:'onePointerElementDirect' , target:'moveElement' , actions:'capMove'   },
+
+              /* element handles -------------------------------------------------- */
+              { cond:'handleResize'            , target:'resizeElement', actions:'capResize' },
+              { cond:'handleScale'             , target:'scaleElement' , actions:'capScale'  },
+              { cond:'handleRotate'            , target:'rotateElement', actions:'capRotate' },
+              { cond:'handleReorder'           , target:'reorderElement',actions:'capReorder'},
+
+              /* edge / node creation -------------------------------------------- */
+              { cond:'edgeHandleDrag'          , target:'createEdge'   , actions:'capEdge'   },
+              { cond:'createNodeHandleDrag'    , target:'createNode'   , actions:'capNode'   },
             ],
 
-            WHEEL: { target:'wheelZoom' }
+            /* wheel zoom (desktop track-pad / mouse) --------------------------- */
+            WHEEL : { target:'wheelZoom' },
+
+            /* ————————————————— DOUBLE TAP ———————————————————————————— */
+            DOUBLE_TAP:[
+              { cond:'doubleTapCanvasBlank', target:'doubleTapCanvas'  },
+              { cond:'doubleTapElement'   , target:'doubleTapElement'  },
+              { cond:'doubleTapEdgeLabel' , target:'doubleTapEdgeLabel'}
+            ]
           }
         },
 
-        /* -------------- canvas navigation states ------------------------ */
-        panCanvas:   { entry:'logState',
-          on:{
-            POINTER_DOWN:{ cond:'twoPointersNavigate', target:'pinchCanvas', actions:'capturePinchStart' },
-            POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{}
-          }
-        },
-        pinchCanvas:{ entry:'logState',
-          on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} }
-        },
-        wheelZoom:{  entry:'logState', after:{ 0:'idle' } },
+        /* ------------  NAVIGATION gestures ------------- */
+        panCanvas   :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        pinchCanvas :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        wheelZoom   :{ entry:'log', after:{0:'idle'} },
 
-        /* -------------- direct-mode selection --------------------------- */
-        lasso:{ entry:'logState',
-          on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} }
-        },
+        /* ------------  SELECTION / GROUP --------------- */
+        lassoSelect :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        moveGroup   :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        pinchGroup  :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
 
-        /* -------------- element / group manipulation -------------------- */
-        moveElement:{  entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        moveGroup:{    entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        pinchElement:{ entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        pinchGroup:{   entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        resizeElement:{entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        scaleElement:{ entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        rotateElement:{entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        reorderElement:{entry:'logState',on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
+        /* ------------  SINGLE ELEMENT ------------------ */
+        moveElement   :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        resizeElement :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        scaleElement  :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        rotateElement :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        reorderElement:{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        pinchElement  :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
 
-        /* -------------- edge / node creation ---------------------------- */
-        createEdge:{  entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
-        createNode:{  entry:'logState', on:{ POINTER_UP:'idle', POINTER_CANCEL:'idle', POINTER_MOVE:{} } },
+        /* ------------  EDGES & NODES ------------------- */
+        createEdge :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
+        createNode :{ entry:'log', on:{ POINTER_UP:'idle', POINTER_MOVE:{} }},
 
-        /* fallback ------------------------------------------------------- */
-        '*': {}
+        /* ------------  DOUBLE-TAPS  -------------------- */
+        doubleTapCanvas   :{ entry:'log', after:{0:'idle'} },
+        doubleTapElement  :{ entry:'log', after:{0:'idle'} },
+        doubleTapEdgeLabel:{ entry:'log', after:{0:'idle'} },
+
+        /* fallback (keep XState happy) */
+        '*':{}
       }
     }
   }
 },
+/* ----------------------------------------------------------------------- */
+/*  OPTIONS – guards + actions                                             */
+/* ----------------------------------------------------------------------- */
 {
-  /* ------------------------------ GUARDS -------------------------------- */
   guards:{
-    /* navigation */
-    twoPointersNavigate:      (ctx,ev,{state}) => Object.keys(ev.active).length === 2 && state.matches('mode.navigate'),
-    onePointerBlankNavigate:  (ctx,ev,{state}) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.navigate'),
-    onePointerBlankDirect:    (ctx,ev,{state}) => Object.keys(ev.active).length === 1 && !ev.hitElement && state.matches('mode.direct'),
-    onePointerElementDirect:  (ctx,ev,{state}) => Object.keys(ev.active).length === 1 &&  ev.hitElement && !ev.handle && state.matches('mode.direct'),
+    /* ----- basic helpers ----- */
+    isNavigate : (_c,_e,{state}) => state.matches('mode.navigate'),
+    isDirect   : (_c,_e,{state}) => state.matches('mode.direct'),
 
-    /* handles (direct-mode) */
-    resizeHandleDirect:  (c,e,{state}) => e.handle==='resize'   && state.matches('mode.direct'),
-    scaleHandleDirect:   (c,e,{state}) => e.handle==='scale'    && state.matches('mode.direct'),
-    rotateHandleDirect:  (c,e,{state}) => e.handle==='rotate'   && state.matches('mode.direct'),
-    reorderHandleDirect: (c,e,{state}) => e.handle==='reorder'  && state.matches('mode.direct'),
-    edgeHandleDirect:    (c,e,{state}) => e.handle==='createEdge' && state.matches('mode.direct'),
-    createHandleDirect:  (c,e,{state}) => e.handle==='createNode' && state.matches('mode.direct'),
+    /* ----- navigation mode ----- */
+    twoPointersNavigate    : (_c,e,p) => Object.keys(e.active||{}).length===2 && !e.hitElement && p.state.matches('mode.navigate'),
+    onePointerBlankNavigate: (_c,e,p) => Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.navigate'),
+
+    /* ----- direct-mode (blank / group / element) ----- */
+    onePointerBlankDirect  : (_c,e,p) => Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.direct'),
+    onePointerElementDirect: (_c,e,p) => Object.keys(e.active||{}).length===1 &&  e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
+    onePointerGroupDirect  : (_c,e,p) => Object.keys(e.active||{}).length===1 &&  e.groupSelected && p.state.matches('mode.direct'),
+
+    /* ----- handles (pointerAdapter marks `handle` key) ----- */
+    handleResize : (_c,e)=> e.handle==='resize',
+    handleScale  : (_c,e)=> e.handle==='scale',
+    handleRotate : (_c,e)=> e.handle==='rotate',
+    handleReorder: (_c,e)=> e.handle==='reorder',
+
+    edgeHandleDrag      : (_c,e)=> e.handle==='edge',
+    createNodeHandleDrag: (_c,e)=> e.handle==='createNode',
+
+    /* ----- double-tap surface ----- */
+    doubleTapCanvasBlank: (_c,e)=> !e.hitElement && !e.edgeLabel,
+    doubleTapElement    : (_c,e)=>  e.hitElement && !e.edgeLabel,
+    doubleTapEdgeLabel  : (_c,e)=>  e.edgeLabel
   },
 
-  /* ------------------------------ ACTIONS ------------------------------ */
   actions:{
-    logState:            (ctx,ev,meta) => console.log('[FSM]', meta.state.value),
+    /* single-liner console log */
+    log: (_c,_e,meta) => console.log('[FSM]', meta.state.value),
 
-    /* simple scratch-captures – kept for future use */
-    capturePanStart:     assign({ draft:(c,e)=>({ start:{...e.xy}, view:e.view       }) }),
-    capturePinchStart:   assign({ draft:(c,e)=>({ points:Object.values(e.active)     }) }),
-    captureLassoStart:   assign({ draft:(c,e)=>({ start:{...e.xy}                    }) }),
-    captureMoveStart:    assign({ draft:(c,e)=>({ start:{...e.xy}, elementId:e.elementId }) }),
-    captureResizeStart:  assign({ draft:(c,e)=>({ start:{...e.xy}, elementId:e.elementId }) }),
-    captureScaleStart:   assign({ draft:(c,e)=>({ start:{...e.xy}, elementId:e.elementId }) }),
-    captureRotateStart:  assign({ draft:(c,e)=>({ start:{...e.xy}, elementId:e.elementId }) }),
-    captureReorderStart: assign({ draft:(c,e)=>({ start:{...e.xy}, elementId:e.elementId }) }),
-    captureEdgeStart:    assign({ draft:(c,e)=>({ elementId:e.elementId }) }),
-    captureNodeStart:    assign({ draft:(c,e)=>({ elementId:e.elementId }) })
+    /* scratch capture helpers (future use) */
+    capPan     : assign({ draft:(_c,e)=>({ start:e.xy , view:e.view          }) }),
+    capPinch   : assign({ draft:(_c,e)=>({ points:Object.values(e.active||{})}) }),
+    capLasso   : assign({ draft:(_c,e)=>({ start:e.xy                        }) }),
+    capMove    : assign({ draft:(_c,e)=>({ start:e.xy , id:e.elementId       }) }),
+    capGroupMove:assign({ draft:(_c,e)=>({ start:e.xy                        }) }),
+    capResize  : assign({ draft:(_c,e)=>({ start:e.xy , id:e.elementId       }) }),
+    capScale   : assign({ draft:(_c,e)=>({ start:e.xy , id:e.elementId       }) }),
+    capRotate  : assign({ draft:(_c,e)=>({ start:e.xy , id:e.elementId       }) }),
+    capReorder : assign({ draft:(_c,e)=>({ start:e.xy , id:e.elementId       }) }),
+    capEdge    : assign({ draft:(_c,e)=>({ start:e.xy , sourceId:e.elementId }) }),
+    capNode    : assign({ draft:(_c,e)=>({ start:e.xy , sourceId:e.elementId }) })
   }
 });

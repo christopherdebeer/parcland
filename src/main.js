@@ -1,6 +1,7 @@
 import { interpret } from 'xstate';
 import { gestureMachine } from './lib/gestureMachine.js';
 import { installPointerAdapter } from './lib/pointerAdapter.js';
+import { createGestureHelpers } from './lib/gesture-helpers.js';
 import { buildContextMenu } from './lib/context-menu';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
@@ -90,7 +91,10 @@ class CanvasController {
         this.switchMode('navigate');
 
         this.loadLocalViewState();
-        this.fsmService     = interpret(gestureMachine).start();
+        const helperActions = createGestureHelpers(this);
+        this.fsmService     = interpret(gestureMachine.withConfig({
+            actions: {...helperActions},
+        })).start();
         this.uninstallAdapter = installPointerAdapter(
             this.canvas,
             this.fsmService,

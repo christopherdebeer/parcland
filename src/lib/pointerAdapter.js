@@ -1,64 +1,108 @@
+// -----------------------------------------------------------------------------
 // Thin DOM ⇄ FSM bridge.
-// Adds capture-phase listeners so `stopPropagation()` inside the app
-// can’t block us, and annotates events with `handle` for element-handles.
+// • Converts native pointer / wheel events into *pure* FSM events
+// • Emits no logs – the FSM itself will log on state transitions
+// -----------------------------------------------------------------------------
 
-export function installPointerAdapter(rootEl, service, getViewState /*, screenToCanvas */) {
+export function installPointerAdapter(
+  rootEl,                       // canvas DOM node
+  service,                      // xstate service for gestureMachine
+  getViewState,                 // () ⇒ { scale, translateX, translateY … }
+  isGroupSelected = () => false // () ⇒ Boolean – true when ≥2 elements selected
+) {
 
-  /* -------------------------------------------------------- helpers */
-  const active = new Map();               // pointerId ➜ {x,y}
+  /* ------------------------------------------------------------------------- */
+  /*  Internal helpers                                                         */
+  /* ------------------------------------------------------------------------- */
 
-  const identifyHandle = (target) => {
-    const h = target.closest('.element-handle');
-    if (!h) return null;
-    if (h.classList.contains('resize-handle'))   return 'resize';
-    if (h.classList.contains('scale-handle'))    return 'scale';
-    if (h.classList.contains('rotate-handle'))   return 'rotate';
-    if (h.classList.contains('reorder-handle'))  return 'reorder';
-    if (h.classList.contains('edge-handle'))     return 'createEdge';
-    if (h.classList.contains('create-handle'))   return 'createNode';
+  const active = new Map();                // pointerId → {x,y}
+  let lastTap = { t: 0, x: 0, y: 0 };      // for double-tap detection
+  const TAP_MS   = 300;
+  const TAP_DIST = 10;
+
+  const classifyHandle = (node) => {
+    if (!node) return null;
+    if (node.classList.contains('resize-handle'))   return 'resize';
+    if (node.classList.contains('scale-handle'))    return 'scale';
+    if (node.classList.contains('rotate-handle'))   return 'rotate';
+    if (node.classList.contains('reorder-handle'))  return 'reorder';
+    if (node.classList.contains('edge-handle'))     return 'edge';
+    if (node.classList.contains('create-handle'))   return 'createNode';
+    /* fall-through → null  */
     return null;
   };
 
-  const send = (type, ev) => {
-    const xy  = { x: ev.clientX, y: ev.clientY };
-    const hit = ev.target.closest('.canvas-element');
+  const send = (type, ev, extra = {}) => {
+    const xy          = { x: ev.clientX, y: ev.clientY };
+    const elementNode = ev.target.closest('.canvas-element');
+    const handleNode  = ev.target.closest('.element-handle');
 
     service.send({
       type,
       xy,
-      active : Object.fromEntries(active),
-      hitElement : !!hit,
-      elementId  : hit ? hit.dataset.elId : null,
-      handle     : identifyHandle(ev.target),
-      view       : getViewState(),
-      ev         : ev                // raw DOM event – ignored by the FSM
+      active      : Object.fromEntries(active),      // live pointer cache
+      hitElement  : !!elementNode,
+      elementId   : elementNode ? elementNode.dataset.elId : null,
+      handle      : classifyHandle(handleNode),      // resize / rotate / …
+      edgeLabel   : !!ev.target.closest('text[data-id]'),
+      groupSelected: isGroupSelected(),
+      view        : getViewState(),
+      ev,                                            // raw DOM event
+      ...extra
     });
   };
 
-  /* -------------------------------------------------------- listeners */
-  const onDown = ev => { active.set(ev.pointerId, {x:ev.clientX, y:ev.clientY}); send('POINTER_DOWN', ev); };
-  const onMove = ev => {
-    if (active.has(ev.pointerId)) {
-      active.set(ev.pointerId, {x:ev.clientX, y:ev.clientY});
-      send('POINTER_MOVE', ev);
+  /* ------------------------------------------------------------------------- */
+  /*  Pointer stream                                                           */
+  /* ------------------------------------------------------------------------- */
+
+  const onPointerDown = (ev) => {
+    active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    send('POINTER_DOWN', ev);
+  };
+
+  const onPointerMove = (ev) => {
+    if (!active.has(ev.pointerId)) return;
+    active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    send('POINTER_MOVE', ev);
+  };
+
+  const finishPointer = (ev) => {
+    active.delete(ev.pointerId);
+    send('POINTER_UP', ev);
+
+    /* ---------- tap / double-tap recognition ------------------------------ */
+    if (ev.button === 0) {
+      const dt   = ev.timeStamp - lastTap.t;
+      const dist = Math.hypot(ev.clientX - lastTap.x, ev.clientY - lastTap.y);
+
+      if (dt < TAP_MS && dist < TAP_DIST) {
+        send('DOUBLE_TAP', ev);
+        lastTap.t = 0;                         // reset
+      } else {
+        lastTap = { t: ev.timeStamp, x: ev.clientX, y: ev.clientY };
+      }
     }
   };
-  const onUpCancel = ev => { active.delete(ev.pointerId); send('POINTER_UP', ev); };
 
-  rootEl.addEventListener('pointerdown',   onDown,    { capture:true, passive:false });
-  rootEl.addEventListener('pointermove',   onMove,    { capture:true, passive:false });
-  rootEl.addEventListener('pointerup',     onUpCancel,{ capture:true, passive:false });
-  rootEl.addEventListener('pointercancel', onUpCancel,{ capture:true, passive:false });
+  const onWheel = (ev) => send('WHEEL', ev);
 
-  const onWheel = ev => send('WHEEL', ev);
-  rootEl.addEventListener('wheel', onWheel, { capture:true, passive:true });
+  /* ------------------------------------------------------------------------- */
+  /*  Wire up listeners                                                        */
+  /* ------------------------------------------------------------------------- */
 
-  /* ------------- return un-installer so CanvasController can clean up */
+  rootEl.addEventListener('pointerdown',   onPointerDown, { passive: true });
+  rootEl.addEventListener('pointermove',   onPointerMove, { passive: true });
+  rootEl.addEventListener('pointerup',     finishPointer, { passive: true });
+  rootEl.addEventListener('pointercancel', finishPointer, { passive: true });
+  rootEl.addEventListener('wheel',         onWheel,       { passive: true });
+
+  /* Return an uninstaller in case the canvas controller gets torn down */
   return () => {
-    rootEl.removeEventListener('pointerdown',   onDown,    true);
-    rootEl.removeEventListener('pointermove',   onMove,    true);
-    rootEl.removeEventListener('pointerup',     onUpCancel,true);
-    rootEl.removeEventListener('pointercancel', onUpCancel,true);
-    rootEl.removeEventListener('wheel',         onWheel,   true);
+    rootEl.removeEventListener('pointerdown',   onPointerDown);
+    rootEl.removeEventListener('pointermove',   onPointerMove);
+    rootEl.removeEventListener('pointerup',     finishPointer);
+    rootEl.removeEventListener('pointercancel', finishPointer);
+    rootEl.removeEventListener('wheel',         onWheel);
   };
 }

@@ -80,22 +80,36 @@ export const gestureMachine = createMachine({
             WHEEL: { target: 'wheelZoom' },
 
             /* ---------------- DOUBLE TAP ------------------------------ */
-            DOUBLE_TAP: [
-              { cond: 'doubleTapCanvasBlank', target: 'doubleTapCanvas' },
-              { cond: 'doubleTapElement', target: 'doubleTapElement' },
-              { cond: 'doubleTapEdgeLabel', target: 'doubleTapEdgeLabel' }
-            ]
+            DOUBLE_TAP : [
+  /* highest-priority: element hit while in navigate mode */
+  { cond : 'doubleTapElementNavigate',
+    target : 'doubleTapElement',
+    actions : ['selectElement', 'switchToDirect'] },
+
+  /* the original order follows */
+  { cond : 'doubleTapCanvasBlank', target : 'doubleTapCanvas' },
+  { cond : 'doubleTapElement',     target : 'doubleTapElement' },
+  { cond : 'doubleTapEdgeLabel',   target : 'doubleTapEdgeLabel' }
+]
           }
         },
 
         /* ------------  NAVIGATION gestures ------------- */
-        panCanvas: {
-          entry: 'log',
-          on: {
-            POINTER_MOVE: { actions: 'applyCanvasPan' },
-            POINTER_UP: { target: 'idle', actions: 'persistViewState' }
-          }
-        },
+        /* -------------  NAVIGATION – one finger pan → two finger pinch -------------- */
+panCanvas : {
+  entry : 'log',
+  on : {
+    POINTER_MOVE : { actions : 'applyCanvasPan' },
+    /* NEW – escalate to pinch as soon as a second finger appears */
+    POINTER_DOWN : { cond : 'twoPointersNavigate',
+                     target : 'pinchCanvas',
+                     actions : 'capPinch' },
+    POINTER_UP   : { target : 'idle',
+                     actions : 'persistViewState' }
+  }
+},
+
+
         pinchCanvas: {
           entry: 'log',
           on: {
@@ -116,13 +130,18 @@ export const gestureMachine = createMachine({
             POINTER_UP: { target: 'idle', actions: 'commitLassoSelection' }
           }
         },
-        moveGroup: {
-          entry: 'log',
-          on: {
-            POINTER_MOVE: { actions: 'applyGroupMove' },
-            POINTER_UP: { target: 'idle', actions: 'commitElementMutation' }
-          }
-        },
+        /* -------------  DIRECT – drag group → group pinch --------------------------- */
+moveGroup : {
+  entry : 'log',
+  on : {
+    POINTER_MOVE : { actions : 'applyGroupMove' },
+    POINTER_DOWN : { cond : 'twoPointersGroupDirect',
+                     target : 'pinchGroup',
+                     actions : 'capGroupPinch' },     // NEW
+    POINTER_UP   : { target : 'idle',
+                     actions : 'commitElementMutation' }
+  }
+},
         pinchGroup: {
           entry: 'log',
           on: {
@@ -132,13 +151,20 @@ export const gestureMachine = createMachine({
         },
 
         /* ------------  SINGLE ELEMENT ------------------ */
-        moveElement: {
-          entry: 'log',
-          on: {
-            POINTER_MOVE: { actions: 'applyMoveElement' },
-            POINTER_UP: { target: 'idle', actions: 'commitElementMutation' }
-          }
-        },
+        /* -------------  DIRECT – drag element → two-finger transform ---------------- */
+moveElement : {
+  entry : 'log',
+  on : {
+    POINTER_MOVE : { actions : 'applyMoveElement' },
+    POINTER_DOWN : { cond : 'twoPointersElementDirect',
+                     target : 'pinchElement',
+                     actions : 'capPinchElement' },   // NEW
+    POINTER_UP   : { target : 'idle',
+                     actions : 'commitElementMutation' }
+  }
+},
+
+
         resizeElement: {
           entry: 'log',
           on: {
@@ -241,7 +267,9 @@ twoPointersGroupDirect : (_c,e,p)=>
       edgeHandleDrag: (_c, e) => e.handle === 'edge',
       createNodeHandleDrag: (_c, e) => e.handle === 'createNode',
 
-      /* double-tap surface */
+      /* double-tap */
+      doubleTapElementNavigate : (_c, e, p) =>
+  e.hitElement && p.state.matches('mode.navigate'),
       doubleTapCanvasBlank: (_c, e) => !e.hitElement && !e.edgeLabel,
       doubleTapElement: (_c, e) => e.hitElement && !e.edgeLabel,
       doubleTapEdgeLabel: (_c, e) => e.edgeLabel
@@ -367,7 +395,11 @@ capGroupPinch : assign({
   }
 }),
 
-
+switchToDirect : (c, _e, meta) => {
+  if (meta.state.matches('mode.navigate')) {
+    c.controller.switchMode('direct');
+  }
+},
 
       capReorder: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
       capEdge: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) }),

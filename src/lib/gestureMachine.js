@@ -238,7 +238,10 @@ moveElement : {
       isDirect: (_c, _e, { state }) => state.matches('mode.direct'),
 
       /* navigation mode */
-      twoPointersNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 2 && !e.hitElement && p.state.matches('mode.navigate'),
+      /* canvas pinch: any two touches in NAVIGATE mode, no matter what is under them */
+      twoPointersNavigate : (_c, e, p) =>
+          Object.keys(e.active || {}).length === 2 &&
+          p.state.matches('mode.navigate'),
       onePointerBlankNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && p.state.matches('mode.navigate'),
       onePointerElementNavigate:  (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
 

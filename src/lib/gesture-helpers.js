@@ -315,12 +315,30 @@ async function commitNodeCreation(ctx, ev) {
   await generateContent?.(text, controller.findElementById(elId));
 }
 
+function editEdgeLabel(ctx, ev) {
+  const edgeId = ev.edgeId;
+  const screenXY = ev.xy
+  const edge = controller.findEdgeElementById(edgeId);
+  if (!edge) return;
 
+  /* create temporary “edit-prompt” element centred on the label */
+  const pt = controller.screenToCanvas(screenXY.x, screenXY.y);
+  const editId = controller.createNewElement(
+      pt.x, pt.y, 'edit-prompt',
+      edge.label || '',
+      false,
+      { target: edge.id, property: 'label' }
+  );
+  controller.createNewEdge(editId, edge.id, 'Editing…', { meta:true });
+  controller.renderElements();
+}
 
   /* ------------------------------------------------------------ */
   /* export bindings                                              */
   /* ------------------------------------------------------------ */
   return {
+    editEdgeLabel,
+    
     /* canvas */
     applyCanvasPan,
     applyCanvasPinch,

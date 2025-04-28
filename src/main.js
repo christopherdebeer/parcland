@@ -985,48 +985,46 @@ class CanvasController {
     };
 
     buildHandles(node, el) {
-        const corners = [
-            { className: "type-handle element-handle", icon: "fa-solid fa-font", handler: (ev) => this.typeHandlePointerDown(ev) },
-            { className: "scale-handle element-handle top-right", icon: "fa-solid fa-up-down-left-right", handler: (ev) => this.scaleHandlePointerDown(ev) },
-            { className: "reorder-handle bottom-left element-handle", icon: "fa-solid fa-layer-group", handler: (ev) => this.reorderHandlePointerDown(ev) },
-            { className: "resize-handle bottom-right element-handle", icon: "fa-solid fa-up-right-and-down-left-from-center", handler: (ev) => this.resizeHandlePointerDown(ev) }
-        ];
-        corners.forEach(corner => {
-            const h = document.createElement("div");
-            h.className = corner.className;
-            const i = document.createElement("i");
-            i.className = corner.icon;
-            h.appendChild(i);
-            // h.addEventListener("pointerdown", corner.handler);
-            node.appendChild(h);
-        });
-        // Add rotate handle
-        const rotateHandle = document.createElement("div");
-        rotateHandle.className = "rotate-handle rotate-handle-position element-handle";
-        const rotateIcon = document.createElement("i");
-        rotateIcon.className = "fa-solid fa-rotate";
-        rotateHandle.appendChild(rotateIcon);
-        //rotateHandle.addEventListener("pointerdown", (ev) => this.rotateHandlePointerDown(ev));
-        node.appendChild(rotateHandle);
+  const h = (className, icon, click) => {
+    const wrap = document.createElement('div');
+    wrap.className = className + ' element-handle';
+    const i = document.createElement('i');
+    i.className = icon;
+    wrap.appendChild(i);
+    wrap.addEventListener('pointerdown', ev => {
+      ev.stopPropagation();            // don’t let the adapter swallow it
+      wrap.setPointerCapture(ev.pointerId);
+    });
+    if (click) wrap.addEventListener('click', click);
+    node.appendChild(wrap);
+  };
 
-        // Add an edge handle for connecting elements.
-        const edgeHandle = document.createElement("div");
-        edgeHandle.className = "edge-handle element-handle";
-        const edgeIcon = document.createElement("i");
-        edgeIcon.className = "fa-solid fa-link";
-        edgeHandle.appendChild(edgeIcon);
-        //edgeHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-edge'));
-        node.appendChild(edgeHandle);
+  /* top-left – TYPE switcher */
+  h('type-handle', 'fa-solid fa-font', () => {
+    this.buildContextMenu(el.id);      // populate …
+    const bb = node.getBoundingClientRect();
+    this.showContextMenu(bb.left, bb.top);
+  });
 
-        // Add an new node handle for creating linked element.
-        const createHandle = document.createElement("div");
-        createHandle.className = "create-handle element-handle";
-        const createIcon = document.createElement("i");
-        createIcon.className = "fa-solid fa-plus";
-        createHandle.appendChild(createIcon);
-        //createHandle.addEventListener("pointerdown", (ev) => this.edgeHandlePointerDown(ev, 'create-node'));
-        node.appendChild(createHandle);
-    }
+  /* top-right – SCALE */
+  h('scale-handle', 'fa-solid fa-up-down-left-right');
+
+  /* bottom-left – REORDER (z-index) */
+  h('reorder-handle', 'fa-solid fa-layer-group');
+
+  /* bottom-right – RESIZE width/height */
+  h('resize-handle', 'fa-solid fa-up-right-and-down-left-from-center');
+
+  /* rotation handle, centred above */
+  h('rotate-handle rotate-handle-position',
+    'fa-solid fa-rotate');
+
+  /* edge creation handle */
+  h('edge-handle',   'fa-solid fa-link');
+
+  /* “create node” handle */
+  h('create-handle', 'fa-solid fa-plus');
+}
 
     applyPositionStyles(node, el) {
         const scale = el.scale || 1;

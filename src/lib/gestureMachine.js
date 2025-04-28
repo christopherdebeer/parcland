@@ -68,6 +68,9 @@ export const gestureMachine = createMachine({
 { cond:'twoPointersGroupDirect', target:'pinchGroup',
   actions:['capGroupPinch'] },
 
+              { cond:'twoPointersElementDirect', target:'pinchElement',
+  actions:['capPinchElement'] },
+
               /* edge / node creation */
               { cond: 'edgeHandleDrag', target: 'createEdge', actions: 'capEdge' },
               { cond: 'createNodeHandleDrag', target: 'createNode', actions: 'capNode' },
@@ -224,6 +227,11 @@ twoPointersGroupDirect : (_c,e,p)=>
   e.groupSelected &&                     // >1 element selected
   p.state.matches('mode.direct'),
 
+      twoPointersElementDirect: (_c,e,p)=>
+  Object.keys(e.active||{}).length===2 &&
+  e.hitElement && !e.groupSelected &&
+  p.state.matches('mode.direct'),
+      
       /* handles */
       handleResize: (_c, e) => e.handle === 'resize',
       handleScale: (_c, e) => e.handle === 'scale',
@@ -341,6 +349,25 @@ capGroupPinch : assign({
     };
   }
 }),
+
+      capPinchElement : assign({
+  draft: (c,e)=>{
+    const el = c.controller.findElementById(e.elementId);
+    const pts=Object.values(e.active||{});
+    return {
+      id : e.elementId,
+      center : { x:el.x, y:el.y },
+      startCx: el.x,  startCy: el.y,
+      startW : el.width, startH : el.height,
+      startScale : el.scale||1,
+      startRotation : el.rotation||0,
+      startDist    : Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
+      startAngle   : Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x)
+    };
+  }
+}),
+
+
 
       capReorder: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
       capEdge: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) }),

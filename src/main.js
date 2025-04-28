@@ -92,9 +92,14 @@ class CanvasController {
 
         this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
-        this.fsmService     = interpret(gestureMachine.withConfig({
-            actions: {...helperActions},
-        })).start();
+        this.fsmService     = interpret(
+            gestureMachine.withContext({
+                ...gestureMachine.context,
+                controller: this,
+            }).withConfig({
+                actions: {...helperActions},
+            })
+        ).start();
         this.uninstallAdapter = installPointerAdapter(
             this.canvas,
             this.fsmService,

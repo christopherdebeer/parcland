@@ -220,7 +220,7 @@ moveElement : {
         /* ------------  DOUBLE-TAPS  -------------------- */
         doubleTapCanvas: { entry: 'log', after: { 0: 'idle' } },
         doubleTapElement: { entry: 'log', after: { 0: 'idle' } },
-        doubleTapEdgeLabel: { entry: 'log', after: { 0: 'idle' } },
+        doubleTapEdgeLabel: { entry : ['log', 'editEdgeLabel'], after: { 0: 'idle' } },
 
         /* fallback (keep XState happy) */
         '*': {}

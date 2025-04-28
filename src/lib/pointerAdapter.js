@@ -31,7 +31,8 @@ export function installPointerAdapter(
     const xy = { x: ev.clientX, y: ev.clientY };
     const elementNode = ev.target.closest('.canvas-element');
     const handleNode = ev.target.closest('.element-handle');
-
+    const edgeLabelNode = ev.target.closest('text[data-id]');
+    
     service.send({
       type,
       xy,
@@ -39,7 +40,8 @@ export function installPointerAdapter(
       hitElement: !!elementNode,
       elementId: elementNode ? elementNode.dataset.elId : null,
       handle: classifyHandle(handleNode),
-      edgeLabel: !!ev.target.closest('text[data-id]'),
+      edgeLabel : !!edgeLabelNode,
+      edgeId: edgeLabelNode ? edgeLabelNode.dataset.id : null,
       groupSelected: isGroupSelected(),
       view: getViewState(),
       ev, // raw DOM event

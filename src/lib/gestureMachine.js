@@ -71,10 +71,7 @@ export const gestureMachine = createMachine({
               { cond:'twoPointersElementDirect', target:'pinchElement',
   actions:['capPinchElement'] },
 
-              /* edge / node creation */
-              { cond: 'edgeHandleDrag', target: 'createEdge', actions: 'capEdge' },
-              { cond: 'createNodeHandleDrag', target: 'createNode', actions: 'capNode' },
-            ],
+             ],
 
             /* wheel zoom (desktop) ------------------------------------- */
             WHEEL: { target: 'wheelZoom' },

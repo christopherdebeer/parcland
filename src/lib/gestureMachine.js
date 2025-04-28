@@ -117,15 +117,22 @@ panCanvas : {
             POINTER_UP: { target: 'idle', actions: 'persistViewState' }
           }
         },
-        wheelZoom : {
-  entry  : ['log', 'applyWheelZoom'],
-  on     : {
-    /* additional wheel events keep us here and recalc zoom */
-    WHEEL : { actions : 'applyWheelZoom' }
+        /* -------------  NAVIGATION – wheel scroll zoom ---------------------------- */
+wheelZoom: {
+  entry: ['log', 'applyWheelZoom'],
+
+  /* any further wheel events while the user is still scrolling */
+  on: {
+    WHEEL: { actions: 'applyWheelZoom' }
   },
-  /* after the user stops scrolling for 100 ms, return to idle */
-  after  : { 100 : 'idle',
-             actions : 'persistViewState' }
+
+  /* when no wheel events arrive for 100 ms → settle & persist view state */
+  after: {
+    100: {
+      target: 'idle',
+      actions: 'persistViewState'
+    }
+  }
 },
 
         /* ------------  SELECTION / GROUP --------------- */

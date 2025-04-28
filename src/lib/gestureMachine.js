@@ -64,6 +64,10 @@ export const gestureMachine = createMachine({
 { cond:'createNodeHandleDrag',   target:'createNode',
   actions:['capNode','startTempLine'] },
 
+              /* direct-mode, group selected, two touches → pinchGroup ------------------- */
+{ cond:'twoPointersGroupDirect', target:'pinchGroup',
+  actions:['capGroupPinch'] },
+
               /* edge / node creation */
               { cond: 'edgeHandleDrag', target: 'createEdge', actions: 'capEdge' },
               { cond: 'createNodeHandleDrag', target: 'createNode', actions: 'capNode' },
@@ -214,6 +218,12 @@ export const gestureMachine = createMachine({
       onePointerElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement &&!e.handle  && !e.groupSelected && p.state.matches('mode.direct'),
       onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected &&!e.handle && p.state.matches('mode.direct'),
 
+      /* ---------------- guards (gestureMachine options) ------------------------ */
+twoPointersGroupDirect : (_c,e,p)=>
+  Object.keys(e.active||{}).length===2 &&
+  e.groupSelected &&                     // >1 element selected
+  p.state.matches('mode.direct'),
+
       /* handles */
       handleResize: (_c, e) => e.handle === 'resize',
       handleScale: (_c, e) => e.handle === 'scale',
@@ -310,6 +320,24 @@ capRotate: assign({
         startRotation: el.rotation || 0 // <<< FIX: Actual initial rotation number
       },
       id: e.elementId
+    };
+  }
+}),
+      /* ---------------- actions (gestureMachine options) ----------------------- */
+capGroupPinch : assign({
+  draft: (_c,e,{state})=>{
+    const ids   = [...state.context.controller.selectedElementIds];
+    const start = new Map();
+    ids.forEach(id=>{
+      const el = state.context.controller.findElementById(id);
+      start.set(id,{ width:el.width, height:el.height,
+                     x:el.x,       y:el.y });
+    });
+    const pts = Object.values(e.active||{});
+    return {
+      startDist : Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
+      startPositions : start,
+      bboxCenter : state.context.controller.getGroupBBox()
     };
   }
 }),

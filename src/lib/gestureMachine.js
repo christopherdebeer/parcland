@@ -117,10 +117,16 @@ panCanvas : {
             POINTER_UP: { target: 'idle', actions: 'persistViewState' }
           }
         },
-        wheelZoom: {
-          entry: ['log', 'applyWheelZoom'],
-          after: { 0: 'idle' }
-        },
+        wheelZoom : {
+  entry  : ['log', 'applyWheelZoom'],
+  on     : {
+    /* additional wheel events keep us here and recalc zoom */
+    WHEEL : { actions : 'applyWheelZoom' }
+  },
+  /* after the user stops scrolling for 100 ms, return to idle */
+  after  : { 100 : 'idle',
+             actions : 'persistViewState' }
+},
 
         /* ------------  SELECTION / GROUP --------------- */
         lassoSelect: {

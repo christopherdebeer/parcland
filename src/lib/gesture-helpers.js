@@ -192,24 +192,29 @@ export function createGestureHelpers(controller) {
     );
   }
   function commitLassoSelection(ctx, ev) {
-    const { start } = ctx.draft;
-    const { x: sx, y: sy } = start;
-    const { x: ex, y: ey } = ev.xy;
-    const tl = controller.screenToCanvas(Math.min(sx, ex), Math.min(sy, ey));
-    const br = controller.screenToCanvas(Math.max(sx, ex), Math.max(sy, ey));
+  const { start } = ctx.draft;
+  const { x: sx, y: sy } = start;
+  const { x: ex, y: ey } = ev.xy;
+  const tl = controller.screenToCanvas(Math.min(sx, ex), Math.min(sy, ey));
+  const br = controller.screenToCanvas(Math.max(sx, ex), Math.max(sy, ey));
 
-    controller.selectedElementIds.clear();
-    controller.canvasState.elements.forEach(el => {
-      const halfW = (el.width * (el.scale || 1)) / 2;
-      const halfH = (el.height * (el.scale || 1)) / 2;
-      const inX = (el.x + halfW) >= tl.x && (el.x - halfW) <= br.x;
-      const inY = (el.y + halfH) >= tl.y && (el.y - halfH) <= br.y;
-      if (inX && inY) controller.selectedElementIds.add(el.id);
-    });
+  controller.selectedElementIds.clear();
+  controller.canvasState.elements.forEach(el => {
+    const halfW = (el.width  * (el.scale || 1)) / 2;
+    const halfH = (el.height * (el.scale || 1)) / 2;
+    const inX = (el.x + halfW) >= tl.x && (el.x - halfW) <= br.x;
+    const inY = (el.y + halfH) >= tl.y && (el.y - halfH) <= br.y;
+    if (inX && inY) controller.selectedElementIds.add(el.id);
+  });
 
-    controller.removeSelectionBox();
-    controller.renderElements();
+  controller.removeSelectionBox();
+  controller.renderElements();
+
+  if (controller.selectedElementIds.size === 0 &&
+      controller.mode === 'direct') {
+    controller.switchMode('navigate');
   }
+}
 
   /* ---------- selection helpers ---------- */
 function selectElement(_ctx, ev) {

@@ -245,18 +245,36 @@ function applyPinchElement(ctx, ev) {
   controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
 }
 
-/* ---------- edge / node drag ---------- */
-function startTempLine(sourceEl, colour) {
-  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-  line.setAttribute('stroke', colour);
-  line.setAttribute('stroke-width','4');
-  line.setAttribute('stroke-dasharray','5 5');
+/*  ---------- edge / node drag  ----------  */
+/**
+ * XState action – called on POINTER_DOWN when the user starts dragging
+ * an edge or “create node” handle.  It spawns a dashed SVG line that
+ * follows the pointer and stores a reference on ctx.draft.tempLine so
+ * that the subsequent apply/commit helpers can use or remove it.
+ */
+function startTempLine(ctx, ev) {
+  /* grab the element that the handle belongs to */
+  const sourceEl = controller.findElementById(ev.elementId);
+  if (!sourceEl) return;                      // nothing to do
+
+  /* create an SVG <line/> */
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('stroke', '#888');
+  line.setAttribute('stroke-width', '4');
+  line.setAttribute('stroke-dasharray', '5 5');
+
+  /* start & end at the element centre for the first frame */
   line.setAttribute('x1', sourceEl.x);
   line.setAttribute('y1', sourceEl.y);
   line.setAttribute('x2', sourceEl.x);
   line.setAttribute('y2', sourceEl.y);
+
   controller.edgesLayer.appendChild(line);
-  return line;
+
+  /* keep a handle to it for the rest of the gesture */
+  ctx.draft.tempLine  = line;
+  ctx.draft.sourceId  = ev.elementId;
+  ctx.draft.start     = ev.xy;
 }
 
 function applyEdgeDrag(ctx, ev) {

@@ -295,18 +295,41 @@ twoPointersGroupDirect : (_c,e,p)=>
       /* scratch capture helpers */
       capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
       capPinch: assign({
-        draft: (_c, e) => ({
-          points: Object.values(e.active || {}),
-          startDist: Math.hypot(
-            ...((p => [p[1].x - p[0].x, p[1].y - p[0].y])(Object.values(e.active || {})))
-          ),
-          initialScale: e.view.scale,
-          center: {
-            x: (e.active[0].x + e.active[1].x) / 2,
-            y: (e.active[0].y + e.active[1].y) / 2
-          }
-        })
-      }),
+      draft: (_c, e) => {
+        // 1. Get the active pointer coordinates as an array of {x, y} objects.
+        //    Handle the case where e.active might be null/undefined briefly.
+        const points = Object.values(e.active || {});
+
+        // 2. Ensure we actually have two points before proceeding. This prevents errors
+        //    if the event somehow triggers with fewer than two active pointers.
+        if (points.length < 2) {
+          console.error("capPinch called with less than 2 active pointers:", points);
+          // Return an empty object or the existing draft to avoid further errors.
+          // Returning an empty object might trigger checks in subsequent actions.
+          return {};
+        }
+
+        // 3. Use the *array elements* (points[0], points[1]) for calculations.
+        //    Destructure the first two points from the array.
+        const [p1, p2] = points;
+
+        // 4. Calculate the starting distance between the two points.
+        const startDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+        // 5. Calculate the starting center point (midpoint) on the screen.
+        const centerX = (p1.x + p2.x) / 2;
+        const centerY = (p1.y + p2.y) / 2;
+
+        // 6. Return the correctly calculated draft object.
+        return {
+          points: points, // Store the initial array of points (optional, but can be useful)
+          startDist: startDist,
+          initialScale: e.view.scale, // Capture the scale when the pinch started
+          center: { x: centerX, y: centerY } // Capture the screen center when the pinch started
+        };
+      }
+    }),
+
       capLasso: assign({ draft: (_c, e) => ({ start: e.xy }) }),
       // Around lib/gestureMachine.js:246
 capMove: assign({

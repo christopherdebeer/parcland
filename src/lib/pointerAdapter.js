@@ -1,108 +1,95 @@
-// -----------------------------------------------------------------------------
-// Thin DOM ⇄ FSM bridge.
-// • Converts native pointer / wheel events into *pure* FSM events
-// • Emits no logs – the FSM itself will log on state transitions
-// -----------------------------------------------------------------------------
-
+// ----------------------------------------------------------------------------
+// Thin DOM ⇆ FSM bridge.
+// Converts native pointer / wheel events into *pure* FSM events.
+// ----------------------------------------------------------------------------
 export function installPointerAdapter(
-  rootEl,                       // canvas DOM node
-  service,                      // xstate service for gestureMachine
-  getViewState,                 // () ⇒ { scale, translateX, translateY … }
-  isGroupSelected = () => false // () ⇒ Boolean – true when ≥2 elements selected
+  rootEl,
+  service,
+  getViewState,
+  isGroupSelected = () => false
 ) {
-
-  /* ------------------------------------------------------------------------- */
-  /*  Internal helpers                                                         */
-  /* ------------------------------------------------------------------------- */
-
-  const active = new Map();                // pointerId → {x,y}
-  let lastTap = { t: 0, x: 0, y: 0 };      // for double-tap detection
-  const TAP_MS   = 300;
+  /* ---------------------------------------------------------- */
+  /* internals                                                  */
+  /* ---------------------------------------------------------- */
+  const active = new Map();                 // pointerId → {x,y}
+  let lastTap = { t: 0, x: 0, y: 0 };
+  const TAP_MS = 300;
   const TAP_DIST = 10;
 
   const classifyHandle = (node) => {
     if (!node) return null;
-    if (node.classList.contains('resize-handle'))   return 'resize';
-    if (node.classList.contains('scale-handle'))    return 'scale';
-    if (node.classList.contains('rotate-handle'))   return 'rotate';
-    if (node.classList.contains('reorder-handle'))  return 'reorder';
-    if (node.classList.contains('edge-handle'))     return 'edge';
-    if (node.classList.contains('create-handle'))   return 'createNode';
-    /* fall-through → null  */
+    if (node.classList.contains('resize-handle')) return 'resize';
+    if (node.classList.contains('scale-handle')) return 'scale';
+    if (node.classList.contains('rotate-handle')) return 'rotate';
+    if (node.classList.contains('reorder-handle')) return 'reorder';
+    if (node.classList.contains('edge-handle')) return 'edge';
+    if (node.classList.contains('create-handle')) return 'createNode';
     return null;
   };
 
   const send = (type, ev, extra = {}) => {
-    const xy          = { x: ev.clientX, y: ev.clientY };
+    const xy = { x: ev.clientX, y: ev.clientY };
     const elementNode = ev.target.closest('.canvas-element');
-    const handleNode  = ev.target.closest('.element-handle');
+    const handleNode = ev.target.closest('.element-handle');
 
     service.send({
       type,
       xy,
-      active      : Object.fromEntries(active),      // live pointer cache
-      hitElement  : !!elementNode,
-      elementId   : elementNode ? elementNode.dataset.elId : null,
-      handle      : classifyHandle(handleNode),      // resize / rotate / …
-      edgeLabel   : !!ev.target.closest('text[data-id]'),
+      active: Object.fromEntries(active),
+      hitElement: !!elementNode,
+      elementId: elementNode ? elementNode.dataset.elId : null,
+      handle: classifyHandle(handleNode),
+      edgeLabel: !!ev.target.closest('text[data-id]'),
       groupSelected: isGroupSelected(),
-      view        : getViewState(),
-      ev,                                            // raw DOM event
+      view: getViewState(),
+      ev, // raw DOM event
       ...extra
     });
   };
 
-  /* ------------------------------------------------------------------------- */
-  /*  Pointer stream                                                           */
-  /* ------------------------------------------------------------------------- */
-
+  /* ---------------------------------------------------------- */
+  /* pointer stream                                             */
+  /* ---------------------------------------------------------- */
   const onPointerDown = (ev) => {
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     send('POINTER_DOWN', ev);
   };
-
   const onPointerMove = (ev) => {
     if (!active.has(ev.pointerId)) return;
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     send('POINTER_MOVE', ev);
   };
-
   const finishPointer = (ev) => {
     active.delete(ev.pointerId);
     send('POINTER_UP', ev);
 
-    /* ---------- tap / double-tap recognition ------------------------------ */
+    /*  tap / double-tap detection  */
     if (ev.button === 0) {
-      const dt   = ev.timeStamp - lastTap.t;
+      const dt = ev.timeStamp - lastTap.t;
       const dist = Math.hypot(ev.clientX - lastTap.x, ev.clientY - lastTap.y);
-
       if (dt < TAP_MS && dist < TAP_DIST) {
         send('DOUBLE_TAP', ev);
-        lastTap.t = 0;                         // reset
+        lastTap.t = 0; // reset
       } else {
         lastTap = { t: ev.timeStamp, x: ev.clientX, y: ev.clientY };
       }
     }
   };
+  const onWheel = (ev) => send('WHEEL', ev, { deltaY: ev.deltaY });
 
-  const onWheel = (ev) => send('WHEEL', ev);
-
-  /* ------------------------------------------------------------------------- */
-  /*  Wire up listeners                                                        */
-  /* ------------------------------------------------------------------------- */
-
-  rootEl.addEventListener('pointerdown',   onPointerDown, { passive: true });
-  rootEl.addEventListener('pointermove',   onPointerMove, { passive: true });
-  rootEl.addEventListener('pointerup',     finishPointer, { passive: true });
+  /* listeners */
+  rootEl.addEventListener('pointerdown', onPointerDown, { passive: true });
+  rootEl.addEventListener('pointermove', onPointerMove, { passive: true });
+  rootEl.addEventListener('pointerup', finishPointer, { passive: true });
   rootEl.addEventListener('pointercancel', finishPointer, { passive: true });
-  rootEl.addEventListener('wheel',         onWheel,       { passive: true });
+  rootEl.addEventListener('wheel', onWheel, { passive: true });
 
-  /* Return an uninstaller in case the canvas controller gets torn down */
+  /* teardown helper */
   return () => {
-    rootEl.removeEventListener('pointerdown',   onPointerDown);
-    rootEl.removeEventListener('pointermove',   onPointerMove);
-    rootEl.removeEventListener('pointerup',     finishPointer);
+    rootEl.removeEventListener('pointerdown', onPointerDown);
+    rootEl.removeEventListener('pointermove', onPointerMove);
+    rootEl.removeEventListener('pointerup', finishPointer);
     rootEl.removeEventListener('pointercancel', finishPointer);
-    rootEl.removeEventListener('wheel',         onWheel);
+    rootEl.removeEventListener('wheel', onWheel);
   };
 }

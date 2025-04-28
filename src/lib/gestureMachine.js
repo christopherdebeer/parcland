@@ -58,6 +58,12 @@ export const gestureMachine = createMachine({
               { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
               { cond: 'handleReorder', target: 'reorderElement', actions: 'capReorder' },
 
+{ cond:'edgeHandleDrag',         target:'createEdge',
+  actions:['capEdge','startTempLine'] },
+
+{ cond:'createNodeHandleDrag',   target:'createNode',
+  actions:['capNode','startTempLine'] },
+
               /* edge / node creation */
               { cond: 'edgeHandleDrag', target: 'createEdge', actions: 'capEdge' },
               { cond: 'createNodeHandleDrag', target: 'createNode', actions: 'capNode' },

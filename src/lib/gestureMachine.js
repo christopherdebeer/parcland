@@ -271,36 +271,43 @@ capMove: assign({
           return { origin: e.xy, startPositions: start };
         }
       }),
-      capResize: assign({
-        draft: (_c, e) => ({
-          resize: {
-            startX: e.xy.x,
-            startY: e.xy.y,
-            startW: () => {
-              const el = e.controller.findElementById(e.elementId);
-              return el.width;
-            },
-            startH: () => {
-              const el = e.controller.findElementById(e.elementId);
-              return el.height;
-            }
-          }
-        })
-      }),
+      // In lib/gestureMachine.js, actions section
+capResize: assign({
+  draft: (c, e) => {
+    const el = c.controller.findElementById(e.elementId);
+    if (!el) return { resize: { startX: e.xy.x, startY: e.xy.y, startW: NaN, startH: NaN } }; // Handle error
+    return {
+      resize: {
+        startX: e.xy.x,       // Pointer start X
+        startY: e.xy.y,       // Pointer start Y
+        startW: el.width,     // <<< FIX: Actual initial width
+        startH: el.height     // <<< FIX: Actual initial height
+      },
+      id: e.elementId // Also good to capture ID if helper needs it (applyResizeElement already gets it from event)
+    };
+  }
+}),
+
       capScale: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
-      capRotate: assign({
-        draft: (_c, e) => ({
-          start: e.xy, id: e.elementId,
-          center: () => {
-            const el = e.controller.findElementById(e.elementId);
-            return { x: el.x + el.width / 2, y: el.y + el.height / 2 };
-          },
-          startRotation: () => {
-            const el = e.controller.findElementById(e.elementId);
-            return el.rotation || 0;
-          }
-        })
-      }),
+      // In lib/gestureMachine.js, actions section
+capRotate: assign({
+  draft: (c, e) => {
+    const el = c.controller.findElementById(e.elementId);
+    if (!el) return { rotate: { startScreen: e.xy, center: null, startRotation: NaN }, id: e.elementId }; // Handle error
+    return {
+      rotate: {
+        startScreen: e.xy,       // Where pointer started on screen
+        center: {                // <<< FIX: Actual center coords object
+          x: el.x + (el.width * (el.scale || 1)) / 2,
+          y: el.y + (el.height * (el.scale || 1)) / 2
+        },
+        startRotation: el.rotation || 0 // <<< FIX: Actual initial rotation number
+      },
+      id: e.elementId
+    };
+  }
+}),
+
       capReorder: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
       capEdge: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) }),
       capNode: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) })

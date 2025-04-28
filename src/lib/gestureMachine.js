@@ -243,12 +243,23 @@ export const gestureMachine = createMachine({
         })
       }),
       capLasso: assign({ draft: (_c, e) => ({ start: e.xy }) }),
-      capMove: assign({
-        draft: (_c, e) => ({
-          origin: e.xy, id: e.elementId,
-          startPos: () => { return {} }
-        })
-      }),
+      // Around lib/gestureMachine.js:246
+capMove: assign({
+  draft: (c, e) => { // c is context, e is the POINTER_DOWN event
+    const el = c.controller.findElementById(e.elementId); // Access controller via context 'c'
+    if (!el) {
+        console.error("capMove: Element not found!", e.elementId);
+        // Return something reasonable or handle error, maybe keep existing draft?
+        return { origin: e.xy, id: e.elementId, startPos: { x: NaN, y: NaN } };
+    }
+    return {
+      origin: e.xy,      // Pointer start screen coords
+      id: e.elementId,   // Element ID
+      startPos: { x: el.x, y: el.y } // <<< FIX: Capture actual element start canvas coords
+    };
+  }
+}),
+
       capGroupMove: assign({
         draft: (_c, e, { state }) => {
           const ids = [...state.context.controller.selectedElementIds];

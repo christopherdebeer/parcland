@@ -464,7 +464,7 @@ body {
 }
 
 #lasso-box {
-  --zoom: var(--zoom, 1);
-  transform: scale(calc(1 / var(--zoom)));
-  transform-origin: top left;
+    --zoom: var(--zoom, 1);
+    transform: scale(calc(1 / var(--zoom)));
+    transform-origin: top left;
 }

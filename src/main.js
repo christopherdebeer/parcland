@@ -22,7 +22,7 @@ class CanvasController {
 
         this.selectionBox = null;              // DOM element for the rubber‑band rectangle
         this.groupTransform = null;            // cached positions for group move/scale
-        
+
         this.activeGesture = null;
         this.supressTap = false;
         this.initialTouches = [];
@@ -92,12 +92,12 @@ class CanvasController {
 
         this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
-        this.fsmService     = interpret(
+        this.fsmService = interpret(
             gestureMachine.withContext({
                 ...gestureMachine.context,
                 controller: this,
             }).withConfig({
-                actions: {...helperActions},
+                actions: { ...helperActions },
             })
         ).start();
         this.uninstallAdapter = installPointerAdapter(
@@ -232,7 +232,7 @@ class CanvasController {
             ev.stopPropagation();
             const newMode = (this.mode === 'direct') ? 'navigate' : 'direct';
             this.switchMode(newMode);
-            
+
         };
 
         // Add drill up button click handler
@@ -985,46 +985,46 @@ class CanvasController {
     };
 
     buildHandles(node, el) {
-  const h = (className, icon, click) => {
-    const wrap = document.createElement('div');
-    wrap.className = className + ' element-handle';
-    const i = document.createElement('i');
-    i.className = icon;
-    wrap.appendChild(i);
-    wrap.addEventListener('pointerdown', ev => {
-      ev.stopPropagation();            // don’t let the adapter swallow it
-      wrap.setPointerCapture(ev.pointerId);
-    });
-    if (click) wrap.addEventListener('click', click);
-    node.appendChild(wrap);
-  };
+        const h = (className, icon, click) => {
+            const wrap = document.createElement('div');
+            wrap.className = className + ' element-handle';
+            const i = document.createElement('i');
+            i.className = icon;
+            wrap.appendChild(i);
+            wrap.addEventListener('pointerdown', ev => {
+                ev.stopPropagation();            // don’t let the adapter swallow it
+                wrap.setPointerCapture(ev.pointerId);
+            });
+            if (click) wrap.addEventListener('click', click);
+            node.appendChild(wrap);
+        };
 
-  /* top-left – TYPE switcher */
-  h('type-handle', 'fa-solid fa-font', () => {
-    this.buildContextMenu(el.id);      // populate …
-    const bb = node.getBoundingClientRect();
-    this.showContextMenu(bb.left, bb.top);
-  });
+        /* top-left – TYPE switcher */
+        h('type-handle', 'fa-solid fa-font', () => {
+            this.buildContextMenu(el.id);      // populate …
+            const bb = node.getBoundingClientRect();
+            this.showContextMenu(bb.left, bb.top);
+        });
 
-  /* top-right – SCALE */
-  h('scale-handle', 'fa-solid fa-up-down-left-right');
+        /* top-right – SCALE */
+        h('scale-handle', 'fa-solid fa-up-down-left-right');
 
-  /* bottom-left – REORDER (z-index) */
-  h('reorder-handle', 'fa-solid fa-layer-group');
+        /* bottom-left – REORDER (z-index) */
+        h('reorder-handle', 'fa-solid fa-layer-group');
 
-  /* bottom-right – RESIZE width/height */
-  h('resize-handle', 'fa-solid fa-up-right-and-down-left-from-center');
+        /* bottom-right – RESIZE width/height */
+        h('resize-handle', 'fa-solid fa-up-right-and-down-left-from-center');
 
-  /* rotation handle, centred above */
-  h('rotate-handle rotate-handle-position',
-    'fa-solid fa-rotate');
+        /* rotation handle, centred above */
+        h('rotate-handle rotate-handle-position',
+            'fa-solid fa-rotate');
 
-  /* edge creation handle */
-  h('edge-handle',   'fa-solid fa-link');
+        /* edge creation handle */
+        h('edge-handle', 'fa-solid fa-link');
 
-  /* “create node” handle */
-  h('create-handle', 'fa-solid fa-plus');
-}
+        /* “create node” handle */
+        h('create-handle', 'fa-solid fa-plus');
+    }
 
     applyPositionStyles(node, el) {
         const scale = el.scale || 1;

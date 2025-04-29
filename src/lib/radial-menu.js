@@ -231,7 +231,8 @@ export function installRadialMenu(controller, options = {}) {
 
   /* ───── 6.  render current menu level ──────────────────────────────────── */
   const render = (instant=false)=>{
-    const {items} = stack[stack.length-1];
+    let {items} = stack[stack.length-1];
+    items = items.filter(it => (it.visible?.(root.__controller__) ?? true));
     itemsBox.innerHTML = '';
     focusIdx = 0;
 
@@ -243,6 +244,12 @@ export function installRadialMenu(controller, options = {}) {
       btn.setAttribute('tabindex','-1');
       btn.innerHTML = `<i class="fas ${it.icon}"></i>
                        <span class="item-label">${it.label}</span>`;
+      const isEnabled = it.enabled?.(root.__controller__) ?? true;
+      if (!isEnabled) {
+          btn.setAttribute('aria-disabled', 'true');
+          btn.style.opacity = .4;
+          btn.style.pointerEvents = 'none';
+      }
       /* rotation-gesture anchor */
       btn.addEventListener('pointerdown',startRotateGesture);
       btn.addEventListener('click',()=>handleItem(it,btn));

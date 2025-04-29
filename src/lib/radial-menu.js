@@ -258,6 +258,8 @@ export function installRadialMenu(controller, options = {}) {
       c.saveLocalViewState?.();
     };
 
+   return rootItems;
+
     return [
       {
         label: c.mode === 'direct' ? 'Navigate' : 'Direct',

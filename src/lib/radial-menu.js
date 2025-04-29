@@ -35,7 +35,7 @@ const LS_POS_KEY = 'parc.radialMenu.pos';
  * Radial-menu structure for parc.land (2025-04-29)
  * Each item can carry `visible()`  and / or  `enabled()` getters.
  *********************************************************************/
-const rootItems/*:MenuItem[]*/ = [
+const rootItems  = (c) => [
   /* ───── Mode toggle ───── */
   {
     label : c => c.mode === 'direct' ? 'Navigate' : 'Direct',
@@ -258,7 +258,7 @@ export function installRadialMenu(controller, options = {}) {
       c.saveLocalViewState?.();
     };
 
-   return rootItems;
+   return rootItems(c);
 
     return [
       {

@@ -261,7 +261,7 @@ export function installRadialMenu(controller, options = {}) {
   /* ───── 7.  opening / closing / drag / rotate interactions ────────────── */
   /* drag whole menu ─────────────────────────────────────────────────────── */
   trigger.addEventListener('pointerdown',e=>{
-    if(trigger.classList.contains('active')) return;  // no drag while open
+    // if(trigger.classList.contains('active')) return;  // no drag while open
     drag.active=true;
     drag.sx=e.clientX; drag.sy=e.clientY;
     const r=root.getBoundingClientRect();

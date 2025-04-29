@@ -172,8 +172,9 @@ export function createGestureHelpers(controller) {
     controller.selectedElementIds.forEach(id => {
       const el = controller.findElementById(id);
       const start = ctx.draft.startPositions.get(id);
-      el.width = start.width * factor;
-      el.height = start.height * factor;
+      // Update scale instead of width/height
+      el.scale = (start.scale || 1) * factor;
+      // Position still needs to be adjusted based on the bounding box center
       el.x = bbox.cx + (start.x - bbox.cx) * factor;
       el.y = bbox.cy + (start.y - bbox.cy) * factor;
     });
@@ -231,8 +232,9 @@ export function createGestureHelpers(controller) {
     if (!el) return;
 
     /* scale & move */
-    el.width = ctx.draft.startW * factor;
-    el.height = ctx.draft.startH * factor;
+    // Update scale instead of width/height
+    el.scale = ctx.draft.startScale * factor;
+    // Position still needs to be adjusted
     el.x = ctx.draft.center.x + (ctx.draft.startCx - ctx.draft.center.x) * factor;
     el.y = ctx.draft.center.y + (ctx.draft.startCy - ctx.draft.center.y) * factor;
 

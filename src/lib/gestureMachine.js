@@ -330,7 +330,8 @@ export const gestureMachine = createMachine({
             const el = state.context.controller.findElementById(id);
             start.set(id, {
               width: el.width, height: el.height,
-              x: el.x, y: el.y
+              x: el.x, y: el.y,
+              scale: el.scale || 1  // Store initial scale
             });
           });
           const pts = Object.values(e.active || {});

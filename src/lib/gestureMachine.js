@@ -303,7 +303,17 @@ export const gestureMachine = createMachine({
         }
       }),
 
-      capScale: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
+      capScale: assign({
+        draft: (c, e) => {
+          const el = c.controller.findElementById(e.elementId);
+          if (!el) return { origin: e.xy, id: e.elementId, startScale: 1 };
+          return {
+            origin: e.xy,
+            id: e.elementId,
+            startScale: el.scale || 1
+          };
+        }
+      }),
       
       capRotate: assign({
         draft: (c, e) => {

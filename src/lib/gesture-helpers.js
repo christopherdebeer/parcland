@@ -124,10 +124,13 @@ export function createGestureHelpers(controller) {
   function applyScaleElement(ctx, ev) {
     const el = controller.findElementById(ev.elementId);
     if (!el) return;
-    const sensitivity = 0.5;
-    const dx = (ev.xy.x - ctx.draft.origin.x) / dpi() * sensitivity;
-    const dy = (ev.xy.y - ctx.draft.origin.y) / dpi() * sensitivity;
-    el.scale = Math.max((dx + dy) / 2, 0.2);
+    const sensitivity = 0.01;
+    const dx = (ev.xy.x - ctx.draft.origin.x) / dpi();
+    const dy = (ev.xy.y - ctx.draft.origin.y) / dpi();
+    // Calculate a scale factor based on the distance moved
+    const scaleFactor = 1 + (dx + dy) * sensitivity;
+    // Apply the scale factor to the initial scale
+    el.scale = Math.max(ctx.draft.startScale * scaleFactor, 0.2);
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,

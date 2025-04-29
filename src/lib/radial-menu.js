@@ -258,7 +258,7 @@ export function installRadialMenu(controller, options = {}) {
       c.saveLocalViewState?.();
     };
 
-   return rootItems(c);
+   // return rootItems(c);
 
     return [
       {

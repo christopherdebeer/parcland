@@ -32,14 +32,14 @@ export function duplicateEl(c, id) {
 }
 
 export function deleteSelection(c) {
-  if (!c.selectedElementIds.size) return;
+  if (!c.selectedElementIds.length) return;
   const keep = el => !c.selectedElementIds.has(el.id);
   /* drop elements */
   c.canvasState.elements = c.canvasState.elements.filter(keep);
   /* drop edges referencing deleted elements */
   c.canvasState.edges =
     c.canvasState.edges.filter(e => keep({id:e.source}) && keep({id:e.target}));
-  c.selectedElementIds.clear();
+  c.clearSelection();
   c.renderElements();
   saveCanvas(c.canvasState);
 }

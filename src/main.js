@@ -21,14 +21,7 @@ class CanvasController {
         });
 
         this.selectionBox = null;              // DOM element for the rubber‑band rectangle
-        this.groupTransform = null;            // cached positions for group move/scale
-
-        this.activeGesture = null;
-        this.supressTap = false;
-        this.initialTouches = [];
         this.activeEditTab = "content"; // "content" or "src"
-        // For edge modal editing:
-        this.edgeBeingEdited = null;
 
         this.viewState = {
             scale: 1,
@@ -61,25 +54,8 @@ class CanvasController {
         this.modalVersionsInfo = document.getElementById("versions-info");
         this.modalError = document.getElementById("modal-error");
 
-        this.lastTapPosition = { x: 0, y: 0 };
-        this.dragStartPos = { x: 0, y: 0 };
-        this.elementStartPos = { x: 0, y: 0 };
-        this.elementStartSize = { width: 0, height: 0 };
-        this.elementStartRotation = 0;
-        this.centerForRotation = { x: 0, y: 0 };
-        this.initialPinchDistance = 0;
-        this.initialPinchAngle = 0;
-        this.elementPinchStartSize = { width: 0, height: 0 };
-        this.elementPinchStartCenter = { x: 0, y: 0 };
-        this.pinchCenterStartCanvas = { x: 0, y: 0 };
-        this.initialCanvasScale = 1;
-        this.pinchCenterScreen = { x: 0, y: 0 };
-        this.pinchCenterCanvas = { x: 0, y: 0 };
-
         this.MAX_SCALE = 10;
         this.MIN_SCALE = 0.1;
-
-        this.activeEdgeCreation = null;
 
         this.codeMirrorContent = null;
         this.codeMirrorSrc = null;
@@ -121,39 +97,6 @@ class CanvasController {
     }
 
     detach() {
-        // Remove all event listeners from canvas
-        if (this.onPointerDownCanvasHandler) {
-            this.canvas.removeEventListener("pointerdown", this.onPointerDownCanvasHandler);
-            this.canvas.removeEventListener("pointermove", this.onPointerMoveCanvasHandler);
-            this.canvas.removeEventListener("pointerup", this.onPointerUpCanvasHandler);
-            this.canvas.removeEventListener("pointercancel", this.onPointerUpCanvasHandler);
-            this.canvas.removeEventListener("wheel", this.onWheelCanvasHandler);
-        }
-
-        // Remove all event listeners from container
-        if (this.onPointerDownElementHandler) {
-            this.container.removeEventListener("pointerdown", this.onPointerDownElementHandler);
-            this.container.removeEventListener("pointermove", this.onPointerMoveElementHandler);
-            this.container.removeEventListener("pointerup", this.onPointerUpElementHandler);
-            this.container.removeEventListener("pointercancel", this.onPointerUpElementHandler);
-        }
-
-        // Remove all event listeners from static container
-        if (this.onPointerDownElementHandler) {
-            this.staticContainer.removeEventListener("pointerdown", this.onPointerDownElementHandler);
-            this.staticContainer.removeEventListener("pointermove", this.onPointerMoveElementHandler);
-            this.staticContainer.removeEventListener("pointerup", this.onPointerUpElementHandler);
-            this.staticContainer.removeEventListener("pointercancel", this.onPointerUpElementHandler);
-        }
-
-        // Remove all event listeners from edges layer
-        if (this.blockPropagationHandler) {
-            this.edgesLayer.removeEventListener("pointerdown", this.blockPropagationHandler);
-            this.edgesLayer.removeEventListener("pointerup", this.blockPropagationHandler);
-        }
-        if (this.onPointerUpEdgesHandler) {
-            this.edgesLayer.removeEventListener("pointerup", this.onPointerUpEdgesHandler);
-        }
 
         // Remove context menu event listener
         if (this.contextMenuPointerDownHandler) {
@@ -172,14 +115,6 @@ class CanvasController {
         this.container.innerHTML = '';
         this.staticContainer.innerHTML = '';
         this.edgesLayer.innerHTML = '';
-        if (this.edgePointerMoveHandler) {
-            document.removeEventListener('pointermove', this.edgePointerMoveHandler);
-            this.edgePointerMoveHandler = null;
-        }
-        if (this.edgePointerUpHandler) {
-            document.removeEventListener('pointerup', this.edgePointerUpHandler);
-            this.edgePointerUpHandler = null;
-        }
 
         // Remove button click handlers
         this.modeBtn.onclick = null;
@@ -202,22 +137,7 @@ class CanvasController {
         }
     }
 
-    blockPropagation(ev) {
-        console.log("[DEBUG] Blocking event propagation on", ev.target);
-        ev.stopPropagation();
-    }
-
-    removeActivePointer(pointerId) {
-        this.initialTouches = this.initialTouches.filter(t => t.id !== pointerId);
-        if (this.initialTouches.length < 2 && this.activeGesture && this.activeGesture.startsWith("pinch")) {
-            this.activeGesture = null;
-        }
-    }
-
     setupEventListeners() {
-
-        this.blockPropagationHandler = this.blockPropagation.bind(this);
-        // this.onPointerUpEdgesHandler = (ev) => this.onPointerUpEdges(ev);
 
         this.contextMenuPointerDownHandler = (ev) => {
             console.log("contextMenu");
@@ -232,7 +152,6 @@ class CanvasController {
             ev.stopPropagation();
             const newMode = (this.mode === 'direct') ? 'navigate' : 'direct';
             this.switchMode(newMode);
-
         };
 
         // Add drill up button click handler
@@ -350,9 +269,6 @@ class CanvasController {
         };
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Multiselect & lasso utilities                                      */
-    /* ------------------------------------------------------------------ */
     createSelectionBox(startX, startY) {
         this.selectionBox = document.createElement('div');
         this.selectionBox.id = 'lasso-box';

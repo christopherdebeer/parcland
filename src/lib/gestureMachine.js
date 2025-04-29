@@ -322,7 +322,6 @@ export const gestureMachine = createMachine({
           };
         }
       }),
-      /* ---------------- actions (gestureMachine options) ----------------------- */
       capGroupPinch: assign({
         draft: (_c, e, { state }) => {
           const ids = [...state.context.controller.selectedElementIds];
@@ -342,7 +341,6 @@ export const gestureMachine = createMachine({
           };
         }
       }),
-
       capPinchElement: assign({
         draft: (c, e) => {
           const el = c.controller.findElementById(e.elementId);

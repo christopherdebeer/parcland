@@ -8,10 +8,8 @@ export function installPointerAdapter(
   getViewState,
   isGroupSelected = () => false
 ) {
-  /* ---------------------------------------------------------- */
-  /* internals                                                  */
-  /* ---------------------------------------------------------- */
-  const active = new Map();                 // pointerId → {x,y}
+
+  const active = new Map(); // pointerId → {x,y}
   let lastTap = { t: 0, x: 0, y: 0 };
   const TAP_MS = 300;
   const TAP_DIST = 10;
@@ -49,9 +47,6 @@ export function installPointerAdapter(
     });
   };
 
-  /* ---------------------------------------------------------- */
-  /* pointer stream                                             */
-  /* ---------------------------------------------------------- */
   const onPointerDown = (ev) => {
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     send('POINTER_DOWN', ev);

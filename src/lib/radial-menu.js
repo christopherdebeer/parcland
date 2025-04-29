@@ -8,11 +8,120 @@
  */
 
 import { saveCanvas } from './storage.js';
+import { 
+ addEl,
+ duplicateEl,
+ deleteSelection,
+ copySelection,
+ pasteClipboard,
+ clipboardHasContent,
+ generateNew,
+ inlineEdit,
+ reorder,
+ groupSelection,
+ ungroupSelection,
+ canUngroup,
+ zoom,
+ zoomToFit,
+ openHistory,
+ exportJSON } from './radial-helpers.js';
 
 /* keep at most one DOM instance alive across controllers */
 let activeRoot = null;
 /* localStorage key for persisted menu position */
 const LS_POS_KEY = 'parc.radialMenu.pos';
+
+/*********************************************************************
+ * Radial-menu structure for parc.land (2025-04-29)
+ * Each item can carry `visible()`  and / or  `enabled()` getters.
+ *********************************************************************/
+const rootItems/*:MenuItem[]*/ = [
+  /* ───── Mode toggle ───── */
+  {
+    label : c => c.mode === 'direct' ? 'Navigate' : 'Direct',
+    icon  : c => c.mode === 'direct' ? 'fa-arrows-alt' : 'fa-hand',
+    action: c => c.switchMode(c.mode === 'direct' ? 'navigate' : 'direct')
+  },
+
+  /* ───── Add ───── */
+  {
+    label:'Add',      icon:'fa-plus-circle', children:[
+      {label:'Text',      icon:'fa-font',               action:c=>addEl(c,'text')},
+      {label:'Markdown',  icon:'fa-brands fa-markdown', action:c=>addEl(c,'markdown')},
+      {label:'Image',     icon:'fa-image',              action:c=>addEl(c,'img')},
+      {label:'Canvas',    icon:'fa-object-group',       action:c=>addEl(c,'canvas-container')},
+      {label:'AI-Generate',icon:'fa-wand-magic-sparkles',action:c=>addEl(c,'markdown','generating…')}
+    ]
+  },
+
+  /* ───── Edit / Clipboard (only if ≥1 element selected) ───── */
+  {
+    label:'Edit', icon:'fa-pen-to-square',
+    visible : c=>c.selectedElementIds.size>0,
+    children:[
+      {label:'Duplicate', icon:'fa-copy',
+        action:c=> c.selectedElementIds.forEach(id=>duplicateEl(c,id))},
+
+      {label:'Delete',    icon:'fa-trash',
+        action:c=> deleteSelection(c) },
+
+      {label:'Copy',      icon:'fa-clone',
+        action:c=> copySelection(c) },
+
+      {label:'Paste',     icon:'fa-paste',
+        enabled : ()=>clipboardHasContent(),
+        action:c=> pasteClipboard(c) },
+
+      {label:'Generate New', icon:'fa-arrow-rotate-right',
+        enabled : c=>c.selectedElementIds.size===1 &&
+                     c.findElementById([...c.selectedElementIds][0]).type!=='img',
+        action  : c=>generateNew(c) },
+
+      {label:'Inline Edit', icon:'fa-i-cursor',
+        action:c=> inlineEdit(c) },
+    ]
+  },
+
+  /* ───── Arrange (multi-selection aware) ───── */
+  {
+    label:'Arrange', icon:'fa-layer-group',
+    visible : c=>c.selectedElementIds.size>0,
+    children:[
+      {label:'Bring Front', icon:'fa-arrow-up',
+        action:c=>reorder(c,'front')},
+      {label:'Send Back',   icon:'fa-arrow-down',
+        action:c=>reorder(c,'back')},
+      {label:'Group',       icon:'fa-object-group',
+        enabled:c=>c.selectedElementIds.size>1,
+        action:c=>groupSelection(c)},
+      {label:'Ungroup',     icon:'fa-object-ungroup',
+        enabled:c=>canUngroup(c),
+        action:c=>ungroupSelection(c)}
+    ]
+  },
+
+  /* ───── View / Zoom ───── */
+  {
+    label:'View', icon:'fa-search',
+    children:[
+      {label:'Zoom In',     icon:'fa-search-plus',  action:c=>zoom(c,1.25)},
+      {label:'Zoom Out',    icon:'fa-search-minus', action:c=>zoom(c,0.8)},
+      {label:'Reset Zoom',  icon:'fa-compress',     action:c=>zoom(c,1/c.viewState.scale)},
+      {label:'Zoom to Fit', icon:'fa-expand',
+        action:c=>zoomToFit(c)}
+    ]
+  },
+
+  /* ───── Canvas ───── */
+  {
+    label:'Canvas', icon:'fa-database',
+    children:[
+      {label:'Save',        icon:'fa-save',   action:c=>saveCanvas(c.canvasState)},
+      {label:'History',     icon:'fa-clock',  action:c=>openHistory(c)},
+      {label:'Export JSON', icon:'fa-file-export', action:c=>exportJSON(c)}
+    ]
+  }
+];
 
 /**
  * Install (or re-attach) the radial menu to a controller.

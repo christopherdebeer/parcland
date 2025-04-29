@@ -1,107 +1,150 @@
 /* ────────────────────────────────────────────────────────────────────────────
- *  Radial Menu for parc.land
- *  - context–sensitive launcher that replaces the old #mode toggle button
+ *  Radial Menu for parc.land  — v2 (2025-04-29)
+ *  • context-sensitive launcher that replaces the old #mode toggle button
+ *  • major revamp: a11y, keyboard nav, persistence, configurability, etc.
  * ---------------------------------------------------------------------------
- *  author: 2025-04-29
+ *  author: parc.land core team
  * ---------------------------------------------------------------------------
  */
+
 import { saveCanvas } from './storage.js';
 
-/* keep just one instance alive */
+/* keep at most one DOM instance alive across controllers */
 let activeRoot = null;
+/* localStorage key for persisted menu position */
+const LS_POS_KEY = 'parc.radialMenu.pos';
 
 /**
- * Install a radial menu that follows the lifetime of the supplied controller.
- * Calling it again with a different controller re-attaches the existing menu
- * (useful when drilling in/out of nested canvases).
+ * Install (or re-attach) the radial menu to a controller.
+ * Pass an optional `options` object to tweak behaviour / styling.
+ *
+ * @param {CanvasController} controller – current canvas controller
+ * @param {Object} [options]
+ * @param {number} [options.menuSize=68]       — root trigger Ø (px)
+ * @param {number} [options.itemSize=56]       — item Ø (px)  ≥ 44 for WCAG
+ * @param {number} [options.orbitRadius=110]   — distance root↔item centres
+ * @param {number} [options.transitionTime=.35]— seconds
  */
-export function installRadialMenu(controller) {
-  console.log("[RM] Install radial menu")
-  /* ───── 1.  reuse or create shell ───────────────────────────────────────── */
+export function installRadialMenu(controller, options = {}) {
+  /* ───── 0.  (re-)use existing shell if already present ─────────────────── */
   if (activeRoot) {
-    /* controller was switched (drill-in/out) – just update reference */
-    console.log("[RM] swap controller")
+    /* controller was switched (drill-in/out) – simply update the reference   */
     activeRoot.__controller__ = controller;
     return;
   }
 
-  /* inject style just once */
+  /* ───── 1.  configuration & CSS custom-props (injected once) ───────────── */
+  const cfg = {
+    menuSize:        options.menuSize      ?? 68,
+    itemSize:        options.itemSize      ?? 56,
+    orbitRadius:     options.orbitRadius   ?? 110,
+    transitionTime:  options.transitionTime?? .35   // seconds
+  };
+
   if (!document.getElementById('radial-menu-style')) {
     const style = document.createElement('style');
     style.id = 'radial-menu-style';
-    style.textContent = `:root{
-  --menu-size:60px;--item-size:50px;--orbit-radius:100px;
-  --primary-color:#2196F3;--transition-time:.35s;
-  --ease:cubic-bezier(.22,.61,.36,1)}
-.radial-menu{position:fixed;left:calc(100% - 80px);top:calc(100% - 80px);
-  width:var(--menu-size);height:var(--menu-size);z-index:999}
-.menu-trigger{width:100%;height:100%;border:none;border-radius:50%;
-  background:var(--primary-color);color:#fff;font-size:1.4rem;cursor:pointer;
-  position:relative;transition:transform var(--transition-time) var(--ease);
-  touch-action:none}
-.menu-trigger.active{transform:rotate(45deg)}
-.menu-items{position:absolute;top:50%;left:50%;visibility:hidden;
-  pointer-events:none}
-.menu-items.active{visibility:visible;pointer-events:auto}
-.menu-items.animating{pointer-events:none}
-.menu-item{position:absolute;width:var(--item-size);height:var(--item-size);
-  transform:translate(-50%,-50%) scale(0);border-radius:50%;background:#fff;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 5px rgba(0,0,0,.25);opacity:0;
-  transition:transform var(--transition-time) var(--ease),
-             opacity   var(--transition-time) var(--ease)}`;
+    style.textContent = `
+      :root{
+        --menu-size:${cfg.menuSize}px;
+        --item-size:${cfg.itemSize}px;
+        --orbit-radius:${cfg.orbitRadius}px;
+        --transition-time:${cfg.transitionTime}s;
+        --primary-color:#2196F3;
+        --ease:cubic-bezier(.22,.61,.36,1);
+      }
+      /* trigger (“+” button) */
+      .radial-menu{position:fixed;width:var(--menu-size);height:var(--menu-size);
+        z-index:999}
+      .menu-trigger{width:100%;height:100%;border:none;border-radius:50%;
+        background:var(--primary-color);color:#fff;font-size:1.4rem;cursor:pointer;
+        position:relative;transition:transform var(--transition-time) var(--ease);
+        outline:none;touch-action:none}
+      .menu-trigger.active{transform:rotate(45deg)}
+      /* fan container */
+      .menu-items{position:absolute;top:50%;left:50%;visibility:hidden;
+        pointer-events:none;outline:none}
+      .menu-items.active{visibility:visible;pointer-events:auto}
+      .menu-items.animating{pointer-events:none}
+      /* individual item */
+      .menu-item{position:absolute;width:var(--item-size);height:var(--item-size);
+        transform:translate(-50%,-50%) scale(0);border-radius:50%;background:#fff;
+        display:flex;align-items:center;justify-content:center;
+        box-shadow:0 2px 5px rgba(0,0,0,.25);opacity:0;
+        transition:transform var(--transition-time) var(--ease),
+                   opacity   var(--transition-time) var(--ease);
+        cursor:pointer;border:none;font-size:1.2rem;outline:none}
+      .menu-item:focus{box-shadow:0 0 0 3px rgba(33,150,243,.5)}
+      /* icon */
+      .menu-item i{pointer-events:none}
+      /* label (hint) */
+      .item-label{position:absolute;top:100%;left:50%;transform:translateX(-50%);
+        font-size:.75rem;color:#fff;background:rgba(0,0,0,.7);padding:2px 6px;
+        border-radius:3px;white-space:nowrap;opacity:0;
+        transition:opacity .2s var(--ease)}
+      .menu-item:hover .item-label,
+      .menu-item:focus .item-label{opacity:1}
+    `;
     document.head.appendChild(style);
   }
 
-  /* create DOM */
+  /* ───── 2.  build DOM shell ────────────────────────────────────────────── */
   const root = document.createElement('div');
   root.className = 'radial-menu';
   root.innerHTML = `
-    <button class="menu-trigger" aria-label="open menu">
-      <i class="fas fa-plus"></i>
+    <button class="menu-trigger" aria-label="Open menu"
+            aria-expanded="false" aria-haspopup="menu">
+      <i class="fas fa-plus" aria-hidden="true"></i>
     </button>
-    <div class="menu-items"></div>`;
-  root.__controller__ = controller;         // <-- keep reference here
+    <div class="menu-items" role="menu"></div>`;
+  root.__controller__ = controller;
   document.body.appendChild(root);
-  console.log("[RM] create radial menu", root)
   activeRoot = root;
 
-  /* ───── 2.  helpers & state ─────────────────────────────────────────────── */
+  /* restore previous position (or bottom-right default) */
+  const pos = JSON.parse(localStorage.getItem(LS_POS_KEY) || 'null');
+  if (pos) {
+    root.style.left = pos.x + 'px';
+    root.style.top  = pos.y + 'px';
+  } else { /* default bottom-right with 20 px margin */
+    root.style.left = `calc(100% - ${cfg.menuSize + 20}px)`;
+    root.style.top  = `calc(100% - ${cfg.menuSize + 20}px)`;
+  }
+
+  /* ───── 3.  helpers & shared state ─────────────────────────────────────── */
   const trigger  = root.querySelector('.menu-trigger');
   const itemsBox = root.querySelector('.menu-items');
 
-  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-  const ORBIT = parseFloat(
-    getComputedStyle(document.documentElement)
-      .getPropertyValue('--orbit-radius')
-  ) || 100;
+  const clamp = (v,min,max)=>Math.min(max,Math.max(min,v));
+  const ORBIT = cfg.orbitRadius;
 
-  /* drag state (move the whole menu) */
-  const drag = { active:false, sx:0, sy:0, sl:0, st:0 };
+  /* drag state */
+  const drag = {active:false,sx:0,sy:0,sl:0,st:0};
 
-  /* rotate fan state */
-  const rot  = { active:false, startA:0, startR:0 };
+  /* rotate state */
+  const rot  = {active:false,startA:0,startR:0};
   let rotation = 0;
 
-  /* navigation stack   stack[stack.length-1] === current level */
+  /* nav stack – root plus nested sub-menus */
   let stack = [];
 
-  /* ───── 3.  dynamic root-level menu – built from controller state ───────── */
+  /* currently focused menu-item index (keyboard navigation) */
+  let focusIdx = 0;
+
+  /* ───── 4.  dynamic root-level structure (depends on controller) ───────── */
   const makeRootItems = () => {
     const c = root.__controller__;
-    /* helpers that need fresh controller reference */
-    const addElement = (type) => {
-      const x = window.innerWidth  / 2;
-      const y = window.innerHeight / 2;
-      const pt = c.screenToCanvas(x, y);
-      c.createNewElement(pt.x, pt.y, type);
+
+    /* util that needs fresh controller reference */
+    const addElement = type => {
+      const x = innerWidth/2,
+            y = innerHeight/2;
+      const pt = c.screenToCanvas(x,y);
+      c.createNewElement(pt.x,pt.y,type);
       closeRoot();
     };
-    const zoom = (factor) => {
-      c.viewState.scale = clamp(
-        c.viewState.scale * factor,
-        c.MIN_SCALE, c.MAX_SCALE
-      );
+    const zoom = factor => {
+      c.viewState.scale = clamp(c.viewState.scale*factor,c.MIN_SCALE,c.MAX_SCALE);
       c.updateCanvasTransform();
       c.saveLocalViewState?.();
     };
@@ -111,215 +154,282 @@ export function installRadialMenu(controller) {
         label: c.mode === 'direct' ? 'Navigate' : 'Direct',
         icon : c.mode === 'direct' ? 'fa-arrows-alt' : 'fa-hand',
         action(){
-          c.switchMode(c.mode === 'direct' ? 'navigate' : 'direct');
-          /* rebuild menu so icon/label toggles */
+          c.switchMode(c.mode==='direct' ? 'navigate':'direct');
           rebuildRoot();
         }
       },
       {
         label:'Add', icon:'fa-plus-circle', children:[
-          { label:'Text',     icon:'fa-font',            action:()=>addElement('text') },
-          { label:'Markdown', icon:'fa-brands fa-markdown',action:()=>addElement('markdown') },
-          { label:'Image',    icon:'fa-image',           action:()=>addElement('img') },
-          { label:'Canvas',   icon:'fa-object-group',    action:()=>addElement('canvas-container') }
+          {label:'Text',     icon:'fa-font',                 action:()=>addElement('text')},
+          {label:'Markdown', icon:'fa-brands fa-markdown',   action:()=>addElement('markdown')},
+          {label:'Image',    icon:'fa-image',                action:()=>addElement('img')},
+          {label:'Canvas',   icon:'fa-object-group',         action:()=>addElement('canvas-container')}
         ]
       },
       {
         label:'Zoom', icon:'fa-search', children:[
-          { label:'In',    icon:'fa-search-plus',  action:()=>zoom(1.25) },
-          { label:'Out',   icon:'fa-search-minus', action:()=>zoom(0.8) },
-          { label:'Reset', icon:'fa-compress',     action:()=>{zoom(1/ c.viewState.scale);} }
+          {label:'In',    icon:'fa-search-plus', action:()=>zoom(1.25)},
+          {label:'Out',   icon:'fa-search-minus',action:()=>zoom(0.8)},
+          {label:'Reset', icon:'fa-compress',    action:()=>{zoom(1/c.viewState.scale)}}
         ]
       },
       {
-        label:'Save', icon:'fa-save',
-        action(){ saveCanvas(c.canvasState); closeRoot(); }
+        label:'Save', icon:'fa-save', action(){
+          saveCanvas(c.canvasState);
+          closeRoot();
+        }
       }
     ];
   };
 
-  /* the root level is rebuilt on each open to reflect latest state */
-  const rebuildRoot = () => { stack = [ { title:'root', items:makeRootItems() } ]; };
+  const rebuildRoot = () => { stack = [{title:'root',items:makeRootItems()}]; };
 
-  /* ───── 4.  animation utilities ─────────────────────────────────────────── */
-  const fly = (btn, x, y, show=true, delay=0) => {
-    btn.style.transitionDelay = delay + 'ms';
-    requestAnimationFrame(() => {
+  /* ───── 5.  fan animation helpers ──────────────────────────────────────── */
+  const fly = (btn,x,y,show=true,delay=0)=>{
+    btn.style.transitionDelay = delay+'ms';
+    requestAnimationFrame(()=>{     // ensures initial compute then animate
       btn.style.transform =
         `translate(-50%,-50%) translate(${x}px,${y}px) scale(${show?1:0})`;
       btn.style.opacity = show ? 1 : 0;
     });
   };
 
-  /* ───── 5.  geometry layout of fan ─────────────────────────────────────── */
-  const layoutItems = (instant=false) => {
-    const r   = root.getBoundingClientRect();
-    const sL  = r.left,
-          sR  = innerWidth  - r.right,
-          sT  = r.top,
-          sB  = innerHeight - r.bottom;
-    const hDir = (sL < sR) ? 1 : -1;        // open toward wider horizontal space
-    const vDir = (sT < sB) ? 1 : -1;        // open toward wider vertical space
-    const base   = Math.atan2(vDir, hDir);  // angle bisector
-    const sweep  = Math.PI / 2;             // 90° fan
-    const its    = [...itemsBox.children];
-    const step   = its.length > 1 ? sweep / (its.length - 1) : 0;
+  /* lay out items around current root position */
+  const layoutItems = (instant=false)=>{
+    const r = root.getBoundingClientRect();
+    const [sL,sR,sT,sB] = [r.left,innerWidth-r.right,r.top,innerHeight-r.bottom];
+    const hDir = (sL<sR)?1:-1,      // open toward wider space
+          vDir = (sT<sB)?1:-1;
+    const base  = Math.atan2(vDir,hDir); // bisector
+    const sweep = Math.PI/2;             // 90° fan
+    const its   = [...itemsBox.children];
+    const step  = its.length>1? sweep/(its.length-1) : 0;
 
-    its.forEach((btn, i) => {
+    its.forEach((btn,i)=>{
       const a = base - sweep/2 + i*step + rotation;
-      const x = Math.cos(a) * ORBIT;
-      const y = Math.sin(a) * ORBIT;
+      let x = Math.cos(a)*ORBIT,
+          y = Math.sin(a)*ORBIT;
 
-      if (instant) {
-        btn.style.transition = 'none';
-        btn.style.transform =
-          `translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
-        btn.style.opacity = 1;
-        /* flush & restore transitions */
-        void btn.offsetWidth;  btn.style.transition = '';
-      } else {
-        fly(btn, x, y, true, i*40);
+      /* edge-protection: shrink orbit if any item would overflow 6 px */
+      const checkX = (r.left+r.width/2)+x,
+            checkY = (r.top +r.height/2)+y;
+      if (checkX < 6)   x += 6 - checkX;
+      if (checkX > innerWidth-6)  x -= checkX - (innerWidth-6);
+      if (checkY < 6)   y += 6 - checkY;
+      if (checkY > innerHeight-6) y -= checkY - (innerHeight-6);
+
+      if (instant){
+        btn.style.transition='none';
+        btn.style.transform=`translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
+        btn.style.opacity=1;
+        void btn.offsetWidth;  btn.style.transition='';
+      }else{
+        fly(btn,x,y,true,i*40);
       }
     });
   };
 
-  /* ───── 6.  (re-)render a level ────────────────────────────────────────── */
-  const render = (instant=false) => {
-    const { items } = stack[stack.length - 1];
+  /* ───── 6.  render current menu level ──────────────────────────────────── */
+  const render = (instant=false)=>{
+    const {items} = stack[stack.length-1];
     itemsBox.innerHTML = '';
+    focusIdx = 0;
 
-    items.forEach(it => {
+    items.forEach((it,idx)=>{
       const btn = document.createElement('button');
       btn.className = 'menu-item';
-      btn.ariaLabel = it.label;
-      btn.innerHTML = `<i class="fas ${it.icon}"></i>`;
-      /* rotation handle */
-      btn.addEventListener('pointerdown', startRotateGesture);
-      btn.addEventListener('click', () => handleItem(it, btn));
+      btn.type      = 'button';
+      btn.setAttribute('role','menuitem');
+      btn.setAttribute('tabindex','-1');
+      btn.innerHTML = `<i class="fas ${it.icon}"></i>
+                       <span class="item-label">${it.label}</span>`;
+      /* rotation-gesture anchor */
+      btn.addEventListener('pointerdown',startRotateGesture);
+      btn.addEventListener('click',()=>handleItem(it,btn));
+      /* haptic feedback */
+      btn.addEventListener('click',()=>navigator.vibrate?.(10));
       itemsBox.appendChild(btn);
+      /* first item receives programmatic focus when opened */
+      if(idx===0 && itemsBox.classList.contains('active')){
+        requestAnimationFrame(()=>btn.focus());
+      }
     });
 
     layoutItems(instant);
   };
 
-  /*───── 7. open / close / back navigation & gestures ───────────────────── */
+  /* ───── 7.  opening / closing / drag / rotate interactions ────────────── */
   /* drag whole menu ─────────────────────────────────────────────────────── */
-  trigger.addEventListener('pointerdown', e => {
-    if (trigger.classList.contains('active')) return;    // no drag while open
-    drag.active = true;
-    drag.sx = e.clientX; drag.sy = e.clientY;
-    const r = root.getBoundingClientRect();
-    drag.sl = r.left; drag.st = r.top;
+  trigger.addEventListener('pointerdown',e=>{
+    if(trigger.classList.contains('active')) return;  // no drag while open
+    drag.active=true;
+    drag.sx=e.clientX; drag.sy=e.clientY;
+    const r=root.getBoundingClientRect();
+    drag.sl=r.left; drag.st=r.top;
     trigger.setPointerCapture(e.pointerId);
   });
-  trigger.addEventListener('pointermove', e => {
-    if (!drag.active) return;
-    const dx = e.clientX - drag.sx,
-          dy = e.clientY - drag.sy;
-    const size = parseFloat(getComputedStyle(root).width);
-    root.style.left = clamp(drag.sl + dx, 0, innerWidth  - size) + 'px';
-    root.style.top  = clamp(drag.st + dy, 0, innerHeight - size) + 'px';
+  trigger.addEventListener('pointermove',e=>{
+    if(!drag.active) return;
+    const dx=e.clientX-drag.sx,
+          dy=e.clientY-drag.sy;
+    const size=parseFloat(getComputedStyle(root).width);
+    const nx=clamp(drag.sl+dx,0,innerWidth-size),
+          ny=clamp(drag.st+dy,0,innerHeight-size);
+    root.style.left=nx+'px';
+    root.style.top =ny+'px';
   });
-  trigger.addEventListener('pointerup',   () => drag.active = false);
-  trigger.addEventListener('pointercancel',() => drag.active = false);
+  const endDrag = ()=>{
+    if(drag.active){
+      /* persist position */
+      localStorage.setItem(LS_POS_KEY,JSON.stringify({
+        x:parseFloat(root.style.left),
+        y:parseFloat(root.style.top)
+      }));
+    }
+    drag.active=false;
+  };
+  trigger.addEventListener('pointerup',endDrag);
+  trigger.addEventListener('pointercancel',endDrag);
 
   /* open / close / back ─────────────────────────────────────────────────── */
-  trigger.addEventListener('click', e => {
-    console.log("[RM] click", trigger, e)
-    if (drag.active) { drag.active = false; return; } // ignore click finishing drag
+  trigger.addEventListener('click',e=>{
+    if(drag.active){ drag.active=false; return; } // ignore click finishing drag
 
-    if (stack.length === 1) {
+    if(stack.length===1){
       /* root level */
-      if (!itemsBox.classList.contains('active')) {
+      if(!itemsBox.classList.contains('active')){
         /* opening */
         rebuildRoot();
-        rotation = 0;
+        rotation=0;
         itemsBox.classList.add('active');
         trigger.classList.add('active');
+        trigger.setAttribute('aria-expanded','true');
         render();
-      } else {
+      }else{
         /* closing */
         closeRoot();
       }
-    } else {
-      /* back one level */
+    }else{
+      /* back one submenu level */
       stack.pop();
-      const currentItems = [...itemsBox.children];
-      currentItems.forEach((b, i) => fly(b, 0, 0, false, i * 30));
-
-      itemsBox.classList.add('animating');
-      const transitionTime = parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue('--transition-time')
-      ) * 1000 + currentItems.length * 30;
-
-      setTimeout(() => {
-        itemsBox.classList.remove('animating');
-        trigger.querySelector('i').className = stack.length === 1 ? 'fas fa-plus' : 'fas fa-arrow-left';
-        render();
-      }, transitionTime);
+      animateBackAndRender();
     }
   });
 
-  /* rotate fan (two fingers or click-drag on item) ───────────────────────── */
-  function startRotateGesture(e) {
-    if (!itemsBox.classList.contains('active') ||
-        itemsBox.classList.contains('animating')) return;
+  /* rotate fan (pointer rotate-drag) ────────────────────────────────────── */
+  function startRotateGesture(e){
+    if(!itemsBox.classList.contains('active')||
+       itemsBox.classList.contains('animating')) return;
     e.stopPropagation();
-    rot.active = true;
-    const cen = root.getBoundingClientRect();
-    const cx  = cen.left + cen.width/2,
-          cy  = cen.top  + cen.height/2;
-    rot.startA = Math.atan2(e.clientY - cy, e.clientX - cx);
-    rot.startR = rotation;
+    rot.active=true;
+    const cen=root.getBoundingClientRect(),
+          cx=cen.left+cen.width/2,
+          cy=cen.top +cen.height/2;
+    rot.startA=Math.atan2(e.clientY-cy,e.clientX-cx);
+    rot.startR=rotation;
     itemsBox.setPointerCapture(e.pointerId);
   }
-  itemsBox.addEventListener('pointermove', e => {
-    if (!rot.active) return;
-    const cen = root.getBoundingClientRect();
-    const cx  = cen.left + cen.width/2,
-          cy  = cen.top  + cen.height/2;
-    const ang = Math.atan2(e.clientY - cy, e.clientX - cx);
-    rotation  = rot.startR + (ang - rot.startA);
-    layoutItems(true);            // immediate update
+  itemsBox.addEventListener('pointermove',e=>{
+    if(!rot.active) return;
+    const cen=root.getBoundingClientRect(),
+          cx=cen.left+cen.width/2,
+          cy=cen.top +cen.height/2;
+    const ang=Math.atan2(e.clientY-cy,e.clientX-cx);
+    rotation=rot.startR+(ang-rot.startA);
+    layoutItems(true);
   });
-  itemsBox.addEventListener('pointerup',   () => rot.active = false);
-  itemsBox.addEventListener('pointercancel',() => rot.active = false);
+  itemsBox.addEventListener('pointerup',  ()=>rot.active=false);
+  itemsBox.addEventListener('pointercancel',()=>rot.active=false);
 
-  /* item click handler ──────────────────────────────────────────────────── */
-  function handleItem(it, btn) {
-    if (it.children) {
+  /* handle item click / submenu dive / action exec ─────────────────────── */
+  function handleItem(it,btn){
+    if(it.children){
       /* dive into submenu */
-      const others = [...itemsBox.children].filter(b => b !== btn);
-      others.forEach(b => fly(b, 0, 0, false));
-      fly(btn, 0, 0, true);
+      const others=[...itemsBox.children].filter(b=>b!==btn);
+      others.forEach(b=>fly(b,0,0,false));
+      fly(btn,0,0,true);
       itemsBox.classList.add('animating');
-      btn.addEventListener('transitionend', function go(ev){
-        if (ev.propertyName !== 'transform') return;
-        btn.removeEventListener('transitionend', go);
+      btn.addEventListener('transitionend',function go(ev){
+        if(ev.propertyName!=='transform') return;
+        btn.removeEventListener('transitionend',go);
         itemsBox.classList.remove('animating');
-        stack.push({ title:it.label, items:it.children });
-        trigger.querySelector('i').className = 'fas fa-arrow-left';
-        rotation = 0;
+        stack.push({title:it.label,items:it.children});
+        trigger.querySelector('i').className='fas fa-arrow-left';
+        rotation=0;
         render();
       });
-    } else if (typeof it.action === 'function') {
-      console.log("[RM] action", it.label, it)
+    }else if(typeof it.action==='function'){
       it.action();
     }
   }
 
   /* close root helper ───────────────────────────────────────────────────── */
-  function closeRoot() {
-    if (!itemsBox.classList.contains('active')) return;
-    const childs = [...itemsBox.children];
-    childs.forEach((b, i) => fly(b, 0, 0, false, i*30));
+  function closeRoot(){
+    if(!itemsBox.classList.contains('active')) return;
+    const childs=[...itemsBox.children];
+    childs.forEach((b,i)=>fly(b,0,0,false,i*30));
     trigger.classList.remove('active');
-    setTimeout(() => itemsBox.classList.remove('active'),
-      parseFloat(getComputedStyle(document.documentElement)
-        .getPropertyValue('--transition-time'))*1000 + childs.length*30);
+    trigger.setAttribute('aria-expanded','false');
+    setTimeout(()=>itemsBox.classList.remove('active'),
+      cfg.transitionTime*1000+childs.length*30);
+    trigger.querySelector('i').className='fas fa-plus';
+    stack=[stack[0]]; // reset to root only
   }
 
-  /* ───── 8.  initial hidden build (so first open animates) ───────────────── */
+  /* animate back one level then render current */
+  function animateBackAndRender(){
+    const current=[...itemsBox.children];
+    current.forEach((b,i)=>fly(b,0,0,false,i*30));
+    itemsBox.classList.add('animating');
+    const t=cfg.transitionTime*1000+current.length*30;
+    setTimeout(()=>{
+      itemsBox.classList.remove('animating');
+      trigger.querySelector('i').className=
+        stack.length===1?'fas fa-plus':'fas fa-arrow-left';
+      render();
+    },t);
+  }
+
+  /* ───── 8.  keyboard accessibility & focus trapping ───────────────────── */
+  document.addEventListener('keydown',function keyNav(e){
+    if(!itemsBox.classList.contains('active')) return;
+
+    const items=[...itemsBox.querySelectorAll('.menu-item')];
+    const maxIdx=items.length-1;
+
+    const focusItem = idx=>{
+      focusIdx=(idx+items.length)%items.length;
+      items[focusIdx].focus();
+    };
+
+    switch(e.key){
+      case 'ArrowRight':
+      case 'ArrowDown':
+        e.preventDefault();focusItem(focusIdx+1);break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        e.preventDefault();focusItem(focusIdx-1);break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();items[focusIdx].click();break;
+      case 'Escape':
+        e.preventDefault();
+        if(stack.length>1){
+          /* back one submenu */
+          stack.pop();
+          animateBackAndRender();
+        }else{
+          closeRoot();
+        }
+        break;
+      case 'Tab':
+        e.preventDefault();
+        focusItem(focusIdx+(e.shiftKey?-1:1));
+        break;
+    }
+  });
+
+  /* ensure root exists fully hidden (so first open animates cleanly) */
   rebuildRoot();
   render(true);
 }

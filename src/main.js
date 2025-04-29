@@ -3,6 +3,7 @@ import { gestureMachine } from './lib/gestureMachine.js';
 import { installPointerAdapter } from './lib/pointerAdapter.js';
 import { createGestureHelpers } from './lib/gesture-helpers.js';
 import { buildContextMenu } from './lib/context-menu';
+import { installRadialMenu } from './lib/radial-menu.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 
@@ -83,6 +84,7 @@ class CanvasController {
             () => this.selectedElementIds.size > 1
         );
         this.setupEventListeners();
+        
 
         if (this.canvasState.parentCanvas) {
             this.drillUpBtn.style.display = 'block';
@@ -94,6 +96,7 @@ class CanvasController {
 
         this.updateCanvasTransform();
         this.renderElements();
+        installRadialMenu(this);
     }
 
     detach() {

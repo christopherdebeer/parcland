@@ -225,6 +225,7 @@ export function installRadialMenu(controller) {
 
   /* open / close / back ----------------------------------------------------- */
   trigger.addEventListener('click', e => {
+    console.log("[RM] click", trigger, e)
     if (drag.active) { drag.active = false; return; } // ignore click finishing drag
 
     if (stack.length === 1) {
@@ -306,6 +307,7 @@ export function installRadialMenu(controller) {
         render();
       });
     } else if (typeof it.action === 'function') {
+      console.log("[RM] action", it.label, it)
       it.action();
     }
   }

@@ -183,7 +183,7 @@ export function installRadialMenu(controller) {
     });
   };
 
-  /* ───── 6.  (re-)render a level ------------------------------------------------ */
+  /* ───── 6.  (re-)render a level ────────────────────────────────────────── */
   const render = (instant=false) => {
     const { items } = stack[stack.length - 1];
     itemsBox.innerHTML = '';
@@ -202,8 +202,8 @@ export function installRadialMenu(controller) {
     layoutItems(instant);
   };
 
-  /* ───── 7.  open / close / back navigation & gestures ───────────────────── */
-  /* drag whole menu --------------------------------------------------------- */
+  /*───── 7. open / close / back navigation & gestures ───────────────────── */
+  /* drag whole menu ─────────────────────────────────────────────────────── */
   trigger.addEventListener('pointerdown', e => {
     if (trigger.classList.contains('active')) return;    // no drag while open
     drag.active = true;
@@ -223,7 +223,7 @@ export function installRadialMenu(controller) {
   trigger.addEventListener('pointerup',   () => drag.active = false);
   trigger.addEventListener('pointercancel',() => drag.active = false);
 
-  /* open / close / back ----------------------------------------------------- */
+  /* open / close / back ─────────────────────────────────────────────────── */
   trigger.addEventListener('click', e => {
     console.log("[RM] click", trigger, e)
     if (drag.active) { drag.active = false; return; } // ignore click finishing drag
@@ -243,28 +243,24 @@ export function installRadialMenu(controller) {
       }
     } else {
       /* back one level */
-      const exited = stack.pop();
-      const parentBtn = [...itemsBox.children]
-        .find(b => b.ariaLabel === exited.title);
-
-      /* collapse siblings */
-      [...itemsBox.children].forEach(b => fly(b, 0, 0, false));
-      /* centre outgoing parent button */
-      if (parentBtn) fly(parentBtn, 0, 0, true);
+      stack.pop();
+      const currentItems = [...itemsBox.children];
+      currentItems.forEach((b, i) => fly(b, 0, 0, false, i * 30));
 
       itemsBox.classList.add('animating');
-      parentBtn?.addEventListener('transitionend', function tidy(ev) {
-        if (ev.propertyName !== 'transform') return;
-        parentBtn.removeEventListener('transitionend', tidy);
+      const transitionTime = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--transition-time')
+      ) * 1000 + currentItems.length * 30;
+
+      setTimeout(() => {
         itemsBox.classList.remove('animating');
-        if (stack.length === 1)
-          trigger.querySelector('i').className = 'fas fa-plus';
-        render();                 // siblings re-appear
-      });
+        trigger.querySelector('i').className = stack.length === 1 ? 'fas fa-plus' : 'fas fa-arrow-left';
+        render();
+      }, transitionTime);
     }
   });
 
-  /* rotate fan (two fingers or click-drag on item) -------------------------- */
+  /* rotate fan (two fingers or click-drag on item) ───────────────────────── */
   function startRotateGesture(e) {
     if (!itemsBox.classList.contains('active') ||
         itemsBox.classList.contains('animating')) return;
@@ -287,9 +283,9 @@ export function installRadialMenu(controller) {
     layoutItems(true);            // immediate update
   });
   itemsBox.addEventListener('pointerup',   () => rot.active = false);
-  itemsBox.addEventListener('pointercancel',()=> rot.active = false);
+  itemsBox.addEventListener('pointercancel',() => rot.active = false);
 
-  /* item click handler ------------------------------------------------------ */
+  /* item click handler ──────────────────────────────────────────────────── */
   function handleItem(it, btn) {
     if (it.children) {
       /* dive into submenu */
@@ -312,7 +308,7 @@ export function installRadialMenu(controller) {
     }
   }
 
-  /* close root helper ------------------------------------------------------- */
+  /* close root helper ───────────────────────────────────────────────────── */
   function closeRoot() {
     if (!itemsBox.classList.contains('active')) return;
     const childs = [...itemsBox.children];

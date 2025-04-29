@@ -96,7 +96,6 @@ class CanvasController {
 
         this.updateCanvasTransform();
         this.renderElements();
-        installRadialMenu(this);
     }
 
     detach() {
@@ -849,10 +848,12 @@ class CanvasController {
             };
         }
         const c = node.querySelector('.content');
-        if (c.clientHeight < c.scrollHeight) {
-            c.classList.add('scroller');
-        } else {
-            c.classList.remove('scroller');
+        if (c) {
+            if (c.clientHeight < c.scrollHeight) {
+                c.classList.add('scroller');
+            } else {
+                c.classList.remove('scroller');
+            }
         }
         // only if someone has previously “converted” it
         if (el.refCanvasId) {
@@ -1119,6 +1120,7 @@ class CanvasController {
 let activeCanvasController = null;
 function updateCanvasController(controller) {
     activeCanvasController = window.CC = controller
+    installRadialMenu(controller);
 }
 
 (async function main() {

@@ -16,9 +16,11 @@ let activeRoot = null;
  * (useful when drilling in/out of nested canvases).
  */
 export function installRadialMenu(controller) {
+  console.log("[RM] Install radial menu")
   /* ───── 1.  reuse or create shell ───────────────────────────────────────── */
   if (activeRoot) {
     /* controller was switched (drill-in/out) – just update reference */
+    console.log("[RM] swap controller")
     activeRoot.__controller__ = controller;
     return;
   }
@@ -61,6 +63,7 @@ export function installRadialMenu(controller) {
     <div class="menu-items"></div>`;
   root.__controller__ = controller;         // <-- keep reference here
   document.body.appendChild(root);
+  console.log("[RM] create radial menu", root)
   activeRoot = root;
 
   /* ───── 2.  helpers & state ─────────────────────────────────────────────── */

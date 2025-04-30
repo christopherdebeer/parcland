@@ -254,114 +254,129 @@ export function installRadialMenu(controller, options = {}) {
     };
   };
 
-  function redistributeItems(items, centerX, centerY, radius, screenBounds) {
-  const N = items.length;
-  if (N === 0) return [];
-
-  // 1. item diameter & minimal angular spacing to avoid overlap
-  const itemDiameter = items[0].getBoundingClientRect().width;
-  const itemRadius   = itemDiameter / 2;
-  // clamp to avoid NaN if diameter > 2*radius
-  const ratio = Math.min(1, itemDiameter / (2 * radius));
-  const minAngle = 2 * Math.asin(ratio);
-
-  // 2. sampling step (never coarser than about 1.15°)
-  const maxStep = 0.02;                   // ~1.15° in radians
-  const step    = Math.min(minAngle / 2, maxStep);
-
-  // 3. collect all allowed angle samples
-  const allowed = [];
-  for (let a = 0; a < Math.PI * 2; a += step) {
-    const x = centerX + Math.cos(a) * radius;
-    const y = centerY + Math.sin(a) * radius;
-    if (
-      x - itemRadius >= screenBounds.left   &&
-      x + itemRadius <= screenBounds.right  &&
-      y - itemRadius >= screenBounds.top    &&
-      y + itemRadius <= screenBounds.bottom
-    ) {
-      allowed.push(a);
-    }
-  }
-
-  // if nothing fits, fall back to full circle
-  if (allowed.length === 0) {
-    return items.map((_, i) => ({
-      x: Math.cos(rotation + 2 * Math.PI * i / N) * radius,
-      y: Math.sin(rotation + 2 * Math.PI * i / N) * radius
-    }));
-  }
-
-  // 4. merge samples into intervals
-  allowed.sort((a, b) => a - b);
-  const intervals = [];
-  let start = allowed[0], prev = allowed[0];
-  for (let i = 1; i < allowed.length; i++) {
-    const a = allowed[i];
-    if (a - prev <= step * 1.5) {
-      prev = a;
-    } else {
-      intervals.push([start, prev]);
-      start = prev = a;
-    }
-  }
-  intervals.push([start, prev]);
-
-  // handle wrap-around merge
-  const twoPi = 2 * Math.PI;
-  if (intervals.length > 1) {
-    const first = intervals[0], last = intervals[intervals.length - 1];
-    if ( first[0] <= step * 1.5 &&
-         twoPi - last[1] <= step * 1.5 ) {
-      // merge them into one crossing the 0/2π boundary
-      intervals[0] = [ last[0] - twoPi, first[1] ];
-      intervals.pop();
-    }
-  }
-
-  // 5. compute total allowed arc length & max possible items
-  let totalArc = 0;
-  const lengths = intervals.map(([s, e]) => {
-    const len = e - s;
-    totalArc += len;
-    return len;
-  });
-  const maxPossible = Math.floor(totalArc / minAngle);
-
-  // if we can’t fit all N without overlap, fallback
-  if (maxPossible < N) {
-    return items.map((_, i) => ({
-      x: Math.cos(rotation + 2 * Math.PI * i / N) * radius,
-      y: Math.sin(rotation + 2 * Math.PI * i / N) * radius
-    }));
-  }
-
-  // 6. otherwise, distribute N items evenly across the allowed arcs
-  const positions = [];
-  for (let i = 0; i < N; i++) {
-    // pick the midpoint of each segment's share of the total arc
-    let target = (i + 0.5) * totalArc / N;
-    let angle;
-    for (let j = 0; j < intervals.length; j++) {
-      const [s, e] = intervals[j];
-      const len    = lengths[j];
-      if (target <= len) {
-        angle = s + target;
-        break;
-      } else {
-        target -= len;
+  // Calculate optimal distribution to prevent overlaps
+  const redistributeItems = (items, centerX, centerY, radius, screenBounds) => {
+    // Start with even angular distribution
+    const fullCircle = Math.PI * 2;
+    const step = items.length > 0 ? fullCircle / items.length : 0;
+    
+    // Initial positions
+    let positions = items.map((_, i) => {
+      const angle = i * step + rotation;
+      return {
+        index: i,
+        angle: angle,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        screenX: centerX + Math.cos(angle) * radius,
+        screenY: centerY + Math.sin(angle) * radius
+      };
+    });
+    
+    // Calculate available space
+    const availableSpace = calculateAvailableSpace(centerX, centerY, screenBounds);
+    
+    // Adjust for screen edges - shrink the orbit in directions with limited space
+    positions = positions.map(pos => {
+      // Calculate direction vectors
+      const dirX = Math.sign(pos.x);
+      const dirY = Math.sign(pos.y);
+      
+      // Calculate available space in this direction
+      const availableDirX = dirX > 0 ? availableSpace.right : availableSpace.left;
+      const availableDirY = dirY > 0 ? availableSpace.bottom : availableSpace.top;
+      
+      // If we're out of bounds, calculate scaling factor
+      let scale = 1;
+      
+      // X constraint
+      if (Math.abs(pos.x) > 0 && Math.abs(pos.x) > availableDirX) {
+        const scaleX = availableDirX / Math.abs(pos.x);
+        scale = Math.min(scale, scaleX);
+      }
+      
+      // Y constraint
+      if (Math.abs(pos.y) > 0 && Math.abs(pos.y) > availableDirY) {
+        const scaleY = availableDirY / Math.abs(pos.y);
+        scale = Math.min(scale, scaleY);
+      }
+      
+      // Apply scaling but keep original angle for reference
+      const scaledPos = { 
+        ...pos,
+        x: pos.x * scale,
+        y: pos.y * scale, 
+        screenX: centerX + pos.x * scale,
+        screenY: centerY + pos.y * scale,
+        originalAngle: pos.angle
+      };
+      
+      return scaledPos;
+    });
+    
+    // Detect and resolve overlaps
+    const effectiveItemSize = cfg.itemSize * 1.2; // 20% padding
+    let hasOverlap = true;
+    let iterations = 0;
+    const maxIterations = 5; // Prevent infinite loops
+    
+    while (hasOverlap && iterations < maxIterations) {
+      hasOverlap = false;
+      iterations++;
+      
+      // Check each pair of items for overlap
+      for (let i = 0; i < positions.length; i++) {
+        for (let j = i + 1; j < positions.length; j++) {
+          const itemA = positions[i];
+          const itemB = positions[j];
+          
+          // Calculate distance between items
+          const dx = itemA.x - itemB.x;
+          const dy = itemA.y - itemB.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // If items are too close
+          if (distance < effectiveItemSize) {
+            hasOverlap = true;
+            
+            // Calculate angle between items
+            const angleBetween = Math.atan2(dy, dx);
+            
+            // Push items apart slightly along their angular difference
+            const pushDistance = (effectiveItemSize - distance) / 2;
+            const pushX = Math.cos(angleBetween) * pushDistance;
+            const pushY = Math.sin(angleBetween) * pushDistance;
+            
+            // Push items in opposite directions
+            positions[i].x += pushX;
+            positions[i].y += pushY;
+            positions[j].x -= pushX;
+            positions[j].y -= pushY;
+          }
+        }
       }
     }
-    // apply any user-rotated offset
-    angle = ((angle + rotation) % twoPi + twoPi) % twoPi;
-    positions.push({
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius
+    
+    // Final pass: check screen boundaries again after overlap resolution
+    positions = positions.map(pos => {
+      const screenX = centerX + pos.x;
+      const screenY = centerY + pos.y;
+      
+      let finalX = pos.x;
+      let finalY = pos.y;
+      
+      // Adjust if we went offscreen
+      if (screenX < screenBounds.left) finalX += screenBounds.left - screenX;
+      if (screenX > screenBounds.right) finalX -= screenX - screenBounds.right;
+      if (screenY < screenBounds.top) finalY += screenBounds.top - screenY;
+      if (screenY > screenBounds.bottom) finalY -= screenY - screenBounds.bottom;
+      
+      return { x: finalX, y: finalY };
     });
-  }
+    
+    return positions;
+  };
 
-  return positions;
-}
     
     
   /* ───── 5.  dynamic root-level structure (depends on controller) ───────── */

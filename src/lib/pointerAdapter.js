@@ -10,6 +10,8 @@ export function installPointerAdapter(
 ) {
 
   const active = new Map(); // pointerId → {x,y}
+  const capturedTargets = new Map(); // pointerId → element that we called setPointerCapture on
+
   let lastTap = { t: 0, x: 0, y: 0 };
   const TAP_MS = 300;
   const TAP_DIST = 10;
@@ -50,7 +52,19 @@ export function installPointerAdapter(
   const onPointerDown = (ev) => {
     ev.preventDefault();
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-    rootEl.setPointerCapture(ev.pointerId);
+    const handleNode    = ev.target.closest('.element-handle');
+    const edgeLabelNode = ev.target.closest('text[data-id]');
+    const elementNode   = ev.target.closest('.canvas-element');
+    const captureNode   = handleNode
+                       || edgeLabelNode
+                       || elementNode
+                       || rootEl;
+
+    // 3) capture on that node and store it
+    captureNode.setPointerCapture(ev.pointerId);
+    capturedTargets.set(ev.pointerId, captureNode);
+
+    ev.target.setPointerCapture(ev.pointerId);
     send('POINTER_DOWN', ev);
   };
   const onPointerMove = (ev) => {
@@ -61,7 +75,12 @@ export function installPointerAdapter(
   const finishPointer = (ev) => {
     ev.preventDefault();
     active.delete(ev.pointerId);
-    rootEl.releasePointerCapture(ev.pointerId);
+    // release capture on whichever node we grabbed
+    const capNode = capturedTargets.get(ev.pointerId) || rootEl;
+    capNode.releasePointerCapture(ev.pointerId);
+    capturedTargets.delete(ev.pointerId);
+
+ 
     send('POINTER_UP', ev);
 
     /*  tap / double-tap detection  */

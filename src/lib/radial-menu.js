@@ -1,8 +1,3 @@
-# Full Radial Menu Implementation with 360° Distribution
-
-Here's the complete file with all the changes applied, including recalculation on drag:
-
-```javascript
 /* ────────────────────────────────────────────────────────────────────────────
  *  Radial Menu for parc.land  — v3 (2025-04-30)
  *  • context-sensitive launcher that replaces the old #mode toggle button
@@ -701,20 +696,3 @@ export function installRadialMenu(controller, options = {}) {
   rebuildRoot();
   render(true);
 }
-```
-
-## Key Improvements Overview
-
-1. **Full Circle Distribution**:
-   - Menu items are now distributed in a 360° orbit by default
-   - Added `fullCircle` configuration option (defaults to true)
-   - Original quadrant-based fan layout is still available
-
-2. **Edge Avoidance**:
-   - Added advanced edge detection that respects screen boundaries
-   - Implemented scaling system that shrinks orbit in constrained directions
-   - Added safety margin to prevent items from touching screen edges
-
-3. **Overlap Prevention**:
-   - Added item overlap detection and resolution algorithm
-   - Uses iterative approach to push​​​​​​​​​​​​​​​​

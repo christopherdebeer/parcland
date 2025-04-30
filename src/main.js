@@ -580,7 +580,7 @@ class CanvasController {
         return node;
     }
 
-    updateElementNode(node, el, isSelected) {
+    updateElementNode(node, el, isSelected, skipHandles) {
         this.applyPositionStyles(node, el);
         node.setAttribute("type", el.type);
         node.classList.remove("selected");
@@ -588,11 +588,13 @@ class CanvasController {
             node.classList.add("selected");
         }
         this.setElementContent(node, el);
-        // Remove old handles (if any)
-        const oldHandles = Array.from(node.querySelectorAll('.element-handle'));
-        oldHandles.forEach(h => h.remove());
-        if (isSelected) {
-            this.buildHandles(node, el);
+        if (!skipHandles) {
+            // Remove old handles (if any)
+            const oldHandles = Array.from(node.querySelectorAll('.element-handle'));
+            oldHandles.forEach(h => h.remove());
+            if (isSelected) {
+                this.buildHandles(node, el);
+            }
         }
     }
 

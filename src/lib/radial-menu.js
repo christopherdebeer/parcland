@@ -254,24 +254,114 @@ export function installRadialMenu(controller, options = {}) {
     };
   };
 
-  // Calculate optimal distribution to prevent overlaps
-  const redistributeItems = (items, centerX, centerY, radius, screenBounds) => {
-    // Start with even angular distribution
-    const fullCircle = Math.PI * 2;
-    const step = items.length > 0 ? fullCircle / items.length : 0;
-    
-    // Initial positions
-    let positions = items.map((_, i) => {
-      const angle = i * step + rotation;
-      return {
-        index: i,
-        angle: angle,
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-        screenX: centerX + Math.cos(angle) * radius,
-        screenY: centerY + Math.sin(angle) * radius
-      };
+  function redistributeItems(items, centerX, centerY, radius, screenBounds) {
+  const N = items.length;
+  if (N === 0) return [];
+
+  // 1. item diameter & minimal angular spacing to avoid overlap
+  const itemDiameter = items[0].getBoundingClientRect().width;
+  const itemRadius   = itemDiameter / 2;
+  // clamp to avoid NaN if diameter > 2*radius
+  const ratio = Math.min(1, itemDiameter / (2 * radius));
+  const minAngle = 2 * Math.asin(ratio);
+
+  // 2. sampling step (never coarser than about 1.15°)
+  const maxStep = 0.02;                   // ~1.15° in radians
+  const step    = Math.min(minAngle / 2, maxStep);
+
+  // 3. collect all allowed angle samples
+  const allowed = [];
+  for (let a = 0; a < Math.PI * 2; a += step) {
+    const x = centerX + Math.cos(a) * radius;
+    const y = centerY + Math.sin(a) * radius;
+    if (
+      x - itemRadius >= screenBounds.left   &&
+      x + itemRadius <= screenBounds.right  &&
+      y - itemRadius >= screenBounds.top    &&
+      y + itemRadius <= screenBounds.bottom
+    ) {
+      allowed.push(a);
+    }
+  }
+
+  // if nothing fits, fall back to full circle
+  if (allowed.length === 0) {
+    return items.map((_, i) => ({
+      x: Math.cos(rotation + 2 * Math.PI * i / N) * radius,
+      y: Math.sin(rotation + 2 * Math.PI * i / N) * radius
+    }));
+  }
+
+  // 4. merge samples into intervals
+  allowed.sort((a, b) => a - b);
+  const intervals = [];
+  let start = allowed[0], prev = allowed[0];
+  for (let i = 1; i < allowed.length; i++) {
+    const a = allowed[i];
+    if (a - prev <= step * 1.5) {
+      prev = a;
+    } else {
+      intervals.push([start, prev]);
+      start = prev = a;
+    }
+  }
+  intervals.push([start, prev]);
+
+  // handle wrap-around merge
+  const twoPi = 2 * Math.PI;
+  if (intervals.length > 1) {
+    const first = intervals[0], last = intervals[intervals.length - 1];
+    if ( first[0] <= step * 1.5 &&
+         twoPi - last[1] <= step * 1.5 ) {
+      // merge them into one crossing the 0/2π boundary
+      intervals[0] = [ last[0] - twoPi, first[1] ];
+      intervals.pop();
+    }
+  }
+
+  // 5. compute total allowed arc length & max possible items
+  let totalArc = 0;
+  const lengths = intervals.map(([s, e]) => {
+    const len = e - s;
+    totalArc += len;
+    return len;
+  });
+  const maxPossible = Math.floor(totalArc / minAngle);
+
+  // if we can’t fit all N without overlap, fallback
+  if (maxPossible < N) {
+    return items.map((_, i) => ({
+      x: Math.cos(rotation + 2 * Math.PI * i / N) * radius,
+      y: Math.sin(rotation + 2 * Math.PI * i / N) * radius
+    }));
+  }
+
+  // 6. otherwise, distribute N items evenly across the allowed arcs
+  const positions = [];
+  for (let i = 0; i < N; i++) {
+    // pick the midpoint of each segment's share of the total arc
+    let target = (i + 0.5) * totalArc / N;
+    let angle;
+    for (let j = 0; j < intervals.length; j++) {
+      const [s, e] = intervals[j];
+      const len    = lengths[j];
+      if (target <= len) {
+        angle = s + target;
+        break;
+      } else {
+        target -= len;
+      }
+    }
+    // apply any user-rotated offset
+    angle = ((angle + rotation) % twoPi + twoPi) % twoPi;
+    positions.push({
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius
     });
+  }
+
+  return positions;
+}
     
     // Calculate available space
     const availableSpace = calculateAvailableSpace(centerX, centerY, screenBounds);

@@ -48,6 +48,7 @@ export function installPointerAdapter(
   };
 
   const onPointerDown = (ev) => {
+    ev.preventDefault();
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     send('POINTER_DOWN', ev);
   };
@@ -57,6 +58,7 @@ export function installPointerAdapter(
     send('POINTER_MOVE', ev);
   };
   const finishPointer = (ev) => {
+    ev.preventDefault();
     active.delete(ev.pointerId);
     send('POINTER_UP', ev);
 
@@ -75,9 +77,9 @@ export function installPointerAdapter(
   const onWheel = (ev) => send('WHEEL', ev, { deltaY: ev.deltaY });
 
   /* listeners */
-  rootEl.addEventListener('pointerdown', onPointerDown, { passive: true });
+  rootEl.addEventListener('pointerdown', onPointerDown, { passive: false });
   rootEl.addEventListener('pointermove', onPointerMove, { passive: true });
-  rootEl.addEventListener('pointerup', finishPointer, { passive: true });
+  rootEl.addEventListener('pointerup', finishPointer, { passive: false });
   rootEl.addEventListener('pointercancel', finishPointer, { passive: true });
   rootEl.addEventListener('wheel', onWheel, { passive: true });
 

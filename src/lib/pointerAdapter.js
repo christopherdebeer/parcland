@@ -50,6 +50,7 @@ export function installPointerAdapter(
   const onPointerDown = (ev) => {
     ev.preventDefault();
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    rootEl.setPointerCapture(ev.pointerId);
     send('POINTER_DOWN', ev);
   };
   const onPointerMove = (ev) => {
@@ -60,6 +61,7 @@ export function installPointerAdapter(
   const finishPointer = (ev) => {
     ev.preventDefault();
     active.delete(ev.pointerId);
+    rootEl.releasePointerCapture(ev.pointerId);
     send('POINTER_UP', ev);
 
     /*  tap / double-tap detection  */

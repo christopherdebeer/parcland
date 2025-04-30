@@ -224,7 +224,7 @@ export function createGestureHelpers(controller) {
     controller.clearSelection();
   }
 
-  function spawnNewElementAtTap: (ctx, evt) => {
+  function spawnNewElementAtTap(ctx, evt) {
     const { x, y } = controller.screenToCanvas(evt.xy.x, evt.xy.y);
     controller.createNewElement(x, y, 'markdown');
   }
@@ -321,6 +321,7 @@ export function createGestureHelpers(controller) {
 
   return {
     editEdgeLabel,
+    spawnNewElementAtTap,
 
     /* canvas */
     applyCanvasPan,

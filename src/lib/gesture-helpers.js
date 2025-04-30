@@ -84,7 +84,8 @@ export function createGestureHelpers(controller) {
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
-      controller.isElementSelected(el.id)
+      controller.isElementSelected(el.id),
+      true
     );
   }
 
@@ -98,7 +99,8 @@ export function createGestureHelpers(controller) {
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
-      controller.isElementSelected(el.id)
+      controller.isElementSelected(el.id),
+      true
     );
   }
 
@@ -117,7 +119,8 @@ export function createGestureHelpers(controller) {
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
-      controller.isElementSelected(el.id)
+      controller.isElementSelected(el.id),
+      true
     );
   }
 
@@ -134,7 +137,8 @@ export function createGestureHelpers(controller) {
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
-      controller.isElementSelected(el.id)
+      controller.isElementSelected(el.id),
+      true
     );
   }
 
@@ -148,7 +152,8 @@ export function createGestureHelpers(controller) {
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
-      controller.isElementSelected(el.id)
+      controller.isElementSelected(el.id),
+      true
     );
   }
 

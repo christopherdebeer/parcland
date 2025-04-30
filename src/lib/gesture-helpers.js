@@ -224,6 +224,11 @@ export function createGestureHelpers(controller) {
     controller.clearSelection();
   }
 
+  function spawnNewElementAtTap: (ctx, evt) => {
+    const { x, y } = controller.screenToCanvas(evt.xy.x, evt.xy.y);
+    controller.createNewElement(x, y, 'markdown');
+  }
+
   function applyPinchElement(ctx, ev) {
     const pts = Object.values(ev.active || {});
     if (pts.length !== 2) return;

@@ -912,7 +912,6 @@ class CanvasController {
             i.className = icon;
             wrap.appendChild(i);
             wrap.addEventListener('pointerdown', ev => {
-                ev.stopPropagation();            // don’t let the adapter swallow it
                 wrap.setPointerCapture(ev.pointerId);
             });
             if (click) wrap.addEventListener('click', click);

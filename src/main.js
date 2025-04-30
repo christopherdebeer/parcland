@@ -911,9 +911,6 @@ class CanvasController {
             const i = document.createElement('i');
             i.className = icon;
             wrap.appendChild(i);
-            wrap.addEventListener('pointerdown', ev => {
-                wrap.setPointerCapture(ev.pointerId);
-            });
             if (click) wrap.addEventListener('click', click);
             node.appendChild(wrap);
         };

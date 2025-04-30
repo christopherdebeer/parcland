@@ -182,9 +182,9 @@ export const gestureMachine = createMachine({
             POINTER_UP: { target: 'idle', actions: 'commitNodeCreation' }
           }
         },
-        doubleTapCanvas: { entry: 'log', after: { 0: 'idle' } },
-        doubleTapElement: { entry: 'log', after: { 0: 'idle' } },
-        doubleTapEdgeLabel: { entry: ['log', 'editEdgeLabel'], after: { 0: 'idle' } },
+        doubleTapCanvas: { entry: ['log', 'spawnNewElementAtTap'], after: { 100: 'idle' } },
+        doubleTapElement: { entry: 'log', after: { 100: 'idle' } },
+        doubleTapEdgeLabel: { entry: ['log', 'editEdgeLabel'], after: { 100: 'idle' } },
 
         /* fallback (keep XState happy) */
         '*': {}

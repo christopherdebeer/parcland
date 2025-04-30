@@ -35,7 +35,7 @@ const LS_POS_KEY = 'parc.radialMenu.pos';
  * Radial-menu structure for parc.land (2025-04-29)
  * Each item can carry `visible()`  and / or  `enabled()` getters.
  *********************************************************************/
-const rootItems  = (c) => [
+const rootItems  = [
   /* ───── Mode toggle ───── */
   {
     label : c => c.mode === 'direct' ? 'Navigate' : 'Direct',
@@ -258,7 +258,7 @@ export function installRadialMenu(controller, options = {}) {
       c.saveLocalViewState?.();
     };
 
-   // return rootItems(c);
+   return rootItems;
 
     return [
       {
@@ -343,7 +343,7 @@ export function installRadialMenu(controller, options = {}) {
   /* ───── 6.  render current menu level ──────────────────────────────────── */
   const render = (instant=false)=>{
     let {items} = stack[stack.length-1];
-    items = items.filter(it => (it.visible?.(root.__controller__) ?? true));
+    items = items //.filter(it => (it.visible?.(root.__controller__) ?? true));
     itemsBox.innerHTML = '';
     focusIdx = 0;
 
@@ -355,7 +355,7 @@ export function installRadialMenu(controller, options = {}) {
       btn.setAttribute('tabindex','-1');
       btn.innerHTML = `<i class="fas ${it.icon}"></i>
                        <span class="item-label">${it.label}</span>`;
-      const isEnabled = it.enabled?.(root.__controller__) ?? true;
+      const isEnabled = true //it.enabled?.(root.__controller__) ?? true;
       if (!isEnabled) {
           btn.setAttribute('aria-disabled', 'true');
           btn.style.opacity = .4;

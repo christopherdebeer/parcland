@@ -304,15 +304,28 @@ class CanvasController {
         if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null; }
     }
 
-    selectElement(id, additive = false) {
-        if (!additive) this.selectedElementIds.clear();
-        if (this.selectedElementIds.has(id) && additive) {
-            this.selectedElementIds.delete(id);  // toggle off
-        } else {
-            this.selectedElementIds.add(id);
-        }
-        this.renderElements();
+
+selectElement(id, additive = false) {
+  if (!additive) this.selectedElementIds.clear();
+
+  const el = this.findElementById(id);
+  if (el?.group) {
+    // pull in every element with the same group ID
+    const gid = el.group;
+    this.canvasState.elements
+      .filter(e => e.group === gid)
+      .forEach(e => this.selectedElementIds.add(e.id));
+  } else {
+    // fall back to single‐element toggle
+    if (this.selectedElementIds.has(id) && additive) {
+      this.selectedElementIds.delete(id);
+    } else {
+      this.selectedElementIds.add(id);
     }
+  }
+
+  this.renderElements();
+}
 
     clearSelection() {
         if (this.selectedElementIds.size) {

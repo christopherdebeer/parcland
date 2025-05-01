@@ -30,7 +30,7 @@ export const gestureMachine = createMachine({
           on: {
             POINTER_DOWN: [
               { cond: 'twoPointersNavigate', target: 'pinchCanvas', actions: 'capPinch' },
-              { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: 'capPan' },
+              { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'capPan'] },
 
               { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['clearSelection', 'capLasso'] },
               { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: 'capGroupMove' },
@@ -182,7 +182,7 @@ export const gestureMachine = createMachine({
             POINTER_UP: { target: 'idle', actions: 'commitNodeCreation' }
           }
         },
-        doubleTapCanvas: { entry: ['log', 'spawnNewElementAtTap'], after: { 100: 'idle' } },
+        doubleTapCanvas: { entry: ['log', 'spawnNewElementAtTap', 'switchToDirect'], after: { 100: 'idle' } },
         doubleTapElement: { entry: 'log', after: { 100: 'idle' } },
         doubleTapEdgeLabel: { entry: ['log', 'editEdgeLabel'], after: { 100: 'idle' } },
 

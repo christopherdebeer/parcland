@@ -95,7 +95,8 @@ body {
     /* really? */
 }
 /* images and html still get exactly the canvas’s width & height */
-.canvas-element[type="img"] > .content {
+.canvas-element[type="img"] > .content,
+.canvas-element[type="html"] > .content{
   height: var(--height);
   overflow: hidden;
 }

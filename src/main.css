@@ -88,12 +88,16 @@ body {
 
 .canvas-element>.content {
     width: var(--width);
-    height: var(--height);
+    /* height: var(--height); */
     border: 1px solid transparent;
     box-sizing: border-box;
-    overflow: auto;
+    /* overflow: auto; */
     /* really? */
-
+}
+/* images and html still get exactly the canvas’s width & height */
+.canvas-element[type="img"] > .content {
+  height: var(--height);
+  overflow: hidden;
 }
 
 .canvas-element>.content>*:last-child {
@@ -113,6 +117,8 @@ body {
     line-height: 1.2;
     font-family: monospace;
     margin: 0;
+    height: auto;
+    overflow: visible;
 }
 
 #canvas[mode="navigate"] .canvas-element>.content {

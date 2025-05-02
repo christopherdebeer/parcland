@@ -1,8 +1,8 @@
 import { getAuthToken } from "./storage";
 
-export async function generateContent(content, el) {
+export async function generateContent(content, el, c) {
     const { type, id } = el;
-    const edges = this.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: this.findElementById(e.source) }));
+    const edges = c.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: c.findElementById(e.source) }));
     console.log("Relevant edges", edges);
     const token = getAuthToken();
     if (!token || token === 'TBC') return await this.generateContentOld(content, type);

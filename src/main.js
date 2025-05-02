@@ -626,7 +626,7 @@ class CanvasController {
         }
     }
 
-    executeScriptElements(el, node) {
+    async executeScriptElements(el, node) {
         const scriptElements = Array.from(node.querySelectorAll('script'));
         const loadScript = (script) => {
             console.log("Loading script", script);
@@ -641,8 +641,13 @@ class CanvasController {
             console.log("Encountered script", scriptElement);
             if (scriptElement.type !== 'module' && !scriptElement.getAttribute('src') && scriptElement.textContent && scriptElement.textContent.trim()) {
                 const code = scriptElement.textContent;
-                const run = new Function('element', 'controller', 'node', code);
-                run(el, this, node);
+                try {
+                    const run = new Function('element', 'controller', 'node', code);
+                    run(el, this, node);
+                } catch(err) {
+                    console.warn("Error executing script", el, node, err)
+                }
+                
             }
             else {
                 loadScript(scriptElement);
@@ -689,11 +694,6 @@ class CanvasController {
             content: finalContent,
             versions: [],
             static: false,
-            childCanvasState: (isCanvasContainer ? {
-                canvasId: newId + "_child",
-                elements: [],
-                versionHistory: []
-            } : null)
         };
         this.canvasState.elements.push(elObj);
         this.selectElement(newId);

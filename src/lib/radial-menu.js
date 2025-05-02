@@ -494,11 +494,14 @@ export function installRadialMenu(controller, options = {}) {
           btn.style.pointerEvents = 'none';
       }
       /* rotation-gesture anchor */
-      btn.addEventListener('pointerdown',startRotateGesture);
-      btn.addEventListener('click',()=>handleItem(it,btn));
-      /* haptic feedback */
-      btn.addEventListener('click',()=>navigator.vibrate?.(10));
+      
+      btn.addEventListener('click',()=> {
+        console.log("[RM] click", it.label, btn)
+        navigator.vibrate?.(10)
+        handleItem(it,btn)
+      });
       itemsBox.appendChild(btn);
+      btn.addEventListener('pointerdown',startRotateGesture);
       /* first item receives programmatic focus when opened */
       if(idx===0 && itemsBox.classList.contains('active')){
         requestAnimationFrame(()=>btn.focus());
@@ -511,7 +514,8 @@ export function installRadialMenu(controller, options = {}) {
   /* ───── 8.  opening / closing / drag / rotate interactions ────────────── */
   /* drag whole menu ─────────────────────────────────────────────────────── */
   trigger.addEventListener('pointerdown',e=>{
-    drag.active=true;
+    console.log("[RM] start drag", drag.active)
+    drag.active=1;
     drag.sx=e.clientX; drag.sy=e.clientY;
     const r=root.getBoundingClientRect();
     drag.sl=r.left; drag.st=r.top;
@@ -519,7 +523,9 @@ export function installRadialMenu(controller, options = {}) {
   });
   
   trigger.addEventListener('pointermove',e=>{
-    if(!drag.active) return;
+    console.log("[RM] drag", drag.active)
+    if(!drag.active == 1) return;
+    drag.active = 2;
     const dx=e.clientX-drag.sx,
           dy=e.clientY-drag.sy;
     const size=parseFloat(getComputedStyle(root).width);
@@ -535,6 +541,7 @@ export function installRadialMenu(controller, options = {}) {
   });
   
   const endDrag = ()=>{
+    console.log("[RM] end drag", drag.active)
     if(drag.active){
       /* persist position */
       localStorage.setItem(LS_POS_KEY,JSON.stringify({
@@ -542,14 +549,15 @@ export function installRadialMenu(controller, options = {}) {
         y:parseFloat(root.style.top)
       }));
     }
-    drag.active=false;
+    drag.active=0;
   };
   trigger.addEventListener('pointerup',endDrag);
   trigger.addEventListener('pointercancel',endDrag);
 
   /* open / close / back ─────────────────────────────────────────────────── */
   trigger.addEventListener('click',e=>{
-    if(drag.active){ drag.active=false; return; } // ignore click finishing drag
+    console.log("[RM] trigger click", drag.active)
+    if(drag.active === 2){ drag.active=0; return; } // ignore click finishing drag
 
     if(stack.length===1){
       /* root level */
@@ -574,9 +582,10 @@ export function installRadialMenu(controller, options = {}) {
 
   /* rotate fan (pointer rotate-drag) ────────────────────────────────────── */
   function startRotateGesture(e){
+    console.log("[RM] startRotateGesture", e, itemsBox)
     if(!itemsBox.classList.contains('active')||
        itemsBox.classList.contains('animating')) return;
-    e.stopPropagation();
+    // e.stopPropagation();
     rot.active=true;
     const cen=root.getBoundingClientRect(),
           cx=cen.left+cen.width/2,
@@ -599,6 +608,7 @@ export function installRadialMenu(controller, options = {}) {
 
   /* handle item click / submenu dive / action exec ─────────────────────── */
   function handleItem(it,btn){
+    console.log("[RM] handle item (click)", it, btn)
     if(it.children){
       /* dive into submenu */
       const others=[...itemsBox.children].filter(b=>b!==btn);

@@ -48,7 +48,7 @@ function ensureDom() {
 
   /* ------ 1.  inject HTML -------------------------------------------------- */
   const tpl = /*html*/`
-<div id="edit-modal" class="modal" hidden>
+<div id="edit-modal" class="modal">
   <div class="modal-content">
     <div class="modal-versions">
       <div class="versions-nav">
@@ -139,7 +139,7 @@ function hydrateUiFor(el) {
   loadVersion(currentVerIdx);
   clearError();
 
-  $root.hidden = false;
+  $root.style.display = "block";
 }
 
 function loadVersion(idx) {
@@ -233,7 +233,7 @@ function clearError() { $errorBox.textContent = ''; }
 function showError(msg){ $errorBox.textContent = msg; }
 
 function close(status, el=null) {
-  $root.hidden = true;
+  $root.style.display = "none";
   resolver?.({ status, el });
   resolver = null;
   currentEl = null;

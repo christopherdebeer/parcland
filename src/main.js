@@ -6,7 +6,7 @@ import { buildContextMenu } from './lib/context-menu';
 import { installRadialMenu } from './lib/radial-menu.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
-
+import { showModal } from './lib/modal.js';
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
@@ -1073,7 +1073,32 @@ class CanvasController {
         this.contextMenu.style.display = "flex";
     }
 
-    openEditModal(el) {
+
+async openEditModal(el) {
+  // If caller didn’t pass one, use the single selected element (legacy path)
+  if (!el) el = this.findElementById(this.selectedElementId);
+  if (!el) return;                              // nothing to edit
+
+  try {
+    // Launch the self-contained modal and wait for the user to finish
+    const { status, el: updated } = await showModal(el, {
+      /* Callback the modal can use for the “Generate” button */
+      generateContent: (seed) => generateContent(seed, el)
+    });
+
+    // Persist changes if the user hit “Save”
+    if (status === 'saved' && updated) {
+      Object.assign(el, updated);               // merge returned changes
+      this.updateElementNode(this.elementNodesMap[el.id], el, true);
+      this.renderEdges();                       // edge labels may have changed
+      saveCanvas(this.canvasState);
+    }
+  } catch (err) {
+    console.error('[openEditModal] modal error:', err);
+  }
+}
+
+    _openEditModal(el) {
         this.editModal.style.display = "block";
         this.currentElForVersions = el;
         el.versions = el.versions || [];

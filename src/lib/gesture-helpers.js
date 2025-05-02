@@ -305,7 +305,7 @@ export function createGestureHelpers(controller) {
     const elId = controller.createNewElement(pt.x, pt.y, 'markdown', 'generating…');
     controller.createNewEdge(ctx.draft.sourceId, elId, text);
     controller.renderElements();
-    await generateContent?.(text, controller.findElementById(elId));
+    await generateContent?.(text, controller.findElementById(elId), controller);
   }
 
   function editEdgeLabel(ctx, ev) {

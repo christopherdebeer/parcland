@@ -82,7 +82,7 @@ export async function generateNew(c) {
   const id = [...c.selectedElementIds][0];
   const el = c.findElementById(id);
   if (!el || el.type === 'img') return;
-  const newContent = await generateContent(el.content, el);
+  const newContent = await generateContent(el.content, el, c);
   if (newContent) {
     el.content = newContent;
     c.updateElementNode(c.elementNodesMap[id], el, true);

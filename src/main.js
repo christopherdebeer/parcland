@@ -69,12 +69,27 @@ class CanvasController {
 
         this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
+        let safeActions = {};
+        Object.entries(helperActions).forEach(([key, fn]) => {
+            safeActions[key] = (ctx, ev, meta) => {
+                console.log(`[Gesture Action: ${key}]`);
+                try {
+                    // run the real helper
+                    return fn(ctx, ev, meta);
+                } catch (err) {
+                    console.error(`[Gesture Action Error: ${key}]`, err);
+                    // emit an in‐machine event—this will bubble to your state machine
+                    this.fsmService.send({ type: 'ERROR', action: key, error: err });
+                    // swallow, so the machine’s transition still completes
+                }
+            };
+        });
         this.fsmService = interpret(
             gestureMachine.withContext({
                 ...gestureMachine.context,
                 controller: this,
             }).withConfig({
-                actions: { ...helperActions },
+                actions: { ...safeActions },
             })
         ).start();
         this.uninstallAdapter = installPointerAdapter(
@@ -84,7 +99,7 @@ class CanvasController {
             () => this.selectedElementIds.size > 1
         );
         this.setupEventListeners();
-        
+
 
         if (this.canvasState.parentCanvas) {
             this.drillUpBtn.style.display = 'block';
@@ -305,27 +320,27 @@ class CanvasController {
     }
 
 
-selectElement(id, additive = false) {
-  if (!additive) this.selectedElementIds.clear();
+    selectElement(id, additive = false) {
+        if (!additive) this.selectedElementIds.clear();
 
-  const el = this.findElementById(id);
-  if (el?.group) {
-    // pull in every element with the same group ID
-    const gid = el.group;
-    this.canvasState.elements
-      .filter(e => e.group === gid)
-      .forEach(e => this.selectedElementIds.add(e.id));
-  } else {
-    // fall back to single‐element toggle
-    if (this.selectedElementIds.has(id) && additive) {
-      this.selectedElementIds.delete(id);
-    } else {
-      this.selectedElementIds.add(id);
+        const el = this.findElementById(id);
+        if (el?.group) {
+            // pull in every element with the same group ID
+            const gid = el.group;
+            this.canvasState.elements
+                .filter(e => e.group === gid)
+                .forEach(e => this.selectedElementIds.add(e.id));
+        } else {
+            // fall back to single‐element toggle
+            if (this.selectedElementIds.has(id) && additive) {
+                this.selectedElementIds.delete(id);
+            } else {
+                this.selectedElementIds.add(id);
+            }
+        }
+
+        this.renderElements();
     }
-  }
-
-  this.renderElements();
-}
 
     clearSelection() {
         if (this.selectedElementIds.size) {
@@ -861,6 +876,9 @@ selectElement(id, additive = false) {
                 this.renderElements();
                 saveCanvas(this.canvasState);
             };
+        } else {
+            console.warn("Unknown element type", el.type, el)
+            console.log("Delete?")
         }
         const c = node.querySelector('.content');
         if (c) {
@@ -880,6 +898,14 @@ selectElement(id, additive = false) {
                 this.handleDrillIn(el);
             };
             c.appendChild(drillInBtn);
+        }
+    }
+
+    deleteElementById(id) {
+        this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== id);
+        if (this.elementNodesMap[id]) {
+            this.elementNodesMap[id].remove();
+            delete this.elementNodesMap[id];
         }
     }
 

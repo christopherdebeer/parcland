@@ -95,6 +95,7 @@ export async function generateNew(c) {
 export function inlineEdit(c) {
   if (c.selectedElementIds.size !== 1) return;
   const el = c.findElementById([...c.selectedElementIds][0]);
+  console.log("opening edit modal for element:", el);
   c.openEditModal(el);
 }
 

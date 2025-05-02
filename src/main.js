@@ -1075,11 +1075,13 @@ class CanvasController {
 
 
 async openEditModal(el) {
+    console.log("[openEditModa] init", el);
   // If caller didn’t pass one, use the single selected element (legacy path)
   if (!el) el = this.findElementById(this.selectedElementId);
   if (!el) return;                              // nothing to edit
 
   try {
+          console.log("[openEditModa] launch", el);
     // Launch the self-contained modal and wait for the user to finish
     const { status, el: updated } = await showModal(el, {
       /* Callback the modal can use for the “Generate” button */

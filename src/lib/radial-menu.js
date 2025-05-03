@@ -204,7 +204,8 @@ export function installRadialMenu(controller, opts={}) {
 
   const render = (instant=false)=>{
     const list = stack[stack.length-1].items
-                  .filter(it=> it.visible ? it.visible(controller) : true);
+                 // wrap in tey catch befor re-enabling
+                 // .filter(it=> it.visible ? it.visible(controller) : true);
     itemsBox.innerHTML='';
     focusIdx=0;
 

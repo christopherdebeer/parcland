@@ -285,7 +285,7 @@ export function installRadialMenu(controller, options = {}) {
   const rebuildRoot  = ()=>{stack=[{title:'root',items:rootItems(cfg)}];};
 
   const render = (instant=false) =>{
-    const list = currentModel().filter(it=>it.visible?.(controller)??true);
+    const list = currentModel() //.filter(it=>it.visible?.(controller)??true);
     itemsBox.innerHTML='';
     focusIdx=0;
     list.forEach((it,idx)=>{
@@ -299,7 +299,7 @@ export function installRadialMenu(controller, options = {}) {
       btn.innerHTML=`
         <i class="fas ${icon}"></i>
         <span class="item-label">${label}</span>`;
-      const enabled = it.enabled?.(controller)??true;
+      const enabled = true; // it.enabled?.(controller)??true;
       if(!enabled){
         btn.setAttribute('aria-disabled','true');
         btn.style.opacity=.4;

@@ -74,8 +74,7 @@ function applyCssVars(cfg){
     .item-label{position:absolute;top:100%;left:50%;transform:translateX(-50%);
       font-size:.75rem;color:#fff;background:rgba(0,0,0,.7);padding:2px 6px;border-radius:3px;
       white-space:nowrap;opacity:0;transition:opacity .2s var(--ease)}
-    .menu-item:hover .item-label,
-    .menu-item:focus .item-label{opacity:1}`;
+    .menu-item .item-label{opacity:1}`;
 }
 
 /* keep single instance across drill-ins ---------------------------------- */
@@ -218,8 +217,6 @@ export function installRadialMenu(controller, opts={}) {
       btn.innerHTML=`<i class="fas ${icon}"></i><span class="item-label">${label}</span>`;
       btn.addEventListener('click',()=> handleClick(it,btn));
       itemsBox.appendChild(btn);
-      // if(i===0 && itemsBox.classList.contains('active'))
-        requestAnimationFrame(()=>btn.focus());
     });
     layoutItems(instant);
   };

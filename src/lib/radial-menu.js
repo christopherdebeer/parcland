@@ -218,7 +218,7 @@ export function installRadialMenu(controller, opts={}) {
       btn.innerHTML=`<i class="fas ${icon}"></i><span class="item-label">${label}</span>`;
       btn.addEventListener('click',()=> handleClick(it,btn));
       itemsBox.appendChild(btn);
-      if(i===0 && itemsBox.classList.contains('active'))
+      // if(i===0 && itemsBox.classList.contains('active'))
         requestAnimationFrame(()=>btn.focus());
     });
     layoutItems(instant);

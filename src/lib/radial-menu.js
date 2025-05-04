@@ -261,12 +261,12 @@ export function installRadialMenu(controller, opts={}) {
 
   /* ── open / close / drag trigger ─────────────────────────────────────── */
   trigger.addEventListener('pointerdown',e=>{
-    drag.active=true; drag.sx=e.clientX; drag.sy=e.clientY;
+    drag.active=1; drag.sx=e.clientX; drag.sy=e.clientY;
     const r=root.getBoundingClientRect(); drag.sl=r.left; drag.st=r.top;
     trigger.setPointerCapture(e.pointerId);
   });
   trigger.addEventListener('pointermove',e=>{
-    if(!drag.active) return;
+    if(drag.active === 0) return;
     const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
     const size=parseFloat(getComputedStyle(root).width);
     root.style.left=Math.min(Math.max(drag.sl+dx,0),innerWidth -size)+'px';
@@ -276,15 +276,16 @@ export function installRadialMenu(controller, opts={}) {
   trigger.addEventListener('pointerup',saveDragPos);
   trigger.addEventListener('pointercancel',saveDragPos);
   function saveDragPos(){
-    if(drag.active){
+    if(drag.active === 2){
       localStorage.setItem(LS_POS_KEY,JSON.stringify({
         x:parseFloat(root.style.left), y:parseFloat(root.style.top)}));
     }
-    drag.active=false;
+    drag.active=0;
   }
 
   trigger.addEventListener('click',()=>{
-    if(drag.active) return;            // ignore click finishing drag
+    console.log("[RM] trigger click", {drag,stack,});
+    if(drag.active === 2) return;            // ignore click finishing drag
     if(stack.length===0) rebuildRoot();
 
     if(!itemsBox.classList.contains('active')){

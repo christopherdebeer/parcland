@@ -20,28 +20,33 @@ const saveCfg  = cfg => localStorage.setItem(LS_CFG_KEY, JSON.stringify(cfg));
 
 /* ─── default cfg  (overridden by persisted + caller options) ───────────── */
 function createCfg(opts = {}) {
+  console.log('[RM] createCfg opts:', opts, 'persisted:', loadCfg());
   return {
     menuSize      : 68,
     itemSize      : 56,
-    orbitRadius   : 110,   // *minimum* radius we tolerate
-    transitionTime: .35,   // s
+    orbitRadius   : 110,
+    transitionTime: .35,
     ease          : 'cubic-bezier(.22,.61,.36,1)',
-    fullCircle    : false, // start in arc mode
+    fullCircle    : false,
     ...loadCfg(),
     ...opts
   };
 }
 
 /* MARGIN = half item + 6 px breathing room around the viewport  */
-const MARGIN = cfg=> cfg.itemSize/2 + 6;
+const MARGIN = cfg => cfg.itemSize/2 + 6;
 const DEG  = Math.PI/180;
 const TAU  = Math.PI*2;
 
 /* ─── CSS custom-props injected once  ───────────────────────────────────── */
 function applyCssVars(cfg){
+  console.log('[RM] applyCssVars', cfg);
   let s = document.getElementById('radial-menu-style');
-  if(!s){ s=document.createElement('style'); s.id='radial-menu-style';
-          document.head.appendChild(s);}
+  if(!s){
+    s = document.createElement('style');
+    s.id = 'radial-menu-style';
+    document.head.appendChild(s);
+  }
   s.textContent = `
     :root{
       --menu-size:${cfg.menuSize}px;
@@ -83,12 +88,14 @@ let activeRoot = null;
 /* ──────────────────────────────────────────────────────────────────────────
  *  Core exported function
  * ───────────────────────────────────────────────────────────────────────── */
-export function installRadialMenu(controller, opts={}) {
+export function installRadialMenu(controller, opts = {}) {
+  console.log('[RM] installRadialMenu start', { controller, opts, activeRoot });
 
   /* reuse shell if it already exists (drill-in/out) */
-  if(activeRoot){
+  if (activeRoot) {
+    console.log('[RM] reusing existing root');
     activeRoot.__controller__ = controller;
-    controller.__rm_relayout  = () => layoutItems(true);
+    controller.__rm_relayout = () => layoutItems(true);
     return;
   }
 
@@ -97,9 +104,10 @@ export function installRadialMenu(controller, opts={}) {
   applyCssVars(cfg);
 
   /* ── DOM shell ---------------------------------------------------------- */
+  console.log('[RM] creating root shell');
   const root = document.createElement('div');
-  root.className='radial-menu';
-  root.innerHTML=`
+  root.className = 'radial-menu';
+  root.innerHTML = `
     <button class="menu-trigger" aria-expanded="false" aria-haspopup="menu">
       <i class="fas fa-plus" aria-hidden="true"></i>
     </button>
@@ -108,140 +116,151 @@ export function installRadialMenu(controller, opts={}) {
   activeRoot = root;
 
   /* restore position */
-  const pos = JSON.parse(localStorage.getItem(LS_POS_KEY)||'null');
-  if(pos){ root.style.left=pos.x+'px'; root.style.top=pos.y+'px';}
-  else{
-    root.style.left=`calc(100% - ${cfg.menuSize+20}px)`;
-    root.style.top =`calc(100% - ${cfg.menuSize+20}px)`;
+  const stored = localStorage.getItem(LS_POS_KEY);
+  const pos = stored ? JSON.parse(stored) : null;
+  console.log('[RM] restoring position:', pos);
+  if (pos) {
+    root.style.left = pos.x + 'px';
+    root.style.top  = pos.y + 'px';
+  } else {
+    root.style.left = `calc(100% - ${cfg.menuSize + 20}px)`;
+    root.style.top  = `calc(100% - ${cfg.menuSize + 20}px)`;
   }
 
   /* wire globals into controller ----------------------------------------- */
-  root.__controller__        = controller;
-  controller.__rm_relayout   = ()=>layoutItems(true);
+  root.__controller__      = controller;
+  controller.__rm_relayout = () => layoutItems(true);
 
   /* local shorthands ------------------------------------------------------ */
   const trigger  = root.querySelector('.menu-trigger');
   const itemsBox = root.querySelector('.menu-items');
-  const gapLin   = cfg.itemSize * 1.2;            // minimum centre-to-centre px
-
-  // ↓←─ here we initialize drag.active as 0 (not `false`)
+  const gapLin   = cfg.itemSize * 1.2;
   const drag     = { active: 0, sx: 0, sy: 0, sl: 0, st: 0 };
 
   /* ───────────────────────────────────────────────────────────────────────
    *  Geometry helpers
    * ───────────────────────────────────────────────────────────────────── */
 
-  /** returns true if the rectangle of an item centred at (x,y) is fully inside viewport */
-  const fits = (x,y)=>
-      x > MARGIN(cfg) && x < innerWidth - MARGIN(cfg) &&
-      y > MARGIN(cfg) && y < innerHeight - MARGIN(cfg);
+  const fits = (x, y) =>
+    x > MARGIN(cfg) && x < innerWidth - MARGIN(cfg) &&
+    y > MARGIN(cfg) && y < innerHeight - MARGIN(cfg);
 
-  /** produce visible angular intervals (start,end) for a particular radius */
-  function visibleIntervals(cx,cy,r){
-    /* 1 sample every degree -> boolean mask */
+  function visibleIntervals(cx, cy, r) {
     const ok = new Uint8Array(360);
-    for(let d=0; d<360; d++){
-      const rad = d*DEG;
-      ok[d] = fits(cx + Math.cos(rad)*r, cy + Math.sin(rad)*r) ? 1 : 0;
+    for (let d = 0; d < 360; d++) {
+      const rad = d * DEG;
+      ok[d] = fits(cx + Math.cos(rad) * r, cy + Math.sin(rad) * r) ? 1 : 0;
     }
-    /* glue 359→0 wrap */
-    if(ok[0] && ok[359]){ let i=0; while(ok[i]) ok[i++] = 0; }
-
-    /* extract intervals */
-    const out=[];
-    let start=-1;
-    for(let d=0; d<360; d++){
-      if(ok[d] && start<0) start=d;
-      if(!ok[d] && start>=0){ out.push([start,(d-1)]); start=-1; }
+    if (ok[0] && ok[359]) {
+      let i = 0;
+      while (ok[i]) ok[i++] = 0;
     }
-    if(start>=0) out.push([start,359]);
-    return out;            // degrees inclusive
+    const out = [];
+    let start = -1;
+    for (let d = 0; d < 360; d++) {
+      if (ok[d] && start < 0) start = d;
+      if (!ok[d] && start >= 0) {
+        out.push([start, d - 1]);
+        start = -1;
+      }
+    }
+    if (start >= 0) out.push([start, 359]);
+    console.log('[RM] visibleIntervals at r=', r, '→', out);
+    return out;
   }
 
-  /** choose the *earliest* radius (largest) where some interval fits n items */
-  function chooseArc(n,cx,cy){
+  function chooseArc(n, cx, cy) {
     const maxR = Math.max(cfg.orbitRadius,
       Math.min(cx - MARGIN(cfg), innerWidth - cx - MARGIN(cfg),
                cy - MARGIN(cfg), innerHeight - cy - MARGIN(cfg)));
 
-    const angGap = d=>2*Math.asin(gapLin/(2*d));        // convert linear→rad
+    const angGap = d => 2 * Math.asin(gapLin / (2 * d));
 
-    for(let r=maxR; r>=cfg.orbitRadius; r-=2){
-      const intervals = visibleIntervals(cx,cy,r);
-      for(const [a0,a1] of intervals){
+    for (let r = maxR; r >= cfg.orbitRadius; r -= 2) {
+      const intervals = visibleIntervals(cx, cy, r);
+      for (const [a0, a1] of intervals) {
         const spanRad = (a1 - a0) * DEG;
         const needRad = (n - 1) * angGap(r);
-        if(spanRad >= needRad){
-          if(cfg.fullCircle && intervals.length===1 && a0===0 && a1===359)
-            return {r, start:0, end:TAU};
-          if(!cfg.fullCircle)
-            return {r, start:a0*DEG, end:a1*DEG};
+        if (spanRad >= needRad) {
+          console.log('[RM] chooseArc found:', { r, start: a0, end: a1, fullCircle: cfg.fullCircle });
+          if (cfg.fullCircle && intervals.length === 1 && a0 === 0 && a1 === 359)
+            return { r, start: 0, end: TAU };
+          if (!cfg.fullCircle)
+            return { r, start: a0 * DEG, end: a1 * DEG };
         }
       }
     }
-    /* fallback: min radius, full ring */
-    return {r:cfg.orbitRadius, start:0, end:TAU};
+    console.warn('[RM] chooseArc fallback');
+    return { r: cfg.orbitRadius, start: 0, end: TAU };
   }
 
-  /** spread n points evenly on chosen arc */
-  function computePositions(n,cx,cy){
-    if(n===1) return [{x:0,y:0}];
-    const {r,start,end} = chooseArc(n,cx,cy);
+  function computePositions(n, cx, cy) {
+    if (n === 1) return [{ x: 0, y: 0 }];
+    const { r, start, end } = chooseArc(n, cx, cy);
     const step = (end - start) / (n - 1);
-    return Array.from({length:n},(_,i)=>{
-      const θ = start + i*step;
-      return {x:Math.cos(θ)*r, y:Math.sin(θ)*r};
+    const pos = Array.from({ length: n }, (_, i) => {
+      const θ = start + i * step;
+      return { x: Math.cos(θ) * r, y: Math.sin(θ) * r };
     });
+    console.log('[RM] computePositions', { n, cx, cy, positions: pos });
+    return pos;
   }
 
   /* ───────────────────────────────────────────────────────────────────────
    *  Layout & render helpers
    * ───────────────────────────────────────────────────────────────────── */
 
-  let stack=[];    // navigation stack
-  let focusIdx=0;
+  let stack = [];
+  let focusIdx = 0;
 
-  const rebuildRoot = ()=>{ stack=[{items:buildRootItems(cfg)}]; };
-  const render = (instant=false)=>{
-    const list = stack[stack.length-1].items;
+  const rebuildRoot = () => {
+    stack = [{ items: buildRootItems(cfg) }];
+    console.log('[RM] rebuildRoot →', stack[0].items);
+  };
+
+  const render = (instant = false) => {
+    console.log('[RM] render(instant=', instant, ') stack.len=', stack.length);
+    const list = stack[stack.length - 1].items;
+    console.log('[RM] rendering items:', list);
     itemsBox.innerHTML = '';
     focusIdx = 0;
 
-    list.forEach((it,i)=>{
+    list.forEach((it, i) => {
       const btn = document.createElement('button');
       btn.className = 'menu-item ' + (it.children ? 'parent' : 'leaf');
-      btn.type = 'button';
-      btn.setAttribute('role','menuitem');
-      btn.tabIndex = -1;
+      btn.type = 'button'; btn.setAttribute('role', 'menuitem'); btn.tabIndex = -1;
 
-      const icon  = typeof it.icon  === 'function' ? it.icon(controller,cfg)  : it.icon;
-      const label = typeof it.label === 'function' ? it.label(controller,cfg) : it.label;
+      const icon  = typeof it.icon === 'function' ? it.icon(controller, cfg) : it.icon;
+      const label = typeof it.label === 'function'? it.label(controller, cfg) : it.label;
       btn.innerHTML = `<i class="fas ${icon}"></i><span class="item-label">${label}</span>`;
+      btn.addEventListener('click', () => handleClick(it, btn));
 
-      btn.addEventListener('click', ()=> handleClick(it, btn));
       itemsBox.appendChild(btn);
+      console.log('[RM] appended item', i, it, btn);
     });
 
     layoutItems(instant);
   };
 
-  function layoutItems(instant=false){
+  function layoutItems(instant = false) {
+    console.log('[RM] layoutItems(instant=', instant, ')');
     const r = root.getBoundingClientRect();
-    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     const children = [...itemsBox.children];
     const pos = computePositions(children.length, cx, cy);
 
-    children.forEach((btn,i)=>{
-      const {x,y} = pos[i];
-      if(instant){
+    children.forEach((btn, i) => {
+      const { x, y } = pos[i];
+      console.log(`[RM] positioning child ${i}: x=${x}, y=${y}`);
+      if (instant) {
         btn.style.transition = 'none';
         btn.style.transform  = `translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
         btn.style.opacity    = 1;
         void btn.offsetWidth;
         btn.style.transition = '';
       } else {
-        requestAnimationFrame(()=>{
-          btn.style.transitionDelay = i*40 + 'ms';
+        requestAnimationFrame(() => {
+          btn.style.transitionDelay = i * 40 + 'ms';
           btn.style.transform       = `translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
           btn.style.opacity         = 1;
         });
@@ -250,68 +269,80 @@ export function installRadialMenu(controller, opts={}) {
   }
 
   /* ── click handler (submenu vs action) ───────────────────────────────── */
-  function handleClick(it, btn){
+  function handleClick(it, btn) {
+    console.log('[RM] handleClick', it, btn);
     const ctrl = root.__controller__;
-    if(it.children){
-      stack.push({items:it.children});
+    if (it.children) {
+      console.log('[RM] drilling into children');
+      stack.push({ items: it.children });
       trigger.querySelector('i').className = 'fas fa-arrow-left';
       itemsBox.classList.add('animating');
       render(true);
-      requestAnimationFrame(()=> itemsBox.classList.remove('animating'));
-    } else if(it.action){
+      requestAnimationFrame(() => itemsBox.classList.remove('animating'));
+    } else if (it.action) {
+      console.log('[RM] leaf action, invoking');
       it.action(ctrl);
-      closeRoot();  // auto-close after leaf action
+      closeRoot();
     }
   }
 
   /* ── open / close / drag trigger ─────────────────────────────────────── */
   trigger.addEventListener('pointerdown', e => {
+    console.log('[RM] pointerdown', e.clientX, e.clientY);
     drag.active = 1;
-    drag.sx = e.clientX;
-    drag.sy = e.clientY;
-    const r = root.getBoundingClientRect();
-    drag.sl = r.left;
-    drag.st = r.top;
+    drag.sx = e.clientX; drag.sy = e.clientY;
+    const rct = root.getBoundingClientRect();
+    drag.sl = rct.left; drag.st = rct.top;
     trigger.setPointerCapture(e.pointerId);
   });
 
   trigger.addEventListener('pointermove', e => {
+    console.log('[RM] pointermove', 'active=', drag.active);
     if (drag.active === 0) return;
     drag.active = 2;
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    console.log('[RM] dragging dx,dy=', dx, dy);
     const size = parseFloat(getComputedStyle(root).width);
     root.style.left = Math.min(Math.max(drag.sl + dx, 0), innerWidth - size) + 'px';
     root.style.top  = Math.min(Math.max(drag.st + dy, 0), innerHeight - size) + 'px';
-    if (itemsBox.classList.contains('active')) layoutItems(true);
+    if (itemsBox.classList.contains('active')) {
+      console.log('[RM] dragging while open, relayout');
+      layoutItems(true);
+    }
   });
 
   trigger.addEventListener('pointerup',   saveDragPos);
   trigger.addEventListener('pointercancel',saveDragPos);
 
-  function saveDragPos(){
+  function saveDragPos() {
+    console.log('[RM] pointerup/cancel, active=', drag.active);
     if (drag.active === 2) {
-      localStorage.setItem(LS_POS_KEY, JSON.stringify({
-        x: parseFloat(root.style.left),
-        y: parseFloat(root.style.top)
-      }));
+      const x = parseFloat(root.style.left), y = parseFloat(root.style.top);
+      console.log('[RM] saving position to LS:', { x, y });
+      localStorage.setItem(LS_POS_KEY, JSON.stringify({ x, y }));
     }
     drag.active = 0;
   }
 
-  trigger.addEventListener('click', ()=>{
-    console.log("[RM] trigger click", {drag, stack});
-    if (drag.active === 2) return;  // ignore click finishing a drag
-
+  trigger.addEventListener('click', () => {
+    console.log('[RM] trigger click', { drag: drag.active, stackLen: stack.length, visible: itemsBox.classList.contains('active') });
+    if (drag.active === 2) {
+      console.log('[RM] click ignored (end of drag)');
+      return;
+    }
     if (stack.length === 0) rebuildRoot();
 
     if (!itemsBox.classList.contains('active')) {
+      console.log('[RM] opening menu');
       itemsBox.classList.add('active');
       trigger.classList.add('active');
       trigger.setAttribute('aria-expanded','true');
       render();
     } else if (stack.length === 1) {
+      console.log('[RM] closing root menu');
       closeRoot();
     } else {
+      console.log('[RM] stepping back up one level');
       stack.pop();
       trigger.querySelector('i').className =
         stack.length === 1 ? 'fas fa-plus' : 'fas fa-arrow-left';
@@ -320,22 +351,23 @@ export function installRadialMenu(controller, opts={}) {
   });
 
   function closeRoot(){
+    console.log('[RM] closeRoot');
     if (!itemsBox.classList.contains('active')) return;
-    [...itemsBox.children].forEach((b,i)=>{
-      b.style.transitionDelay = i*30 + 'ms';
+    [...itemsBox.children].forEach((b, i) => {
+      b.style.transitionDelay = i * 30 + 'ms';
       b.style.transform       = 'translate(-50%,-50%) scale(0)';
       b.style.opacity         = 0;
     });
     trigger.classList.remove('active');
     trigger.setAttribute('aria-expanded','false');
     setTimeout(() => itemsBox.classList.remove('active'),
-      cfg.transitionTime*1000 + itemsBox.children.length*30);
+      cfg.transitionTime * 1000 + itemsBox.children.length * 30);
     trigger.querySelector('i').className = 'fas fa-plus';
-    stack.length = 1;  // reset to root
+    stack.length = 1;
   }
 
   /* ── keyboard nav ─────────────────────────────────────────────────────── */
-  document.addEventListener('keydown', e=>{
+  document.addEventListener('keydown', e => {
     if (!itemsBox.classList.contains('active')) return;
     const items = [...itemsBox.children];
     const focus = i => {
@@ -345,26 +377,28 @@ export function installRadialMenu(controller, opts={}) {
     switch(e.key){
       case 'ArrowRight': case 'ArrowDown':
         e.preventDefault(); focus(focusIdx+1); break;
-      case 'ArrowLeft':  case 'ArrowUp':
+      case 'ArrowLeft': case 'ArrowUp':
         e.preventDefault(); focus(focusIdx-1); break;
       case 'Enter': case ' ':
         e.preventDefault(); items[focusIdx].click(); break;
       case 'Escape':
         e.preventDefault();
-        if(stack.length>1){ stack.pop(); render(true); }
+        if (stack.length > 1) { stack.pop(); render(true); }
         else closeRoot();
         break;
       case 'Tab':
-        e.preventDefault(); focus(focusIdx + (e.shiftKey?-1:1)); break;
+        e.preventDefault(); focus(focusIdx + (e.shiftKey ? -1 : 1)); break;
     }
   });
 
   /* adjust on resize ------------------------------------------------------ */
-  window.addEventListener('resize',()=>{
+  window.addEventListener('resize', () => {
+    console.log('[RM] window resize, active=', itemsBox.classList.contains('active'));
     if (itemsBox.classList.contains('active')) layoutItems(true);
   });
 
   /* initial hidden state -------------------------------------------------- */
+  console.log('[RM] initial render');
   rebuildRoot();
   render(true);
 }

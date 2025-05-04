@@ -267,6 +267,7 @@ export function installRadialMenu(controller, opts={}) {
   });
   trigger.addEventListener('pointermove',e=>{
     if(drag.active === 0) return;
+    drag.active = 2;
     const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
     const size=parseFloat(getComputedStyle(root).width);
     root.style.left=Math.min(Math.max(drag.sl+dx,0),innerWidth -size)+'px';

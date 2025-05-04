@@ -122,8 +122,10 @@ export function installRadialMenu(controller, opts={}) {
   /* local shorthands ------------------------------------------------------ */
   const trigger  = root.querySelector('.menu-trigger');
   const itemsBox = root.querySelector('.menu-items');
-  const gapLin   = cfg.itemSize*1.2;            // minimum centre-to-centre px
-  const drag     ={active:false,sx:0,sy:0,sl:0,st:0};
+  const gapLin   = cfg.itemSize * 1.2;            // minimum centre-to-centre px
+
+  // ↓←─ here we initialize drag.active as 0 (not `false`)
+  const drag     = { active: 0, sx: 0, sy: 0, sl: 0, st: 0 };
 
   /* ───────────────────────────────────────────────────────────────────────
    *  Geometry helpers
@@ -131,8 +133,8 @@ export function installRadialMenu(controller, opts={}) {
 
   /** returns true if the rectangle of an item centred at (x,y) is fully inside viewport */
   const fits = (x,y)=>
-      x>MARGIN(cfg) && x<innerWidth-MARGIN(cfg) &&
-      y>MARGIN(cfg) && y<innerHeight-MARGIN(cfg);
+      x > MARGIN(cfg) && x < innerWidth - MARGIN(cfg) &&
+      y > MARGIN(cfg) && y < innerHeight - MARGIN(cfg);
 
   /** produce visible angular intervals (start,end) for a particular radius */
   function visibleIntervals(cx,cy,r){
@@ -140,7 +142,7 @@ export function installRadialMenu(controller, opts={}) {
     const ok = new Uint8Array(360);
     for(let d=0; d<360; d++){
       const rad = d*DEG;
-      ok[d] = fits(cx+Math.cos(rad)*r, cy+Math.sin(rad)*r) ? 1 : 0;
+      ok[d] = fits(cx + Math.cos(rad)*r, cy + Math.sin(rad)*r) ? 1 : 0;
     }
     /* glue 359→0 wrap */
     if(ok[0] && ok[359]){ let i=0; while(ok[i]) ok[i++] = 0; }
@@ -159,33 +161,33 @@ export function installRadialMenu(controller, opts={}) {
   /** choose the *earliest* radius (largest) where some interval fits n items */
   function chooseArc(n,cx,cy){
     const maxR = Math.max(cfg.orbitRadius,
-      Math.min(cx-MARGIN(cfg), innerWidth-cx-MARGIN(cfg),
-               cy-MARGIN(cfg), innerHeight-cy-MARGIN(cfg)));
+      Math.min(cx - MARGIN(cfg), innerWidth - cx - MARGIN(cfg),
+               cy - MARGIN(cfg), innerHeight - cy - MARGIN(cfg)));
 
     const angGap = d=>2*Math.asin(gapLin/(2*d));        // convert linear→rad
 
     for(let r=maxR; r>=cfg.orbitRadius; r-=2){
       const intervals = visibleIntervals(cx,cy,r);
       for(const [a0,a1] of intervals){
-        const spanRad = (a1-a0)*DEG;
-        const needRad = (n-1)*angGap(r);
+        const spanRad = (a1 - a0) * DEG;
+        const needRad = (n - 1) * angGap(r);
         if(spanRad >= needRad){
           if(cfg.fullCircle && intervals.length===1 && a0===0 && a1===359)
-            return {r,start:0,end:TAU};
+            return {r, start:0, end:TAU};
           if(!cfg.fullCircle)
-            return {r,start:a0*DEG,end:a1*DEG};
+            return {r, start:a0*DEG, end:a1*DEG};
         }
       }
     }
     /* fallback: min radius, full ring */
-    return {r:cfg.orbitRadius,start:0,end:TAU};
+    return {r:cfg.orbitRadius, start:0, end:TAU};
   }
 
   /** spread n points evenly on chosen arc */
   function computePositions(n,cx,cy){
     if(n===1) return [{x:0,y:0}];
     const {r,start,end} = chooseArc(n,cx,cy);
-    const step = (end-start)/(n-1);
+    const step = (end - start) / (n - 1);
     return Array.from({length:n},(_,i)=>{
       const θ = start + i*step;
       return {x:Math.cos(θ)*r, y:Math.sin(θ)*r};
@@ -196,149 +198,171 @@ export function installRadialMenu(controller, opts={}) {
    *  Layout & render helpers
    * ───────────────────────────────────────────────────────────────────── */
 
-  let stack=[];                                   // navigation stack
+  let stack=[];    // navigation stack
   let focusIdx=0;
 
   const rebuildRoot = ()=>{ stack=[{items:buildRootItems(cfg)}]; };
-
   const render = (instant=false)=>{
-    const list = stack[stack.length-1].items
-                 // wrap in tey catch befor re-enabling
-                 // .filter(it=> it.visible ? it.visible(controller) : true);
-    itemsBox.innerHTML='';
-    focusIdx=0;
+    const list = stack[stack.length-1].items;
+    itemsBox.innerHTML = '';
+    focusIdx = 0;
 
     list.forEach((it,i)=>{
-      const btn=document.createElement('button');
-      btn.className='menu-item '+(it.children?'parent':'leaf');
-      btn.type='button'; btn.setAttribute('role','menuitem'); btn.tabIndex=-1;
-      const icon = typeof it.icon==='function'?it.icon(controller,cfg):it.icon;
-      const label= typeof it.label==='function'?it.label(controller,cfg):it.label;
-      btn.innerHTML=`<i class="fas ${icon}"></i><span class="item-label">${label}</span>`;
-      btn.addEventListener('click',()=> handleClick(it,btn));
+      const btn = document.createElement('button');
+      btn.className = 'menu-item ' + (it.children ? 'parent' : 'leaf');
+      btn.type = 'button';
+      btn.setAttribute('role','menuitem');
+      btn.tabIndex = -1;
+
+      const icon  = typeof it.icon  === 'function' ? it.icon(controller,cfg)  : it.icon;
+      const label = typeof it.label === 'function' ? it.label(controller,cfg) : it.label;
+      btn.innerHTML = `<i class="fas ${icon}"></i><span class="item-label">${label}</span>`;
+
+      btn.addEventListener('click', ()=> handleClick(it, btn));
       itemsBox.appendChild(btn);
     });
+
     layoutItems(instant);
   };
 
   function layoutItems(instant=false){
     const r = root.getBoundingClientRect();
-    const cx=r.left+r.width/2, cy=r.top+r.height/2;
-    const children=[...itemsBox.children];
-    const pos = computePositions(children.length,cx,cy);
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const children = [...itemsBox.children];
+    const pos = computePositions(children.length, cx, cy);
 
     children.forEach((btn,i)=>{
-      const {x,y}=pos[i];
+      const {x,y} = pos[i];
       if(instant){
-        btn.style.transition='none';
-        btn.style.transform=`translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
-        btn.style.opacity=1;
-        void btn.offsetWidth; btn.style.transition='';
-      }else{
+        btn.style.transition = 'none';
+        btn.style.transform  = `translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
+        btn.style.opacity    = 1;
+        void btn.offsetWidth;
+        btn.style.transition = '';
+      } else {
         requestAnimationFrame(()=>{
-          btn.style.transitionDelay=i*40+'ms';
-          btn.style.transform=`translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
-          btn.style.opacity=1;
+          btn.style.transitionDelay = i*40 + 'ms';
+          btn.style.transform       = `translate(-50%,-50%) translate(${x}px,${y}px) scale(1)`;
+          btn.style.opacity         = 1;
         });
       }
     });
   }
 
   /* ── click handler (submenu vs action) ───────────────────────────────── */
-  function handleClick(it,btn){
-    const ctrl=root.__controller__;
+  function handleClick(it, btn){
+    const ctrl = root.__controller__;
     if(it.children){
       stack.push({items:it.children});
-      trigger.querySelector('i').className='fas fa-arrow-left';
+      trigger.querySelector('i').className = 'fas fa-arrow-left';
       itemsBox.classList.add('animating');
       render(true);
-      requestAnimationFrame(()=>itemsBox.classList.remove('animating'));
-    }else if(it.action){
+      requestAnimationFrame(()=> itemsBox.classList.remove('animating'));
+    } else if(it.action){
       it.action(ctrl);
-      closeRoot();                       // auto-close after leaf action
+      closeRoot();  // auto-close after leaf action
     }
   }
 
   /* ── open / close / drag trigger ─────────────────────────────────────── */
-  trigger.addEventListener('pointerdown',e=>{
-    drag.active=1; drag.sx=e.clientX; drag.sy=e.clientY;
-    const r=root.getBoundingClientRect(); drag.sl=r.left; drag.st=r.top;
+  trigger.addEventListener('pointerdown', e => {
+    drag.active = 1;
+    drag.sx = e.clientX;
+    drag.sy = e.clientY;
+    const r = root.getBoundingClientRect();
+    drag.sl = r.left;
+    drag.st = r.top;
     trigger.setPointerCapture(e.pointerId);
   });
-  trigger.addEventListener('pointermove',e=>{
-    if(drag.active === 0) return;
+
+  trigger.addEventListener('pointermove', e => {
+    if (drag.active === 0) return;
     drag.active = 2;
-    const dx=e.clientX-drag.sx, dy=e.clientY-drag.sy;
-    const size=parseFloat(getComputedStyle(root).width);
-    root.style.left=Math.min(Math.max(drag.sl+dx,0),innerWidth -size)+'px';
-    root.style.top =Math.min(Math.max(drag.st+dy,0),innerHeight-size)+'px';
-    if(itemsBox.classList.contains('active')) layoutItems(true);
+    const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+    const size = parseFloat(getComputedStyle(root).width);
+    root.style.left = Math.min(Math.max(drag.sl + dx, 0), innerWidth - size) + 'px';
+    root.style.top  = Math.min(Math.max(drag.st + dy, 0), innerHeight - size) + 'px';
+    if (itemsBox.classList.contains('active')) layoutItems(true);
   });
-  trigger.addEventListener('pointerup',saveDragPos);
+
+  trigger.addEventListener('pointerup',   saveDragPos);
   trigger.addEventListener('pointercancel',saveDragPos);
+
   function saveDragPos(){
-    if(drag.active === 2){
-      localStorage.setItem(LS_POS_KEY,JSON.stringify({
-        x:parseFloat(root.style.left), y:parseFloat(root.style.top)}));
+    if (drag.active === 2) {
+      localStorage.setItem(LS_POS_KEY, JSON.stringify({
+        x: parseFloat(root.style.left),
+        y: parseFloat(root.style.top)
+      }));
     }
-    drag.active=0;
+    drag.active = 0;
   }
 
-  trigger.addEventListener('click',()=>{
-    console.log("[RM] trigger click", {drag,stack,});
-    if(drag.active === 2) return;            // ignore click finishing drag
-    if(stack.length===0) rebuildRoot();
+  trigger.addEventListener('click', ()=>{
+    console.log("[RM] trigger click", {drag, stack});
+    if (drag.active === 2) return;  // ignore click finishing a drag
 
-    if(!itemsBox.classList.contains('active')){
+    if (stack.length === 0) rebuildRoot();
+
+    if (!itemsBox.classList.contains('active')) {
       itemsBox.classList.add('active');
       trigger.classList.add('active');
       trigger.setAttribute('aria-expanded','true');
       render();
-    }else if(stack.length===1){
+    } else if (stack.length === 1) {
       closeRoot();
-    }else{
+    } else {
       stack.pop();
-      trigger.querySelector('i').className=
-        stack.length===1 ? 'fas fa-plus':'fas fa-arrow-left';
+      trigger.querySelector('i').className =
+        stack.length === 1 ? 'fas fa-plus' : 'fas fa-arrow-left';
       render(true);
     }
   });
 
   function closeRoot(){
-    if(!itemsBox.classList.contains('active')) return;
+    if (!itemsBox.classList.contains('active')) return;
     [...itemsBox.children].forEach((b,i)=>{
-      b.style.transitionDelay=i*30+'ms';
-      b.style.transform='translate(-50%,-50%) scale(0)';
-      b.style.opacity=0;
+      b.style.transitionDelay = i*30 + 'ms';
+      b.style.transform       = 'translate(-50%,-50%) scale(0)';
+      b.style.opacity         = 0;
     });
     trigger.classList.remove('active');
     trigger.setAttribute('aria-expanded','false');
-    setTimeout(()=>itemsBox.classList.remove('active'),
+    setTimeout(() => itemsBox.classList.remove('active'),
       cfg.transitionTime*1000 + itemsBox.children.length*30);
-    trigger.querySelector('i').className='fas fa-plus';
-    stack.length=1;                     // keep root for next open
+    trigger.querySelector('i').className = 'fas fa-plus';
+    stack.length = 1;  // reset to root
   }
 
   /* ── keyboard nav ─────────────────────────────────────────────────────── */
-  document.addEventListener('keydown',e=>{
-    if(!itemsBox.classList.contains('active')) return;
-    const items=[...itemsBox.children];
-    const focus=i=>{ focusIdx=(i+items.length)%items.length; items[focusIdx].focus(); };
+  document.addEventListener('keydown', e=>{
+    if (!itemsBox.classList.contains('active')) return;
+    const items = [...itemsBox.children];
+    const focus = i => {
+      focusIdx = (i + items.length) % items.length;
+      items[focusIdx].focus();
+    };
     switch(e.key){
-      case'ArrowRight':case'ArrowDown': e.preventDefault();focus(focusIdx+1);break;
-      case'ArrowLeft' :case'ArrowUp'  : e.preventDefault();focus(focusIdx-1);break;
-      case'Enter':case' ': e.preventDefault(); items[focusIdx].click();break;
-      case'Escape':
+      case 'ArrowRight': case 'ArrowDown':
+        e.preventDefault(); focus(focusIdx+1); break;
+      case 'ArrowLeft':  case 'ArrowUp':
+        e.preventDefault(); focus(focusIdx-1); break;
+      case 'Enter': case ' ':
+        e.preventDefault(); items[focusIdx].click(); break;
+      case 'Escape':
         e.preventDefault();
-        if(stack.length>1){ stack.pop(); render(true);}
+        if(stack.length>1){ stack.pop(); render(true); }
         else closeRoot();
         break;
-      case'Tab': e.preventDefault(); focus(focusIdx+(e.shiftKey?-1:1)); break;
+      case 'Tab':
+        e.preventDefault(); focus(focusIdx + (e.shiftKey?-1:1)); break;
     }
   });
 
   /* adjust on resize ------------------------------------------------------ */
-  window.addEventListener('resize',()=>{ if(itemsBox.classList.contains('active')) layoutItems(true); });
+  window.addEventListener('resize',()=>{
+    if (itemsBox.classList.contains('active')) layoutItems(true);
+  });
 
   /* initial hidden state -------------------------------------------------- */
   rebuildRoot();

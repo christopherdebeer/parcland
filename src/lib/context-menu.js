@@ -19,8 +19,7 @@ const nativeTypes = [
 ];
 
 /* merge plug-ins (unknown icon ⇒ generic cube) */
-const plugTypes = controller.elementRegistry?
-  .listTypes()
+const plugTypes = controller.elementRegistry?.listTypes()
   .filter(t => !nativeTypes.some(n=>n.type===t))
   .map(t => ({ type:t, icon:'fa-solid fa-cube' })) || [];
 

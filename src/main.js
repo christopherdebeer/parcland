@@ -7,6 +7,8 @@ import { installRadialMenu } from './lib/radial-menu.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';
+import { elementRegistry } from './lib/elementRegistry.js';
+
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
@@ -459,7 +461,7 @@ class CanvasController {
             usedIds.add(el.id);
             let node = this.elementNodesMap[el.id];
             if (!node) {
-                node = this.createElementNode(el);
+                node = this._ensureDomFor(el);
                 (el.static ? this.staticContainer : this.container).appendChild(node);
                 this.elementNodesMap[el.id] = node;
             }
@@ -469,7 +471,11 @@ class CanvasController {
 
         existingIds.forEach(id => {
             if (!usedIds.has(id)) {
-                this.elementNodesMap[id].remove();
+                const node = this.elementNodesMap[id];
+      const view = elementRegistry.viewFor(node?.dataset.type);
+      view?.unmount?.(node.firstChild);
+      node.remove();
+
                 delete this.elementNodesMap[id];
             }
         });
@@ -609,6 +615,13 @@ class CanvasController {
     }
 
     updateElementNode(node, el, isSelected, skipHandles) {
+        const view = elementRegistry.viewFor(el.type);
+  if (view && typeof view.update === 'function') {
+    view.update(el, node.firstChild, this);   // firstChild is view root
+  } else {
+    this.setElementContent(node, el);         // legacy fallback
+  }
+
         this.applyPositionStyles(node, el);
         node.setAttribute("type", el.type);
         node.classList.remove("selected");
@@ -1018,6 +1031,31 @@ class CanvasController {
         const edges = this.findEdgesByElementId(el.id) || [];
         this.renderEdges();
     }
+    // ------------------------------------------------------------------
+//  Registry helpers (new)
+// ------------------------------------------------------------------
+/** Ensure a DOM node exists for el, mounted through its ElementView. */
+_ensureDomFor(el) {
+  let node = this.elementNodesMap[el.id];
+  if (node) return node;
+
+  const view = elementRegistry.viewFor(el.type);
+  node = document.createElement('div');
+  node.classList.add('canvas-element');
+  node.dataset.elId = el.id;
+  node.dataset.type = el.type;
+
+  /* Let the view create its inside DOM */
+  if (view) {
+    const inner = view.mount(el, this);
+    inner && node.appendChild(inner);
+  } else {
+    /* fallback – keep old hard-wired rendering for legacy types */
+    this.setElementContent(node, el);
+  }
+  this.elementNodesMap[el.id] = node;
+  return node;
+}
 
     computeIntersection(el, otherEl) {
         // Our elements' x and y represent the center coordinates.

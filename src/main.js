@@ -40,22 +40,8 @@ class CanvasController {
         this.staticContainer = document.getElementById("static-container");
         this.contextMenu = document.getElementById("context-menu");
         this.modeBtn = document.getElementById("mode");
-        this.editModal = document.getElementById("edit-modal");
         this.drillUpBtn = document.getElementById("drillUp");
         this.edgesLayer = document.getElementById("edges-layer");
-
-        // For modal editors using CodeMirror on divs
-        this.editorContentContainer = document.getElementById("editor-content");
-        this.editorSrcContainer = document.getElementById("editor-src");
-
-        this.modalCancelBtn = document.getElementById("modal-cancel");
-        this.modalSaveBtn = document.getElementById("modal-save");
-        this.modalGenerateBtn = document.getElementById("modal-generate");
-
-        this.modalVersionsPrevBtn = document.getElementById("versions-prev");
-        this.modalVersionsNextBtn = document.getElementById("versions-next");
-        this.modalVersionsInfo = document.getElementById("versions-info");
-        this.modalError = document.getElementById("modal-error");
 
         this.MAX_SCALE = 10;
         this.MIN_SCALE = 0.1;
@@ -138,15 +124,6 @@ class CanvasController {
         // Remove button click handlers
         this.modeBtn.onclick = null;
         this.drillUpBtn.onclick = null;
-        this.modalCancelBtn.onclick = null;
-        this.modalSaveBtn.onclick = null;
-        this.modalGenerateBtn.onclick = null;
-        document.getElementById('modal-clear').onclick = null;
-        document.getElementById('modal-copy').onclick = null;
-        this.modalVersionsPrevBtn.onclick = null;
-        this.modalVersionsNextBtn.onclick = null;
-        document.getElementById('tab-content').onclick = null;
-        document.getElementById('tab-src').onclick = null;
 
         this.hideContextMenu();
 
@@ -175,117 +152,6 @@ class CanvasController {
 
         // Add drill up button click handler
         this.drillUpBtn.onclick = this.handleDrillUp.bind(this);
-
-        this.modalCancelBtn.onclick = () => {
-            this.editModal.style.display = "none";
-        };
-
-        this.modalSaveBtn.onclick = () => {
-            const el = this.findElementById(this.selectedElementId);
-            if (el) {
-                if (this.activeEditTab === "content") {
-                    const newContent = this.codeMirrorContent.getValue();
-                    if (el.content) {
-                        el.versions = el.versions || [];
-                        el.versions.push({ content: el.content, timestamp: Date.now() });
-                    }
-                    el.content = newContent;
-                    if (el.type !== "img") {
-                        el.src = undefined;
-                    }
-                } else if (this.activeEditTab === "src") {
-                    const newSrc = this.codeMirrorSrc.getValue();
-                    el.src = newSrc;
-                }
-                this.updateElementNode(this.elementNodesMap[el.id], el, true);
-                saveCanvas(this.canvasState);
-            }
-            this.editModal.style.display = "none";
-        };
-
-        this.modalGenerateBtn.onclick = async () => {
-            const el = this.findElementById(this.selectedElementId);
-            if (!el) return;
-            this.clearModalError();
-            this.modalGenerateBtn.disabled = true;
-            const oldBtnContent = this.modalGenerateBtn.innerHTML;
-            this.modalGenerateBtn.innerHTML = `Generating... <i class="fa-solid fa-spinner fa-spin"></i>`;
-            try {
-                let currentContent;
-                if (this.activeEditTab === "content") {
-                    currentContent = this.codeMirrorContent.getValue();
-                } else {
-                    currentContent = this.codeMirrorSrc.getValue();
-                }
-                const generatedContent = await generateContent(currentContent, el);
-                if (generatedContent) {
-                    if (this.activeEditTab === "content") {
-                        this.codeMirrorContent.setValue(generatedContent);
-                    } else {
-                        this.codeMirrorSrc.setValue(generatedContent);
-                    }
-                } else {
-                    this.showModalError("No content generated or an error occurred.");
-                }
-            } catch (err) {
-                console.error("Generate error", err);
-                this.showModalError("An error occurred while generating content.");
-            } finally {
-                this.modalGenerateBtn.disabled = false;
-                this.modalGenerateBtn.innerHTML = oldBtnContent;
-            }
-        };
-
-        document.getElementById("modal-clear").onclick = () => {
-            if (this.activeEditTab === "content") {
-                this.codeMirrorContent.setValue("");
-            } else {
-                this.codeMirrorSrc.setValue("");
-            }
-        };
-
-        document.getElementById("modal-copy").onclick = async () => {
-            try {
-                if (this.activeEditTab === "content") {
-                    await navigator.clipboard.writeText(this.codeMirrorContent.getValue());
-                } else {
-                    await navigator.clipboard.writeText(this.codeMirrorSrc.getValue());
-                }
-                alert("Copied to clipboard!");
-            } catch (err) {
-                console.error("Failed to copy:", err);
-            }
-        };
-
-        this.modalVersionsPrevBtn.onclick = () => {
-            if (!this.currentElForVersions) return;
-            if (this.currentVersionIndex > 0) {
-                this.currentVersionIndex--;
-                this.loadVersion(this.currentElForVersions, this.currentVersionIndex);
-            }
-        };
-        this.modalVersionsNextBtn.onclick = () => {
-            if (!this.currentElForVersions) return;
-            if (this.currentVersionIndex < this.currentElForVersions.versions.length) {
-                this.currentVersionIndex++;
-                this.loadVersion(this.currentElForVersions, this.currentVersionIndex);
-            }
-        };
-
-        document.getElementById("tab-content").onclick = () => {
-            this.activeEditTab = "content";
-            document.getElementById("tab-content").classList.add("active");
-            document.getElementById("tab-src").classList.remove("active");
-            document.getElementById("editor-content").style.display = "block";
-            document.getElementById("editor-src").style.display = "none";
-        };
-        document.getElementById("tab-src").onclick = () => {
-            this.activeEditTab = "src";
-            document.getElementById("tab-src").classList.add("active");
-            document.getElementById("tab-content").classList.remove("active");
-            document.getElementById("editor-src").style.display = "block";
-            document.getElementById("editor-content").style.display = "none";
-        };
     }
 
     createSelectionBox(startX, startY) {
@@ -1135,86 +1001,6 @@ class CanvasController {
             }
         } catch (err) {
             console.error('[openEditModal] modal error:', err);
-        }
-    }
-
-    _openEditModal(el) {
-        this.editModal.style.display = "block";
-        this.currentElForVersions = el;
-        el.versions = el.versions || [];
-        this.currentVersionIndex = el.versions.length;
-        if (!this.codeMirrorContent) {
-            this.codeMirrorContent = CodeMirror(this.editorContentContainer, {
-                value: "",
-                lineNumbers: true,
-                mode: this.getCodeMirrorMode(el.type),
-                theme: "default",
-                lineWrapping: true
-            });
-        } else {
-            this.codeMirrorContent.setOption('mode', this.getCodeMirrorMode(el.type));
-        }
-        if (!this.codeMirrorSrc) {
-            this.codeMirrorSrc = CodeMirror(this.editorSrcContainer, {
-                value: "",
-                lineNumbers: true,
-                mode: "text",
-                theme: "default",
-                lineWrapping: true
-            });
-        }
-        if (el.type === "img" && el.src) {
-            this.activeEditTab = "src";
-            document.getElementById("tab-src").classList.add("active");
-            document.getElementById("tab-content").classList.remove("active");
-            document.getElementById("editor-src").style.display = "block";
-            document.getElementById("editor-content").style.display = "none";
-        } else {
-            this.activeEditTab = "content";
-            document.getElementById("tab-content").classList.add("active");
-            document.getElementById("tab-src").classList.remove("active");
-            document.getElementById("editor-content").style.display = "block";
-            document.getElementById("editor-src").style.display = "none";
-        }
-        this.loadVersion(el, this.currentVersionIndex);
-    }
-
-    loadVersion(el, index) {
-        if (!el.versions) return;
-        if (index < el.versions.length) {
-            const older = el.versions[index];
-            this.codeMirrorContent.setValue(older.content);
-        } else {
-            this.codeMirrorContent.setValue(el.content || "");
-        }
-        this.currentVersionIndex = index;
-        this.renderVersionInfo(el);
-    }
-
-    renderVersionInfo(el) {
-        const total = el.versions.length + 1;
-        const shown = this.currentVersionIndex + 1;
-        if (this.currentVersionIndex < el.versions.length) {
-            this.modalVersionsInfo.textContent = `Viewing Older Version ${shown} of ${total}`;
-        } else {
-            this.modalVersionsInfo.textContent = `Viewing Current Version ${shown} of ${total}`;
-        }
-    }
-
-    clearModalError() {
-        this.modalError.textContent = "";
-    }
-
-    showModalError(msg) {
-        this.modalError.textContent = msg;
-    }
-
-    getCodeMirrorMode(type) {
-        switch (type) {
-            case 'html': return 'htmlmixed';
-            case 'markdown': return 'markdown';
-            case 'text': return 'javascript';
-            default: return 'javascript';
         }
     }
 }

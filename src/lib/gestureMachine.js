@@ -4,6 +4,7 @@
  * ---------------------------------------------------------------------------
  */
 import { createMachine, assign } from 'xstate';
+import { buildContextMenu } from './context-menu';
 
 export const gestureMachine = createMachine({
 
@@ -41,6 +42,7 @@ export const gestureMachine = createMachine({
               { cond: 'handleScale', target: 'scaleElement', actions: 'capScale' },
               { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
               { cond: 'handleReorder', target: 'reorderElement', actions: 'capReorder' },
+              { cond: 'handleType', target: 'typeElement', actions: ['buildContextMenu', 'showContextMenu'] },
               { cond: 'edgeHandleDrag', target: 'createEdge', actions: ['capEdge', 'startTempLine'] },
               { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode', 'startTempLine'] },
               { cond: 'twoPointersGroupDirect', target: 'pinchGroup', actions: ['capGroupPinch'] },
@@ -161,6 +163,12 @@ export const gestureMachine = createMachine({
             POINTER_UP: { target: 'idle', actions: 'commitElementMutation' }
           }
         },
+        typeElement: {
+          entry: 'log',
+          on: {
+            POINTER_UP: { target: 'idle' }
+          }
+        },
         pinchElement: {
           entry: 'log',
           on: {
@@ -211,6 +219,7 @@ export const gestureMachine = createMachine({
       handleScale: (_c, e) => e.handle === 'scale',
       handleRotate: (_c, e) => e.handle === 'rotate',
       handleReorder: (_c, e) => e.handle === 'reorder',
+      handleType: (_c, e) => e.handle === 'type',
 
       edgeHandleDrag: (_c, e) => e.handle === 'edge',
       createNodeHandleDrag: (_c, e) => e.handle === 'createNode',

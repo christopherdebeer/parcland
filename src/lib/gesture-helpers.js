@@ -324,9 +324,27 @@ export function createGestureHelpers(controller) {
     controller.renderElements();
   }
 
+  function buildContextMenu (ctx, ev) {
+    if (ev.hitElement) {
+      controller.buildContextMenu(ev.elementId);
+    } else {
+      controller.buildContextMenu();
+    }
+  }
+
+  function showContextMenu (c, e) {
+    controller.showContextMenu(e.xy.x, e.xy.y)
+  }
+  function hideContextMenu (c, _e) {
+    controller.hideContextMenu()
+  }
+
   return {
     editEdgeLabel,
     spawnNewElementAtTap,
+    buildContextMenu,
+    showContextMenu,
+    hideContextMenu,
 
     /* canvas */
     applyCanvasPan,

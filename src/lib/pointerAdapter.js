@@ -24,6 +24,7 @@ export function installPointerAdapter(
     if (node.classList.contains('reorder-handle')) return 'reorder';
     if (node.classList.contains('edge-handle')) return 'edge';
     if (node.classList.contains('create-handle')) return 'createNode';
+    if (node.classList.contains('type-handle')) return 'type';
     return null;
   };
 

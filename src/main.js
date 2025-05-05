@@ -836,11 +836,7 @@ class CanvasController {
         };
 
         /* top-left – TYPE switcher */
-        h('type-handle', 'fa-solid fa-font', () => {
-            this.buildContextMenu(el.id);      // populate …
-            const bb = node.getBoundingClientRect();
-            this.showContextMenu(bb.left, bb.top);
-        });
+        h('type-handle', 'fa-solid fa-font');
 
         /* top-right – SCALE */
         h('scale-handle', 'fa-solid fa-up-down-left-right');

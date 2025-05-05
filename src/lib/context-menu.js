@@ -15,7 +15,6 @@ function buildContextMenu(el, controller) {
         { type: 'text', icon: 'fa-solid fa-font' },
         { type: 'html', icon: 'fa-solid fa-code' },
         { type: 'markdown', icon: 'fa-brands fa-markdown' },
-        { type: 'canvas-container', icon: 'fa-regular fa-object-group' }
     ];
 
     /* merge plug-ins (unknown icon ⇒ generic cube) */

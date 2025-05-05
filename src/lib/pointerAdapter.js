@@ -52,13 +52,13 @@ export function installPointerAdapter(
   const onPointerDown = (ev) => {
     ev.preventDefault();
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-    const handleNode    = ev.target.closest('.element-handle');
+    const handleNode = ev.target.closest('.element-handle');
     const edgeLabelNode = ev.target.closest('text[data-id]');
-    const elementNode   = ev.target.closest('.canvas-element');
-    const captureNode   = handleNode
-                       || edgeLabelNode
-                       || elementNode
-                       || rootEl;
+    const elementNode = ev.target.closest('.canvas-element');
+    const captureNode = handleNode
+      || edgeLabelNode
+      || elementNode
+      || rootEl;
 
     // 3) capture on that node and store it
     captureNode.setPointerCapture(ev.pointerId);
@@ -80,7 +80,7 @@ export function installPointerAdapter(
     capNode.releasePointerCapture(ev.pointerId);
     capturedTargets.delete(ev.pointerId);
 
- 
+
     send('POINTER_UP', ev);
 
     /*  tap / double-tap detection  */

@@ -298,7 +298,7 @@ export const gestureMachine = createMachine({
               startW: el.width,
               startH: el.height
             },
-            id: e.elementId 
+            id: e.elementId
           };
         }
       }),
@@ -314,7 +314,7 @@ export const gestureMachine = createMachine({
           };
         }
       }),
-      
+
       capRotate: assign({
         draft: (c, e) => {
           const el = c.controller.findElementById(e.elementId);

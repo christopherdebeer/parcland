@@ -472,9 +472,9 @@ class CanvasController {
         existingIds.forEach(id => {
             if (!usedIds.has(id)) {
                 const node = this.elementNodesMap[id];
-      const view = elementRegistry.viewFor(node?.dataset.type);
-      view?.unmount?.(node.firstChild);
-      node.remove();
+                const view = elementRegistry.viewFor(node?.dataset.type);
+                view?.unmount?.(node.firstChild);
+                node.remove();
 
                 delete this.elementNodesMap[id];
             }
@@ -616,11 +616,11 @@ class CanvasController {
 
     updateElementNode(node, el, isSelected, skipHandles) {
         const view = elementRegistry.viewFor(el.type);
-  if (view && typeof view.update === 'function') {
-    view.update(el, node.firstChild, this);   // firstChild is view root
-  } else {
-    this.setElementContent(node, el);         // legacy fallback
-  }
+        if (view && typeof view.update === 'function') {
+            view.update(el, node.firstChild, this);   // firstChild is view root
+        } else {
+            this.setElementContent(node, el);         // legacy fallback
+        }
 
         this.applyPositionStyles(node, el);
         node.setAttribute("type", el.type);
@@ -657,10 +657,10 @@ class CanvasController {
                 try {
                     const run = new Function('element', 'controller', 'node', code);
                     run(el, this, node);
-                } catch(err) {
+                } catch (err) {
                     console.warn("Error executing script", el, node, err)
                 }
-                
+
             }
             else {
                 loadScript(scriptElement);
@@ -1032,30 +1032,30 @@ class CanvasController {
         this.renderEdges();
     }
     // ------------------------------------------------------------------
-//  Registry helpers (new)
-// ------------------------------------------------------------------
-/** Ensure a DOM node exists for el, mounted through its ElementView. */
-_ensureDomFor(el) {
-  let node = this.elementNodesMap[el.id];
-  if (node) return node;
+    //  Registry helpers (new)
+    // ------------------------------------------------------------------
+    /** Ensure a DOM node exists for el, mounted through its ElementView. */
+    _ensureDomFor(el) {
+        let node = this.elementNodesMap[el.id];
+        if (node) return node;
 
-  const view = elementRegistry.viewFor(el.type);
-  node = document.createElement('div');
-  node.classList.add('canvas-element');
-  node.dataset.elId = el.id;
-  node.dataset.type = el.type;
+        const view = elementRegistry.viewFor(el.type);
+        node = document.createElement('div');
+        node.classList.add('canvas-element');
+        node.dataset.elId = el.id;
+        node.dataset.type = el.type;
 
-  /* Let the view create its inside DOM */
-  if (view) {
-    const inner = view.mount(el, this);
-    inner && node.appendChild(inner);
-  } else {
-    /* fallback – keep old hard-wired rendering for legacy types */
-    this.setElementContent(node, el);
-  }
-  this.elementNodesMap[el.id] = node;
-  return node;
-}
+        /* Let the view create its inside DOM */
+        if (view) {
+            const inner = view.mount(el, this);
+            inner && node.appendChild(inner);
+        } else {
+            /* fallback – keep old hard-wired rendering for legacy types */
+            this.setElementContent(node, el);
+        }
+        this.elementNodesMap[el.id] = node;
+        return node;
+    }
 
     computeIntersection(el, otherEl) {
         // Our elements' x and y represent the center coordinates.
@@ -1112,31 +1112,31 @@ _ensureDomFor(el) {
     }
 
 
-async openEditModal(el) {
-    console.log("[openEditModa] init", el);
-  // If caller didn’t pass one, use the single selected element (legacy path)
-  if (!el) el = this.findElementById(this.selectedElementId);
-  if (!el) return;                              // nothing to edit
+    async openEditModal(el) {
+        console.log("[openEditModa] init", el);
+        // If caller didn’t pass one, use the single selected element (legacy path)
+        if (!el) el = this.findElementById(this.selectedElementId);
+        if (!el) return;                              // nothing to edit
 
-  try {
-          console.log("[openEditModa] launch", el);
-    // Launch the self-contained modal and wait for the user to finish
-    const { status, el: updated } = await showModal(el, {
-      /* Callback the modal can use for the “Generate” button */
-      generateContent: (seed) => generateContent(seed, el)
-    });
+        try {
+            console.log("[openEditModa] launch", el);
+            // Launch the self-contained modal and wait for the user to finish
+            const { status, el: updated } = await showModal(el, {
+                /* Callback the modal can use for the “Generate” button */
+                generateContent: (seed) => generateContent(seed, el)
+            });
 
-    // Persist changes if the user hit “Save”
-    if (status === 'saved' && updated) {
-      Object.assign(el, updated);               // merge returned changes
-      this.updateElementNode(this.elementNodesMap[el.id], el, true);
-      this.renderEdges();                       // edge labels may have changed
-      saveCanvas(this.canvasState);
+            // Persist changes if the user hit “Save”
+            if (status === 'saved' && updated) {
+                Object.assign(el, updated);               // merge returned changes
+                this.updateElementNode(this.elementNodesMap[el.id], el, true);
+                this.renderEdges();                       // edge labels may have changed
+                saveCanvas(this.canvasState);
+            }
+        } catch (err) {
+            console.error('[openEditModal] modal error:', err);
+        }
     }
-  } catch (err) {
-    console.error('[openEditModal] modal error:', err);
-  }
-}
 
     _openEditModal(el) {
         this.editModal.style.display = "block";

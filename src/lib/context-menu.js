@@ -10,18 +10,18 @@ function buildContextMenu(el, controller) {
     controller.contextMenu.appendChild(typesContainer);
 
     /* … inside buildContextMenu … */
-const nativeTypes = [
-  { type: 'img',        icon: 'fa-solid fa-image'      },
-  { type: 'text',       icon: 'fa-solid fa-font'       },
-  { type: 'html',       icon: 'fa-solid fa-code'       },
-  { type: 'markdown',   icon: 'fa-brands fa-markdown'  },
-  { type: 'canvas-container', icon:'fa-regular fa-object-group'}
-];
+    const nativeTypes = [
+        { type: 'img', icon: 'fa-solid fa-image' },
+        { type: 'text', icon: 'fa-solid fa-font' },
+        { type: 'html', icon: 'fa-solid fa-code' },
+        { type: 'markdown', icon: 'fa-brands fa-markdown' },
+        { type: 'canvas-container', icon: 'fa-regular fa-object-group' }
+    ];
 
-/* merge plug-ins (unknown icon ⇒ generic cube) */
-const plugTypes = controller.elementRegistry?.listTypes()
-  .filter(t => !nativeTypes.some(n=>n.type===t))
-  .map(t => ({ type:t, icon:'fa-solid fa-cube' })) || [];
+    /* merge plug-ins (unknown icon ⇒ generic cube) */
+    const plugTypes = controller.elementRegistry?.listTypes()
+        .filter(t => !nativeTypes.some(n => n.type === t))
+        .map(t => ({ type: t, icon: 'fa-solid fa-cube' })) || [];
 
     const types = [...nativeTypes, ...plugTypes];
     types.forEach(t => {

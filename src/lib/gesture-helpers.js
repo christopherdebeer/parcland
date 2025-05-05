@@ -41,20 +41,20 @@ export function createGestureHelpers(controller) {
 
     // Calculate the current center point in canvas coordinates
     const currentCenter = controller.screenToCanvas(
-        ctx.draft.center.x, 
-        ctx.draft.center.y
+      ctx.draft.center.x,
+      ctx.draft.center.y
     );
-    
+
     // Apply the zoom transformation centered on this point
     const delta = newScale - controller.viewState.scale;
     controller.viewState.scale = newScale;
-    
+
     // Adjust translation to keep the pinch center fixed in canvas space
     controller.viewState.translateX -= currentCenter.x * delta;
     controller.viewState.translateY -= currentCenter.y * delta;
 
     controller.updateCanvasTransform();
-}
+  }
 
   function applyWheelZoom(_ctx, ev) {
     const { ev: wheelEv, deltaY } = ev;

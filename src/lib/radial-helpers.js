@@ -1,8 +1,8 @@
 /* ──────────────────────────────────────────────────────────────────────────────
  *  Radial-menu helper functions for parc.land            (2025-04-29)
  * ──────────────────────────────────────────────────────────────────────────── */
-import { saveCanvas }                  from './storage.js';
-import { generateContent }             from './generation.js';
+import { saveCanvas } from './storage.js';
+import { generateContent } from './generation.js';
 
 /* internal clipboard — page-lifetime only */
 const _clip = { elements: null };
@@ -14,8 +14,8 @@ const _clip = { elements: null };
  * @param {string} [content]
  */
 export function addEl(c, type, content = '') {
-  const { innerWidth:W, innerHeight:H } = window;
-  const pt = c.screenToCanvas(W/2, H/2);
+  const { innerWidth: W, innerHeight: H } = window;
+  const pt = c.screenToCanvas(W / 2, H / 2);
   c.createNewElement(pt.x, pt.y, type, content);
 }
 
@@ -38,7 +38,7 @@ export function deleteSelection(c) {
   c.canvasState.elements = c.canvasState.elements.filter(keep);
   /* drop edges referencing deleted elements */
   c.canvasState.edges =
-    c.canvasState.edges.filter(e => keep({id:e.source}) && keep({id:e.target}));
+    c.canvasState.edges.filter(e => keep({ id: e.source }) && keep({ id: e.target }));
   c.clearSelection();
   c.renderElements();
   saveCanvas(c.canvasState);
@@ -51,7 +51,7 @@ export function copySelection(c) {
   const els = c.canvasState.elements
     .filter(el => c.selectedElementIds.has(el.id))
     .map(el => ({ ...el }));                               // deepish clone
-  try { navigator.clipboard?.writeText(JSON.stringify(els)); } catch {}
+  try { navigator.clipboard?.writeText(JSON.stringify(els)); } catch { }
   _clip.elements = els;
 }
 
@@ -66,8 +66,8 @@ export async function pasteClipboard(c) {
   const pastedEls = _clip.elements.map((el, i) => ({
     ...el,
     id: 'el-' + (now + i),
-    x : el.x + 30,
-    y : el.y + 30
+    x: el.x + 30,
+    y: el.y + 30
   }));
   c.canvasState.elements.push(...pastedEls);
   c.selectedElementIds = new Set(pastedEls.map(e => e.id));
@@ -154,20 +154,22 @@ export function zoomToFit(c) {
   /* fit all elements’ bounding box into the visible canvas */
   if (!c.canvasState.elements.length) return;
   const xs = [], ys = [], xe = [], ye = [];
-  c.canvasState.elements.forEach(el=>{
+  c.canvasState.elements.forEach(el => {
     const s = el.scale || 1;
     xs.push(el.x - el.width * s / 2);
-    ys.push(el.y - el.height* s / 2);
-    xe.push(el.x + el.width* s / 2);
-    ye.push(el.y + el.height* s / 2);
+    ys.push(el.y - el.height * s / 2);
+    xe.push(el.x + el.width * s / 2);
+    ye.push(el.y + el.height * s / 2);
   });
-  const bb = { x1:Math.min(...xs), y1:Math.min(...ys),
-               x2:Math.max(...xe), y2:Math.max(...ye) };
+  const bb = {
+    x1: Math.min(...xs), y1: Math.min(...ys),
+    x2: Math.max(...xe), y2: Math.max(...ye)
+  };
   const W = c.canvas.clientWidth, H = c.canvas.clientHeight;
   const scaleX = W / (bb.x2 - bb.x1), scaleY = H / (bb.y2 - bb.y1);
   c.viewState.scale = Math.min(scaleX, scaleY) * 0.85;          // 15 % margin
-  c.viewState.translateX = -bb.x1 * c.viewState.scale + (W - (bb.x2-bb.x1)*c.viewState.scale)/2;
-  c.viewState.translateY = -bb.y1 * c.viewState.scale + (H - (bb.y2-bb.y1)*c.viewState.scale)/2;
+  c.viewState.translateX = -bb.x1 * c.viewState.scale + (W - (bb.x2 - bb.x1) * c.viewState.scale) / 2;
+  c.viewState.translateY = -bb.y1 * c.viewState.scale + (H - (bb.y2 - bb.y1) * c.viewState.scale) / 2;
   c.updateCanvasTransform();
   c.saveLocalViewState?.();
 }
@@ -176,14 +178,14 @@ export function zoomToFit(c) {
 
 export function openHistory(c) {
   const js = JSON.stringify(c.canvasState.versionHistory ?? [], null, 2);
-  const w  = window.open('', '_blank');
-  w.document.write(`<pre>${js.replace(/</g,'&lt;')}</pre>`);
+  const w = window.open('', '_blank');
+  w.document.write(`<pre>${js.replace(/</g, '&lt;')}</pre>`);
 }
 
 export function exportJSON(c) {
   const data = JSON.stringify(c.canvasState, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
-  const url  = URL.createObjectURL(blob);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `${c.canvasState.canvasId}.json`;
   a.click();

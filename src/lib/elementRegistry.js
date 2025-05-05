@@ -16,10 +16,10 @@ export function createRegistry() {
   }
 
   /** Return the view object for a type, or undefined */
-  function viewFor(type)        { return _views[type]; }
+  function viewFor(type) { return _views[type]; }
 
   /** Shallow copy of the currently known set */
-  function listTypes()          { return Object.keys(_views); }
+  function listTypes() { return Object.keys(_views); }
 
   return { register, viewFor, listTypes };
 }

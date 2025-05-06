@@ -31,9 +31,9 @@ export const gestureMachine = createMachine({
           on: {
             POINTER_DOWN: [
               { cond: 'twoPointersNavigate', target: 'pinchCanvas', actions: 'capPinch' },
-              { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'capPan'] },
+              { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'hideContextMenu', 'capPan'] },
 
-              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['clearSelection', 'capLasso'] },
+              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['clearSelection', 'hideContextMenu', 'capLasso'] },
               { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: 'capGroupMove' },
               { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['selectElement', 'capMove'] },
               { cond: 'onePointerElementNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
@@ -52,7 +52,7 @@ export const gestureMachine = createMachine({
             DOUBLE_TAP: [
               { cond: 'doubleTapElementNavigate', target: 'doubleTapElement', actions: ['selectElement', 'switchToDirect'] },
               { cond: 'doubleTapCanvasBlank', target: 'doubleTapCanvas' },
-              { cond: 'doubleTapElement', target: 'doubleTapElement' },
+              { cond: 'doubleTapElement', target: 'doubleTapElement', actions: ['selectElement', 'openEditModal'] },
               { cond: 'doubleTapEdgeLabel', target: 'doubleTapEdgeLabel' }
             ]
           }

@@ -339,12 +339,17 @@ export function createGestureHelpers(controller) {
     controller.hideContextMenu()
   }
 
+  function openEditModal (c, e) {
+    controller.openEditModal(controller.findElementById(e.elementId))
+  }
+
   return {
     editEdgeLabel,
     spawnNewElementAtTap,
     buildContextMenu,
     showContextMenu,
     hideContextMenu,
+    openEditModal,
 
     /* canvas */
     applyCanvasPan,

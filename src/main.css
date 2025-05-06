@@ -481,7 +481,7 @@ body {
     transform-origin: top left;
 }
 
-/* ─────── Command Palette (bottom-center) ──────────────────────────────── */
+/* ─────── Command Palette (revised) ────────────────────────────────────── */
 #cmd-palette{
   position:fixed;
   left:50%;
@@ -493,7 +493,7 @@ body {
   pointer-events:auto;
 }
 
-/* input bar */
+/* input bar ───────────────────────────────────────────────────────────── */
 #cmd-palette input{
   width:100%;
   box-sizing:border-box;
@@ -510,30 +510,48 @@ body {
   box-shadow:0 0 0 2px rgba(33,150,243,.25);
 }
 
-/* suggestions list */
+/* suggestions pop upward ──────────────────────────────────────────────── */
 #cmd-palette .suggestions{
-  margin:0.5rem 0 0;
+  position:absolute;
+  bottom:calc(100% + .5rem);   /* list grows above the bar */
+  left:0;
+  width:100%;
+  margin:0;
   padding:0;
   list-style:none;
   max-height:50vh;
   overflow-y:auto;
+  display:none;                /* toggled by JS */
 }
+#cmd-palette.focused:not(.empty) .suggestions{
+  display:block;
+}
+
+/* suggestion row ──────────────────────────────────────────────────────── */
 #cmd-palette .suggestion{
+  display:flex;
+  align-items:center;
+  gap:.5em;
   padding:0.4em 0.8em;
   font-size:0.95rem;
   background:#fafafa;
   border:1px solid #eee;
-  border-top:none;
+  border-bottom:none;
   cursor:pointer;
-  display:flex;
-  flex-wrap:wrap;
-  gap:0.25em;
 }
+#cmd-palette .suggestion:last-child{border-bottom:1px solid #eee;}
 #cmd-palette .suggestion:hover,
 #cmd-palette .suggestion.active{
   background:#2196F3;
   color:#fff;
 }
+
+/* icon column for element suggestions */
+#cmd-palette .s-icon{
+  flex:0 0 1.2em;
+  text-align:center;
+}
+#cmd-palette .s-icon i{width:1em;}
 
 /* breadcrumb crumbs */
 #cmd-palette .crumb{

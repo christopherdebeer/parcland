@@ -3,7 +3,7 @@ import { gestureMachine } from './lib/gestureMachine.js';
 import { installPointerAdapter } from './lib/pointerAdapter.js';
 import { createGestureHelpers } from './lib/gesture-helpers.js';
 import { buildContextMenu } from './lib/context-menu';
-import { installRadialMenu } from './lib/radial-menu.js';
+import { installCommandPalette } from './lib/command-palette.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';
@@ -1004,7 +1004,7 @@ class CanvasController {
 let activeCanvasController = null;
 function updateCanvasController(controller) {
     activeCanvasController = window.CC = controller
-    installRadialMenu(controller);
+    installCommandPalette(controller);
 }
 
 (async function main() {

@@ -117,10 +117,13 @@ export function installCommandPalette(controller, opts = {}) {
   /*  Action handlers                                                        */
   /* ----------------------------------------------------------------------- */
   function run(item) {
+    console.log("[CMD] run item", item)
     if (!item) return;
     if (item.kind === 'command') {
+      console.log("[CMD] run command", item)
       item.action?.(controller);
     } else {                    // element
+      console.log("[CMD] run element", item)
       controller.selectElement(item.id);
       zoomToElement(controller, item.id);
       controller.switchMode?.('navigate');

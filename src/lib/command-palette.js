@@ -159,9 +159,9 @@ export function installCommandPalette(controller, opts = {}) {
   /* ----------------------------------------------------------------------- */
   $input.addEventListener('focus', () => root.classList.add('focused'));
   $input.addEventListener('blur',  () => {
-    root.classList.remove('focused');
+    //root.classList.remove('focused');
     /* keep suggestions open if value exists & element clicked */
-    setTimeout(() => !document.activeElement.closest('#cmd-palette') && reset(), 10);
+    // setTimeout(() => !document.activeElement.closest('#cmd-palette') && reset(), 10);
   });
 
   $input.addEventListener('input', e => {

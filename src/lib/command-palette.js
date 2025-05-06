@@ -69,7 +69,9 @@ function flatten(controller, cfg) {
   const flat=[]; const root=buildRootItems(cfg);
   (function walk(items,path){
     items.forEach(it=>{
+      try {
       if(it.visible && !it.visible(controller)) return;
+      } catch (err) { console.warn("[CMD] menu item visibilty check failed, showing by default.", it, err)}
       const p=[...path,typeof it.label==='function'?it.label(controller,cfg):it.label];
       if(it.children) walk(it.children,p);
       else flat.push({path:p,action:it.action});

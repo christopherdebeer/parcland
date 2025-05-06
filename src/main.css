@@ -480,3 +480,77 @@ body {
     transform: scale(calc(1 / var(--zoom)));
     transform-origin: top left;
 }
+
+/* ─────── Command Palette (bottom-center) ──────────────────────────────── */
+#cmd-palette{
+  position:fixed;
+  left:50%;
+  bottom:2rem;
+  transform:translateX(-50%);
+  width:min(480px,90vw);
+  z-index:10000;
+  font-family:sans-serif;
+  pointer-events:auto;
+}
+
+/* input bar */
+#cmd-palette input{
+  width:100%;
+  box-sizing:border-box;
+  padding:0.65em 1em;
+  font-size:1rem;
+  border:1px solid #ccc;
+  border-radius:8px;
+  outline:none;
+  background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.15);
+}
+#cmd-palette input:focus{
+  border-color:#2196F3;
+  box-shadow:0 0 0 2px rgba(33,150,243,.25);
+}
+
+/* suggestions list */
+#cmd-palette .suggestions{
+  margin:0.5rem 0 0;
+  padding:0;
+  list-style:none;
+  max-height:50vh;
+  overflow-y:auto;
+}
+#cmd-palette .suggestion{
+  padding:0.4em 0.8em;
+  font-size:0.95rem;
+  background:#fafafa;
+  border:1px solid #eee;
+  border-top:none;
+  cursor:pointer;
+  display:flex;
+  flex-wrap:wrap;
+  gap:0.25em;
+}
+#cmd-palette .suggestion:hover,
+#cmd-palette .suggestion.active{
+  background:#2196F3;
+  color:#fff;
+}
+
+/* breadcrumb crumbs */
+#cmd-palette .crumb{
+  opacity:.6;
+  white-space:nowrap;
+}
+#cmd-palette .suggestion.active .crumb,
+#cmd-palette .suggestion:hover .crumb{
+  opacity:1;
+}
+#cmd-palette .crumb:last-child{
+  font-weight:600;
+  opacity:1;
+}
+
+/* narrow-screen tweaks */
+@media(max-width:480px){
+  #cmd-palette input{font-size:1.1rem;}
+  #cmd-palette .suggestion{font-size:1.05rem;}
+}

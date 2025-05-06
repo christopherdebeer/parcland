@@ -1,85 +1,210 @@
 /* ---------------------------------------------------------------------------
- *  command-palette.js                drop-in replacement for radial menu
+ *  command-palette.js              (2025-05-06)
+ *  Bottom-centre command bar + fuzzy suggestions.
+ *  – Shows command tree items (from radial-menu-items.js)
+ *  – Also lists existing canvas elements (icon + truncated content)
+ *  – ENTER on no match  → new markdown node at viewport centre
+ *  – ENTER on element   → zoom-to-fit + select the element
+ *  – ENTER on command   → run the original .action(controller)
  * ------------------------------------------------------------------------- */
+
 import { buildRootItems } from './radial-menu-items.js';
 
+/* public entry point -- mirrors installRadialMenu() signature */
 export function installCommandPalette(controller, opts = {}) {
-  const cfg = { maxResults: 7, ...opts };
-  const flat = flatten(controller, cfg);
+  const cfg = { maxResults: 7, fuzziness: false, ...opts };
 
-  // ---------- 1. DOM -------------------------------------------------------
+  /* ----------------------------------------------------------------------- */
+  /*  Flatten the command tree once                                          */
+  /* ----------------------------------------------------------------------- */
+  function flattenCommands() {
+    const out = [];
+    function walk(items, path) {
+      items.forEach(it => {
+        // todo: wrap exec in try catch to prevent exceptions breaking the app
+        // if (it.visible && !it.visible(controller)) return;
+        const lbl = typeof it.label === 'function' ? it.label(controller, cfg) : it.label;
+        const nextPath = [...path, lbl];
+        if (it.children) walk(it.children, nextPath);
+        else out.push({
+          kind: 'command',
+          path: nextPath,
+          action: it.action,
+          searchText: nextPath.join(' ').toLowerCase()
+        });
+      });
+    }
+    walk(buildRootItems(cfg), []);
+    return out;
+  }
+  let commandPool = flattenCommands();
+
+  /* ----------------------------------------------------------------------- */
+  /*  Helpers for element suggestions                                        */
+  /* ----------------------------------------------------------------------- */
+  function iconForType(t) {
+    return t === 'img'      ? 'fa-image'
+         : t === 'markdown' ? 'fa-brands fa-markdown'
+         : t === 'html'     ? 'fa-code'
+         :                    'fa-font';
+  }
+  function buildElementPool() {
+    return controller.canvasState.elements.map(el => {
+      const raw = (el.content ?? '').replace(/\s+/g, ' ').trim();
+      const txt  = raw.length > 40 ? raw.slice(0, 40) + '…' : raw || '(empty)';
+      return {
+        kind: 'element',
+        id: el.id,
+        label: txt,
+        icon: iconForType(el.type),
+        searchText: txt.toLowerCase()
+      };
+    });
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /*  DOM skeleton                                                           */
+  /* ----------------------------------------------------------------------- */
   const root = document.createElement('div');
   root.id = 'cmd-palette';
-  root.innerHTML = /*html*/`
-    <input type="text" autocomplete="off" />
+  root.classList.add('empty');  // initial state
+  root.innerHTML = `
+    <input type="text" autocomplete="off" spellcheck="false"
+           placeholder="› Type a command…" />
     <ul class="suggestions"></ul>`;
   document.body.appendChild(root);
 
   const $input = root.querySelector('input');
   const $list  = root.querySelector('.suggestions');
 
-  // ---------- 2. render helpers -------------------------------------------
-  let filtered = flat, sel = -1;
+  /* ----------------------------------------------------------------------- */
+  /*  Render loop                                                            */
+  /* ----------------------------------------------------------------------- */
+  let filtered = [], sel = -1;      // currently displayed subset + selection index
+
   function render() {
     $list.innerHTML = '';
     filtered.forEach((it, i) => {
       const li = document.createElement('li');
       li.className = 'suggestion' + (i === sel ? ' active' : '');
-      li.innerHTML = it.path.map(p => `<span class="crumb">${p}</span>`).join('');
+      if (it.kind === 'command') {
+        // breadcrumbs
+        li.innerHTML = it.path.map(p => `<span class="crumb">${p}</span>`).join('');
+      } else {
+        // element row
+        li.innerHTML =
+          `<span class="s-icon"><i class="fa-solid ${it.icon}"></i></span>` +
+          `<span class="crumb">${it.label}</span>`;
+      }
       li.onclick = () => run(it);
       $list.appendChild(li);
     });
   }
-  function run(item) { item.action(controller); reset(); }
-  function reset() { $input.value=''; sel=-1; filtered=flat; render(); }
 
-  // ---------- 3. events ----------------------------------------------------
-  $input.addEventListener('input', e => {
+  /* ----------------------------------------------------------------------- */
+  /*  Filter function                                                        */
+  /* ----------------------------------------------------------------------- */
+  function computeFiltered(q) {
+    if (!q) return [];
+    const term = q.toLowerCase();
+    const pool = [...commandPool, ...buildElementPool()];
+    return pool
+      .filter(i => i.searchText.includes(term))
+      .slice(0, cfg.maxResults);
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /*  Action handlers                                                        */
+  /* ----------------------------------------------------------------------- */
+  function run(item) {
+    if (!item) return;
+    if (item.kind === 'command') {
+      item.action?.(controller);
+    } else {                    // element
+      controller.selectElement(item.id);
+      zoomToElement(controller, item.id);
+      controller.switchMode?.('navigate');
+    }
+    reset();
+  }
+
+  function reset() {
+    $input.value = '';
     sel = -1;
-    filtered = filter(flat, e.target.value);
+    filtered = [];
+    root.classList.add('empty');
+    render();
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /*  Zoom-to-fit a single element                                           */
+  /* ----------------------------------------------------------------------- */
+  function zoomToElement(ctrl, elId) {
+    const el = ctrl.findElementById(elId);
+    if (!el) return;
+    const canvasBox = ctrl.canvas.getBoundingClientRect();
+    const margin = 60;                               // px around the element
+    const w = el.width  * (el.scale || 1) + margin;
+    const h = el.height * (el.scale || 1) + margin;
+    const scaleX = canvasBox.width  / w;
+    const scaleY = canvasBox.height / h;
+    ctrl.viewState.scale = Math.min(scaleX, scaleY, ctrl.MAX_SCALE);
+    ctrl.recenterOnElement(elId);
+    ctrl.updateCanvasTransform();
+    ctrl.saveLocalViewState?.();
+  }
+
+  /* ----------------------------------------------------------------------- */
+  /*  Event wiring                                                           */
+  /* ----------------------------------------------------------------------- */
+  $input.addEventListener('focus', () => root.classList.add('focused'));
+  $input.addEventListener('blur',  () => {
+    root.classList.remove('focused');
+    /* keep suggestions open if value exists & element clicked */
+    setTimeout(() => !document.activeElement.closest('#cmd-palette') && reset(), 10);
+  });
+
+  $input.addEventListener('input', e => {
+    const q = e.target.value.trim();
+    root.classList.toggle('empty', q === '');
+    filtered = computeFiltered(q);
+    sel = -1;
     render();
   });
+
   $input.addEventListener('keydown', e => {
-    if (e.key === 'ArrowDown') { sel = (sel+1)%filtered.length; render(); e.preventDefault(); }
-    else if (e.key === 'ArrowUp') { sel = (sel-1+filtered.length)%filtered.length; render(); e.preventDefault(); }
-    else if (e.key === 'Enter') {
+    if (e.key === 'ArrowDown' && filtered.length) {
+      sel = (sel + 1) % filtered.length;
+      render(); e.preventDefault();
+    } else if (e.key === 'ArrowUp' && filtered.length) {
+      sel = (sel - 1 + filtered.length) % filtered.length;
+      render(); e.preventDefault();
+    } else if (e.key === 'Enter') {
       if (sel >= 0) run(filtered[sel]);
-      else {
-        // default: new node
-        const { width:hW, height:hH } = controller.canvas.getBoundingClientRect();
-        const pt = controller.screenToCanvas(hW/2, hH/2);
-        controller.createNewElement(pt.x, pt.y, 'markdown', $input.value);
+      else if ($input.value.trim()) {
+        /* default: new markdown node at viewport centre */
+        const rect = controller.canvas.getBoundingClientRect();
+        const pt = controller.screenToCanvas(rect.width / 2, rect.height / 2);
+        controller.createNewElement(pt.x, pt.y, 'markdown', $input.value.trim());
         reset();
       }
-    } else if (e.key === 'Escape') reset();
-  });
-
-  // optional: focus palette with Cmd+K
-  window.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-      e.preventDefault(); $input.focus(); $input.select();
+    } else if (e.key === 'Escape') {
+      reset();
     }
   });
 
-  render();    // initial
+  /* quick shortcut – Cmd/Ctrl + K */
+  window.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      $input.focus(); $input.select();
+    }
+  });
+
+  /* first paint */
+  render();
 }
 
-/* --- helpers ------------------------------------------------------------ */
-function flatten(controller, cfg) {
-  const flat=[]; const root=buildRootItems(cfg);
-  (function walk(items,path){
-    items.forEach(it=>{
-      try {
-      if(it.visible && !it.visible(controller)) return;
-      } catch (err) { console.warn("[CMD] menu item visibilty check failed, showing by default.", it, err)}
-      const p=[...path,typeof it.label==='function'?it.label(controller,cfg):it.label];
-      if(it.children) walk(it.children,p);
-      else flat.push({path:p,action:it.action});
-    });
-  })(root,[]);
-  return flat;
-}
-function filter(list,q){ if(!q)return list.slice(0,7);
-  const t=q.toLowerCase();
-  return list.filter(i=>i.path.join(' ').toLowerCase().includes(t)).slice(0,7);
-}
+/* ---------------------------------------------------------------------------
+ *  End of module
+ * ------------------------------------------------------------------------- */

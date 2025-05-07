@@ -237,7 +237,7 @@ class CanvasController {
     }
 
     switchMode(m) {
-        if (!m && this.mode !== m) return;
+        if (m && this.mode === m) return;
         this.mode = m;
         this.canvas.setAttribute("mode", this.mode);
         this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'}"></i> ${this.mode}`;

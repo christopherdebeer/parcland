@@ -1,6 +1,3 @@
-import { getAuthToken } from "./storage";
-
-// src/lib/generation.js
 import { getAuthToken, saveCanvas } from "./storage";
 
 /**

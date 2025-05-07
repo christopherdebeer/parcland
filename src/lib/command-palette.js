@@ -9,6 +9,7 @@
  * ------------------------------------------------------------------------- */
 
 import { buildRootItems } from './radial-menu-items.js';
+import { editElementWithPrompt } from './generation.js';
 
 /* public entry point -- mirrors installRadialMenu() signature */
 export function installCommandPalette(controller, opts = {}) {
@@ -176,25 +177,40 @@ export function installCommandPalette(controller, opts = {}) {
   });
 
   $input.addEventListener('keydown', e => {
-    if (e.key === 'ArrowDown' && filtered.length) {
-      sel = (sel + 1) % filtered.length;
-      render(); e.preventDefault();
-    } else if (e.key === 'ArrowUp' && filtered.length) {
-      sel = (sel - 1 + filtered.length) % filtered.length;
-      render(); e.preventDefault();
-    } else if (e.key === 'Enter') {
-      if (sel >= 0) run(filtered[sel]);
-      else if ($input.value.trim()) {
-        /* default: new markdown node at viewport centre */
+  if (e.key === 'ArrowDown' && filtered.length) {
+    sel = (sel + 1) % filtered.length;
+    render();
+    e.preventDefault();
+  } else if (e.key === 'ArrowUp' && filtered.length) {
+    sel = (sel - 1 + filtered.length) % filtered.length;
+    render();
+    e.preventDefault();
+  } else if (e.key === 'Enter') {
+    const value = $input.value.trim();
+    if (sel >= 0) {
+      // run the selected suggestion
+      run(filtered[sel]);
+    } else if (value) {
+      const promptText = value;
+      const selId = controller.selectedElementId;
+      if (selId) {
+        // If an element is selected, edit it with our new helper
+        const el = controller.findElementById(selId);
+        editElementWithPrompt(promptText, el, controller)
+          .catch(err => console.error('Edit helper failed', err));
+        reset();
+      } else {
+        // No selection → create a new markdown node
         const rect = controller.canvas.getBoundingClientRect();
         const pt = controller.screenToCanvas(rect.width / 2, rect.height / 2);
-        controller.createNewElement(pt.x, pt.y, 'markdown', $input.value.trim());
+        controller.createNewElement(pt.x, pt.y, 'markdown', promptText);
         reset();
       }
-    } else if (e.key === 'Escape') {
-      reset();
     }
-  });
+  } else if (e.key === 'Escape') {
+    reset();
+  }
+});
 
   /* quick shortcut – Cmd/Ctrl + K */
   window.addEventListener('keydown', e => {

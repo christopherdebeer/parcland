@@ -27,6 +27,7 @@ import {
   groupSelection, ungroupSelection, canUngroup,
   zoom, zoomToFit, openHistory, exportJSON
 } from './radial-helpers.js';
+import { autoLayout }   from './auto-layout.js';
 
 /**
  * buildRootItems(cfg)  → Item[]
@@ -86,7 +87,11 @@ export function buildRootItems(cfg) {
             c.findElementById([...c.selectedElementIds][0]).type !== 'img'),
           action: c => generateNew(c)
         },
-        { label: 'Inline Edit', icon: 'fa-i-cursor', action: c => inlineEdit(c) }
+        { label: 'Inline Edit', icon: 'fa-i-cursor', action: c => inlineEdit(c) },
+         { label:'Auto-Layout ✨', icon:'fa-wand-magic-sparkles',
+           //enabled: c => c.selectedElementIds.size > 1,
+           action : c => autoLayout(c, { scope:'selection' }) },
+
       ]
     },
 

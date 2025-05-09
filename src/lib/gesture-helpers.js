@@ -304,6 +304,7 @@ export function createGestureHelpers(controller) {
       controller.createNewEdge(ctx.draft.sourceId, tgtId, '');
       controller.requestRender();
       saveCanvas(controller.canvasState);
+      controller._pushHistorySnapshot('Add edge');
     }
   }
 

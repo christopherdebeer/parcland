@@ -17,7 +17,7 @@ export function createGestureHelpers(controller) {
   }
   function persistViewState() {
     controller.saveLocalViewState();
-    controller._pushHistorySnapshot('View change');
+    // controller._pushHistorySnapshot('View change');
   }
 
   function applyCanvasPan(ctx, ev) {

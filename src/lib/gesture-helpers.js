@@ -13,9 +13,11 @@ export function createGestureHelpers(controller) {
   function commitElementMutation() {
     controller.requestRender();
     saveCanvas(controller.canvasState);
+    controller._pushHistorySnapshot('Element change');
   }
   function persistViewState() {
     controller.saveLocalViewState();
+    controller._pushHistorySnapshot('View change');
   }
 
   function applyCanvasPan(ctx, ev) {

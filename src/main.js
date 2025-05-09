@@ -127,7 +127,7 @@ class CanvasController {
         };
 
         this.requestRender();
-
+        this.uninstallCommandPalette = installCommandPalette(this);
     }
 
     detach() {
@@ -1087,7 +1087,6 @@ class CanvasController {
 let activeCanvasController = null;
 function updateCanvasController(controller) {
     activeCanvasController = window.CC = controller
-    installCommandPalette(controller);
 }
 
 (async function main() {

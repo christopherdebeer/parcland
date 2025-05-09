@@ -20,14 +20,14 @@ export const gestureMachine = createMachine({
       initial: 'navigate',
       states: {
         navigate: {
-          entry: 'log',
+          entry: ['log', 'updateMode'],
           on: {
             TOGGLE_MODE: 'direct',
             KEYUP: { cond: 'keyIsEscape', target: 'direct' }
           }
         },
         direct: {
-          entry: 'log',
+          entry: ['log', 'updateMode'],
           on: {
             TOGGLE_MODE: 'navigate',
             KEYUP: { cond: 'keyIsEscape', target: 'navigate' }
@@ -241,7 +241,11 @@ export const gestureMachine = createMachine({
       doubleTapElement: (_c, e) => e.hitElement && !e.edgeLabel,
       doubleTapEdgeLabel: (_c, e) => e.edgeLabel,
 
-      keyIsEscape: (_c, e) => e.key === 'Escape',
+      keyIsEscape: (_c, e) => {
+        const isEscape = e.key === 'Escape';
+        console.log("[FSM] Guard keyIsEscape", isEscape);
+        return isEscape;
+      },
     },
 
     actions: {
@@ -392,7 +396,14 @@ export const gestureMachine = createMachine({
         }
       }),
 
+      updateMode: (c, _e, meta) => {
+        console.log("[FSM] action updateMode", );
+        c.controller.mode = meta.state.matches('mode.direct') ? 'direct' : 'navigate';
+        c.controller.updateModeUI();
+      },
+
       switchToDirect: (c, _e, meta) => {
+        console.log("[FSM] action switchToDirect", meta.state.matches('mode.navigate') )
         if (meta.state.matches('mode.navigate')) {
           c.controller.switchMode('direct');
         }

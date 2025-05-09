@@ -34,7 +34,7 @@ export function installPointerAdapter(
     const handleNode = ev.target.closest('.element-handle');
     const edgeLabelNode = ev.target.closest('text[data-id]');
 
-    service.send({
+    const payload = {
       type,
       xy,
       active: Object.fromEntries(active),
@@ -47,7 +47,9 @@ export function installPointerAdapter(
       view: getViewState(),
       ev, // raw DOM event
       ...extra
-    });
+    }
+    console.log("[FSM] Pointer adapter event send:", payload)
+    service.send(payload);
   };
 
   const onPointerDown = (ev) => {

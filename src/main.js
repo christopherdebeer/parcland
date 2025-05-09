@@ -761,22 +761,22 @@ class CanvasController {
             console.log("Delete?")
         }
         // --- keep model dimensions in sync with flowed DOM height --------------
-requestAnimationFrame(() => {          // run after the browser paints
-  const contentBox = node.querySelector('.content') || node;
-  if (!contentBox) return;
+        requestAnimationFrame(() => {          // run after the browser paints
+            const contentBox = node.querySelector('.content') || node;
+            if (!contentBox) return;
 
-  const rect  = contentBox.getBoundingClientRect();
-  const scale = el.scale || 1;         // our model stores *unscaled* size
-  const newW  = rect.width  / scale;
-  const newH  = rect.height / scale;
+            const rect = contentBox.getBoundingClientRect();
+            const scale = el.scale || 1;         // our model stores *unscaled* size
+            const newW = rect.width / scale;
+            const newH = rect.height / scale;
 
-  const EPS = 1;                       // px tolerance to avoid jitter
-  if (Math.abs(newW - el.width)  > EPS ||
-      Math.abs(newH - el.height) > EPS) {
-    el.width  = newW;
-    el.height = newH;
-  }
-});
+            const EPS = 1;                       // px tolerance to avoid jitter
+            if (Math.abs(newW - el.width) > EPS ||
+                Math.abs(newH - el.height) > EPS) {
+                el.width = newW;
+                el.height = newH;
+            }
+        });
         const c = node.querySelector('.content');
         if (c) {
             if (c.clientHeight < c.scrollHeight) {

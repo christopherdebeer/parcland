@@ -44,15 +44,15 @@ export function installCommandPalette(controller, opts = {}) {
   /*  Helpers for element suggestions                                        */
   /* ----------------------------------------------------------------------- */
   function iconForType(t) {
-    return t === 'img'      ? 'fa-image'
-         : t === 'markdown' ? 'fa-brands fa-markdown'
-         : t === 'html'     ? 'fa-code'
-         :                    'fa-font';
+    return t === 'img' ? 'fa-image'
+      : t === 'markdown' ? 'fa-brands fa-markdown'
+        : t === 'html' ? 'fa-code'
+          : 'fa-font';
   }
   function buildElementPool() {
     return controller.canvasState.elements.map(el => {
       const raw = (el.content ?? '').replace(/\s+/g, ' ').trim();
-      const txt  = raw.length > 40 ? raw.slice(0, 40) + '…' : raw || '(empty)';
+      const txt = raw.length > 40 ? raw.slice(0, 40) + '…' : raw || '(empty)';
       return {
         kind: 'element',
         id: el.id,
@@ -76,7 +76,7 @@ export function installCommandPalette(controller, opts = {}) {
   document.body.appendChild(root);
 
   const $input = root.querySelector('input');
-  const $list  = root.querySelector('.suggestions');
+  const $list = root.querySelector('.suggestions');
 
   /* ----------------------------------------------------------------------- */
   /*  Render loop                                                            */
@@ -148,9 +148,9 @@ export function installCommandPalette(controller, opts = {}) {
     if (!el) return;
     const canvasBox = ctrl.canvas.getBoundingClientRect();
     const margin = 60;                               // px around the element
-    const w = el.width  * (el.scale || 1) + margin;
+    const w = el.width * (el.scale || 1) + margin;
     const h = el.height * (el.scale || 1) + margin;
-    const scaleX = canvasBox.width  / w;
+    const scaleX = canvasBox.width / w;
     const scaleY = canvasBox.height / h;
     ctrl.viewState.scale = Math.min(scaleX, scaleY, ctrl.MAX_SCALE);
     ctrl.recenterOnElement(elId);
@@ -162,7 +162,7 @@ export function installCommandPalette(controller, opts = {}) {
   /*  Event wiring                                                           */
   /* ----------------------------------------------------------------------- */
   $input.addEventListener('focus', () => root.classList.add('focused'));
-  $input.addEventListener('blur',  () => {
+  $input.addEventListener('blur', () => {
     //root.classList.remove('focused');
     /* keep suggestions open if value exists & element clicked */
     // setTimeout(() => !document.activeElement.closest('#cmd-palette') && reset(), 10);
@@ -177,40 +177,40 @@ export function installCommandPalette(controller, opts = {}) {
   });
 
   $input.addEventListener('keydown', e => {
-  if (e.key === 'ArrowDown' && filtered.length) {
-    sel = (sel + 1) % filtered.length;
-    render();
-    e.preventDefault();
-  } else if (e.key === 'ArrowUp' && filtered.length) {
-    sel = (sel - 1 + filtered.length) % filtered.length;
-    render();
-    e.preventDefault();
-  } else if (e.key === 'Enter') {
-    const value = $input.value.trim();
-    if (sel >= 0) {
-      // run the selected suggestion
-      run(filtered[sel]);
-    } else if (value) {
-      const promptText = value;
-      const selId = controller.selectedElementId;
-      if (selId) {
-        // If an element is selected, edit it with our new helper
-        const el = controller.findElementById(selId);
-        editElementWithPrompt(promptText, el, controller)
-          .catch(err => console.error('Edit helper failed', err));
-        reset();
-      } else {
-        // No selection → create a new markdown node
-        const rect = controller.canvas.getBoundingClientRect();
-        const pt = controller.screenToCanvas(rect.width / 2, rect.height / 2);
-        controller.createNewElement(pt.x, pt.y, 'markdown', promptText);
-        reset();
+    if (e.key === 'ArrowDown' && filtered.length) {
+      sel = (sel + 1) % filtered.length;
+      render();
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp' && filtered.length) {
+      sel = (sel - 1 + filtered.length) % filtered.length;
+      render();
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      const value = $input.value.trim();
+      if (sel >= 0) {
+        // run the selected suggestion
+        run(filtered[sel]);
+      } else if (value) {
+        const promptText = value;
+        const selId = controller.selectedElementId;
+        if (selId) {
+          // If an element is selected, edit it with our new helper
+          const el = controller.findElementById(selId);
+          editElementWithPrompt(promptText, el, controller)
+            .catch(err => console.error('Edit helper failed', err));
+          reset();
+        } else {
+          // No selection → create a new markdown node
+          const rect = controller.canvas.getBoundingClientRect();
+          const pt = controller.screenToCanvas(rect.width / 2, rect.height / 2);
+          controller.createNewElement(pt.x, pt.y, 'markdown', promptText);
+          reset();
+        }
       }
+    } else if (e.key === 'Escape') {
+      reset();
     }
-  } else if (e.key === 'Escape') {
-    reset();
-  }
-});
+  });
 
   /* quick shortcut – Cmd/Ctrl + K */
   window.addEventListener('keydown', e => {

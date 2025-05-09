@@ -27,8 +27,8 @@ import {
   groupSelection, ungroupSelection, canUngroup,
   zoom, zoomToFit, openHistory, exportJSON
 } from './radial-helpers.js';
-import { autoLayout }   from './auto-layout.js';
-import { align }   from './align.js';
+import { autoLayout } from './auto-layout.js';
+import { align } from './align.js';
 
 /**
  * buildRootItems(cfg)  → Item[]
@@ -89,16 +89,15 @@ export function buildRootItems(cfg) {
           action: c => generateNew(c)
         },
         { label: 'Inline Edit', icon: 'fa-i-cursor', action: c => inlineEdit(c) },
-        // radial-menu-items.js (excerpt)
-{
-  label:'Auto-Layout', icon:'fa-wand-magic-sparkles', children:[
-    { label:'→  Right',  action:c=>autoLayout(c,{direction:'RIGHT'}) },
-    { label:'↓  Down',   action:c=>autoLayout(c,{direction:'DOWN' }) },
-    { label:'⇆  Left',   action:c=>autoLayout(c,{direction:'LEFT' }) },
-    { label:'↕  Up',     action:c=>autoLayout(c,{direction:'UP'   }) },
-    { label:'Radial',    action:c=>autoLayout(c,{algorithm:'radial'}) }
-  ]
-}
+        {
+          label: 'Auto-Layout', icon: 'fa-wand-magic-sparkles', children: [
+            { label: '→  Right', action: c => autoLayout(c, { direction: 'RIGHT' }) },
+            { label: '↓  Down', action: c => autoLayout(c, { direction: 'DOWN' }) },
+            { label: '⇆  Left', action: c => autoLayout(c, { direction: 'LEFT' }) },
+            { label: '↕  Up', action: c => autoLayout(c, { direction: 'UP' }) },
+            { label: 'Radial', action: c => autoLayout(c, { algorithm: 'radial' }) }
+          ]
+        },
       ]
     },
 
@@ -119,15 +118,17 @@ export function buildRootItems(cfg) {
           enabled: c => canUngroup(c),
           action: c => ungroupSelection(c)
         },
-        { label:'Align', icon:'fa-align-left', 
-         children:[
-    { label:'Left',  action:(c)=>align(c,{axis:'x',pos:'min'}) },
-    { label:'Right', action:(c)=>align(c,{axis:'x',pos:'max'}) },
-    { label:'Top',   action:(c)=>align(c,{axis:'y',pos:'min'}) },
-    { label:'Bottom',action:(c)=>align(c,{axis:'y',pos:'max'}) },
-    { label:'Centre Vert',action:(c)=>align(c,{axis:'x',pos:'center'}) },
-    { label:'Centre Horiz',action:(c)=>align(c,{axis:'y',pos:'center'}) },
-]}
+        {
+          label: 'Align', icon: 'fa-align-left',
+          children: [
+            { label: 'Left', action: (c) => align(c, { axis: 'x', pos: 'min' }) },
+            { label: 'Right', action: (c) => align(c, { axis: 'x', pos: 'max' }) },
+            { label: 'Top', action: (c) => align(c, { axis: 'y', pos: 'min' }) },
+            { label: 'Bottom', action: (c) => align(c, { axis: 'y', pos: 'max' }) },
+            { label: 'Centre Vert', action: (c) => align(c, { axis: 'x', pos: 'center' }) },
+            { label: 'Centre Horiz', action: (c) => align(c, { axis: 'y', pos: 'center' }) },
+          ]
+        }
       ]
     },
 

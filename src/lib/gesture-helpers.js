@@ -324,7 +324,7 @@ export function createGestureHelpers(controller) {
     controller.renderElements();
   }
 
-  function buildContextMenu (ctx, ev) {
+  function buildContextMenu(ctx, ev) {
     if (ev.hitElement) {
       controller.buildContextMenu(ev.elementId);
     } else {
@@ -332,14 +332,14 @@ export function createGestureHelpers(controller) {
     }
   }
 
-  function showContextMenu (c, e) {
+  function showContextMenu(c, e) {
     controller.showContextMenu(e.xy.x, e.xy.y)
   }
-  function hideContextMenu (c, _e) {
+  function hideContextMenu(c, _e) {
     controller.hideContextMenu()
   }
 
-  function openEditModal (c, e) {
+  function openEditModal(c, e) {
     controller.openEditModal(controller.findElementById(e.elementId))
   }
 

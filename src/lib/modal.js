@@ -1,7 +1,3 @@
-/* -----------------------------------------------------------------------------
- *  modal.js  – self-contained replacement for the old <div id="edit-modal">…
- *              Drop into src/lib  (2025-05-02)
- * --------------------------------------------------------------------------- */
 
 let $root = null;    // modal shell (created on-demand)
 let $contentEditorHost = null;    // div that will hold CodeMirror
@@ -27,9 +23,6 @@ let currentVerIdx = 0;       // 0 … el.versions.length  (top == current)
 let resolver = null;    // Promise resolver returned by showModal
 let generateFn = null;    // callback injected by caller (optional)
 
-/* ────────────────────────────────────────────────────────────────────────────
- *  Public entry point
- * ------------------------------------------------------------------------- */
 export function showModal(el, opts = {}) {
   if (!el) throw new Error('showModal: element required');
   generateFn = opts.generateContent ?? null;
@@ -40,13 +33,8 @@ export function showModal(el, opts = {}) {
   return new Promise((res) => { resolver = res; });
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- *  DOM bootstrap (runs once)
- * ------------------------------------------------------------------------- */
 function ensureDom() {
   if ($root) return;
-
-  /* ------ 1.  inject HTML -------------------------------------------------- */
   const tpl = /*html*/`
 <div id="edit-modal" class="modal">
   <div class="modal-content">
@@ -171,7 +159,6 @@ function switchTab(tab, silent = false) {
 
 function getActiveCM() { return activeTab === 'content' ? cmContent : cmSrc; }
 
-/* ─── actions ─────────────────────────────────────────────────────────────── */
 function saveAndClose() {
   if (!currentEl) return;
 
@@ -219,7 +206,6 @@ function copyToClipboard() {
     .catch(err => console.warn('Clipboard error', err));
 }
 
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
 function getMode(type) {
   switch (type) {
     case 'html': return 'htmlmixed';
@@ -238,7 +224,3 @@ function close(status, el = null) {
   resolver = null;
   currentEl = null;
 }
-
-/* ----------------------------------------------------------------------------
- *  End of module
- * ------------------------------------------------------------------------- */

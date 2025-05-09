@@ -496,6 +496,7 @@ class CanvasController {
             node.classList.add("selected");
         }
         this.setElementContent(node, el);
+
         if (!skipHandles) {
             // Remove old handles (if any)
             const oldHandles = Array.from(node.querySelectorAll('.element-handle'));
@@ -760,23 +761,7 @@ class CanvasController {
             console.warn("Unknown element type", el.type, el)
             console.log("Delete?")
         }
-        // --- keep model dimensions in sync with flowed DOM height --------------
-        requestAnimationFrame(() => {          // run after the browser paints
-            const contentBox = node.querySelector('.content') || node;
-            if (!contentBox) return;
-
-            const rect = contentBox.getBoundingClientRect();
-            const scale = el.scale || 1;         // our model stores *unscaled* size
-            const newW = rect.width / scale;
-            const newH = rect.height / scale;
-
-            const EPS = 1;                       // px tolerance to avoid jitter
-            if (Math.abs(newW - el.width) > EPS ||
-                Math.abs(newH - el.height) > EPS) {
-                el.width = newW;
-                el.height = newH;
-            }
-        });
+        
         const c = node.querySelector('.content');
         if (c) {
             if (c.clientHeight < c.scrollHeight) {
@@ -881,6 +866,7 @@ class CanvasController {
         const rotation = el.rotation || 0;
         const zIndex = Math.floor(el.zIndex) || 1;
         const blendMode = el.blendMode || 'normal';
+        node.style.setProperty('--blend-mode', blendMode);
         if (el.static) {
             node.style.position = 'fixed';
             node.style.left = (el.fixedLeft || 0) + '%';

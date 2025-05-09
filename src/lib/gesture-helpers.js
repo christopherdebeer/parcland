@@ -96,12 +96,19 @@ export function createGestureHelpers(controller) {
     const dy = (ev.xy.y - ctx.draft.resize.startY) / dpi();
     el.width = Math.max(20, ctx.draft.resize.startW + dx);
     el.height = Math.max(20, ctx.draft.resize.startH + dy);
+    const node = controller.elementNodesMap[el.id];
     controller.updateElementNode(
-      controller.elementNodesMap[el.id],
+      node,
       el,
       controller.isElementSelected(el.id),
       true
     );
+    // --- keep model dimensions in sync with flowed DOM height --------------
+    requestAnimationFrame(() => {          // run after the browser paints
+      const contentBox = node.querySelector('.content') || node;
+      if (!contentBox) return;
+      e.height = contentBox.clientHeight / (el.scale || 1);
+  });
   }
 
   function applyRotateElement(ctx, ev) {

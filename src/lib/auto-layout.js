@@ -118,6 +118,7 @@ export async function autoLayout(controller, o = {}) {
   /* —— 3.6  Redraw & persist ——————————————————— */
   controller.requestRender();
   saveCanvas(controller.canvasState);
+  controller._pushHistorySnapshot('Autolayout');
 }
 
 export default autoLayout;

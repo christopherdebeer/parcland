@@ -213,12 +213,12 @@ class CanvasController {
 
   _restoreSnapshot({ canvasState, viewState }) {
   this.canvasState = structuredClone(canvasState);
-  this.viewState   = structuredClone(viewState);
+  //this.viewState   = structuredClone(viewState);
 
   // clear selection, keep mode
   this.selectedElementIds.clear();
   this.requestRender();
-  this.updateCanvasTransform();
+  //this.updateCanvasTransform();
 }
 
 

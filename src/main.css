@@ -539,7 +539,7 @@ body {
   align-items:center;
   gap:.5em;
   padding:0.4em 0.8em;
-  font-size:0.95rem;
+  font-size:0.8rem;
   background:#fafafa;
   border:1px solid #eee;
   border-bottom:none;
@@ -573,8 +573,3 @@ body {
   opacity:1;
 }
 
-/* narrow-screen tweaks */
-@media(max-width:480px){
-  #cmd-palette input{font-size:1.1rem;}
-  #cmd-palette .suggestion{font-size:1.05rem;}
-}

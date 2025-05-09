@@ -22,8 +22,13 @@ export function installCommandPalette(controller, opts = {}) {
     const out = [];
     function walk(items, path) {
       items.forEach(it => {
-        // todo: wrap exec in try catch to prevent exceptions breaking the app
-        // if (it.visible && !it.visible(controller)) return;
+        try {
+          if (it.visible && !it.visible(controller)) return;
+          if (it.enabled && !it.enabled(controller)) return;
+        } catch (err) {
+          console.error('Error checking command visibility:', err);
+          return;
+        } 
         const lbl = typeof it.label === 'function' ? it.label(controller, cfg) : it.label;
         const nextPath = [...path, lbl];
         if (it.children) walk(it.children, nextPath);
@@ -38,7 +43,7 @@ export function installCommandPalette(controller, opts = {}) {
     walk(buildRootItems(cfg), []);
     return out;
   }
-  let commandPool = flattenCommands();
+  let commandPool = () => flattenCommands();
 
   /* ----------------------------------------------------------------------- */
   /*  Helpers for element suggestions                                        */
@@ -108,7 +113,7 @@ export function installCommandPalette(controller, opts = {}) {
   function computeFiltered(q) {
     if (!q) return [];
     const term = q.toLowerCase();
-    const pool = [...commandPool, ...buildElementPool()];
+    const pool = [...commandPool(), ...buildElementPool()];
     return pool
       .filter(i => i.searchText.includes(term))
       .slice(0, cfg.maxResults);

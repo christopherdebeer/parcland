@@ -652,6 +652,7 @@ class CanvasController {
         this.selectElement(newId);
         this.requestRender();
         saveCanvas(this.canvasState);
+        this._pushHistorySnapshot('New element');
         return newId;
     }
 
@@ -670,6 +671,8 @@ class CanvasController {
             }
         };
         this.canvasState.edges.push(newEdge);
+        this._pushHistorySnapshot('new edge');
+
     }
 
     createEditElement(ev, el, prop) {
@@ -861,6 +864,8 @@ class CanvasController {
             this.elementNodesMap[id].remove();
             delete this.elementNodesMap[id];
         }
+        this._pushHistorySnapshot('delete element');
+
     }
 
     async handleDrillIn(el) {
@@ -1070,6 +1075,8 @@ class CanvasController {
                 this.updateElementNode(this.elementNodesMap[el.id], el, true);
                 this.requestEdgeUpdate();                       // edge labels may have changed
                 saveCanvas(this.canvasState);
+                this._pushHistorySnapshot('edit element');
+
             }
         } catch (err) {
             console.error('[openEditModal] modal error:', err);

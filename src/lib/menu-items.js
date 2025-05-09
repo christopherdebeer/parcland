@@ -56,6 +56,10 @@ export function buildRootItems(cfg) {
       action: c => c.switchMode(c.mode === 'direct' ? 'navigate' : 'direct')
     },
 
+    /* ── undo/redo ─────────────────────────────────────────────────────── */
+{ label:'Undo', icon:'fa-rotate-left',  action:c=>c.undo() },
+{ label:'Redo', icon:'fa-rotate-right', action:c=>c.redo() },
+
     /* ── Add … ───────────────────────────────────────────────────────────── */
     {
       label: 'Add', icon: 'fa-plus-circle', children: [

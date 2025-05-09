@@ -50,6 +50,7 @@ export async function autoLayout(controller, o={}) {
     scope            = 'selection',
     edgeAwareSpacing = 40,
     nodePadding      = 30,
+    direction        = 'DOWN',
     algorithm        = 'layered',
   } = o;
 
@@ -93,7 +94,7 @@ export async function autoLayout(controller, o={}) {
       'elk.spacing.edgeNode'           : edgeAwareSpacing,
       'elk.spacing.edgeEdge'           : edgeAwareSpacing / 2,
       /* a “typical” UML direction; change freely */
-      'elk.direction'                  : 'RIGHT',
+      'elk.direction'                  : direction,
     },
     children : elkNodes,
     edges    : elkEdges,

@@ -116,7 +116,7 @@ export async function autoLayout(controller, o = {}) {
   if (dx || dy) nodeById.forEach(el => { el.x += dx; el.y += dy; });
 
   /* —— 3.6  Redraw & persist ——————————————————— */
-  controller.renderElements();
+  controller.requestRender();
   saveCanvas(controller.canvasState);
 }
 

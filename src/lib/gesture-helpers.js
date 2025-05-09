@@ -11,7 +11,7 @@ export function createGestureHelpers(controller) {
   const dpi = () => controller.viewState.scale || 1;     // “device-pixels” ⇄ canvas
 
   function commitElementMutation() {
-    controller.renderElements();
+    controller.requestRender();
     saveCanvas(controller.canvasState);
   }
   function persistViewState() {
@@ -107,7 +107,7 @@ export function createGestureHelpers(controller) {
     requestAnimationFrame(() => {          // run after the browser paints
       const contentBox = node.querySelector('.content') || node;
       if (!contentBox) return;
-      e.height = contentBox.clientHeight / (el.scale || 1);
+      el.height = contentBox.clientHeight / (el.scale || 1);
   });
   }
 
@@ -173,7 +173,7 @@ export function createGestureHelpers(controller) {
       el.x = start.x + dx;
       el.y = start.y + dy;
     });
-    controller.renderElements();
+    controller.requestRender();
   }
 
   function applyGroupPinch(ctx, ev) {
@@ -193,7 +193,7 @@ export function createGestureHelpers(controller) {
       el.x = bbox.cx + (start.x - bbox.cx) * factor;
       el.y = bbox.cy + (start.y - bbox.cy) * factor;
     });
-    controller.renderElements();
+    controller.requestRender();
   }
 
   function applyLassoUpdate(ctx, ev) {
@@ -219,7 +219,7 @@ export function createGestureHelpers(controller) {
     });
 
     controller.removeSelectionBox();
-    controller.renderElements();
+    controller.requestRender();
 
     if (controller.selectedElementIds.size === 0 &&
       controller.mode === 'direct') {
@@ -228,10 +228,12 @@ export function createGestureHelpers(controller) {
   }
 
   function selectElement(_ctx, ev) {
+    console.log("[FSM] helper selectElement", ev)
     if (!ev.elementId) return;
-    const additive = ev.ctrlKey || ev.metaKey;
+    const additive = ev.ev.ctrlKey || ev.ev.metaKey;
     controller.selectElement(ev.elementId, additive);
   }
+
   function clearSelection() {
     controller.clearSelection();
   }
@@ -298,7 +300,7 @@ export function createGestureHelpers(controller) {
     const tgtId = target && target.dataset.elId;
     if (tgtId && tgtId !== ctx.draft.sourceId) {
       controller.createNewEdge(ctx.draft.sourceId, tgtId, '');
-      controller.renderElements();
+      controller.requestRender();
       saveCanvas(controller.canvasState);
     }
   }
@@ -311,7 +313,7 @@ export function createGestureHelpers(controller) {
     if (!text) return;
     const elId = controller.createNewElement(pt.x, pt.y, 'markdown', 'generating…');
     controller.createNewEdge(ctx.draft.sourceId, elId, text);
-    controller.renderElements();
+    controller.requestRender();
     await generateContent?.(text, controller.findElementById(elId), controller);
   }
 
@@ -328,7 +330,7 @@ export function createGestureHelpers(controller) {
       { target: edge.id, property: 'label' }
     );
     controller.createNewEdge(editId, edge.id, 'Editing…', { meta: true });
-    controller.renderElements();
+    controller.requestRender();
   }
 
   function buildContextMenu(ctx, ev) {

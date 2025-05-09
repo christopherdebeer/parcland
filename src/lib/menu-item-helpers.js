@@ -1,5 +1,5 @@
 /* ──────────────────────────────────────────────────────────────────────────────
- *  Radial-menu helper functions for parc.land            (2025-04-29)
+ *  menu item helper functions for parc.land            (2025-04-29)
  * ──────────────────────────────────────────────────────────────────────────── */
 import { saveCanvas } from './storage.js';
 import { generateContent } from './generation.js';
@@ -27,7 +27,7 @@ export function duplicateEl(c, id) {
   const dup = { ...el, id: 'el-' + Date.now(), x: el.x + 20, y: el.y + 20 };
   c.canvasState.elements.push(dup);
   c.selectElement(dup.id);
-  c.renderElements();
+  c.requestRender();
   saveCanvas(c.canvasState);
 }
 
@@ -40,7 +40,7 @@ export function deleteSelection(c) {
   c.canvasState.edges =
     c.canvasState.edges.filter(e => keep({ id: e.source }) && keep({ id: e.target }));
   c.clearSelection();
-  c.renderElements();
+  c.requestRender();
   saveCanvas(c.canvasState);
 }
 
@@ -71,7 +71,7 @@ export async function pasteClipboard(c) {
   }));
   c.canvasState.elements.push(...pastedEls);
   c.selectedElementIds = new Set(pastedEls.map(e => e.id));
-  c.renderElements();
+  c.requestRender();
   saveCanvas(c.canvasState);
 }
 
@@ -107,7 +107,7 @@ export function reorder(c, dir /* 'front' | 'back' */) {
     const el = c.findElementById(id);
     if (el) el.zIndex = (el.zIndex || 1) + delta;
   });
-  c.renderElements();
+  c.requestRender();
   saveCanvas(c.canvasState);
 }
 

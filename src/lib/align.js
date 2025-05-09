@@ -18,5 +18,5 @@ export function align(c, { axis = 'x', pos = 'min' } = {}) {
         : (Math.min(...els.map(e => e.y)) + Math.max(...els.map(e => e.y))) / 2;
     els.forEach(e => e.y = target);
   }
-  c.renderElements(); saveCanvas(c.canvasState);
+  c.requestRender(); saveCanvas(c.canvasState);
 }

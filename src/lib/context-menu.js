@@ -92,7 +92,7 @@ function buildContextMenu(el, controller) {
         } else {
             controller.container.appendChild(node);
         }
-        controller.renderElements();
+        controller.requestRender();
         saveCanvas(controller.canvasState);
         controller.hideContextMenu();
     });
@@ -172,7 +172,7 @@ function buildContextMenu(el, controller) {
         controller.canvasState.elements.push(newEl);
         controller.selectElement(newEl.id);
         controller.hideContextMenu();
-        controller.renderElements();
+        controller.requestRender();
         saveCanvas(controller.canvasState);
     });
     controller.contextMenu.appendChild(duplicateBtn);

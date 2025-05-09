@@ -98,7 +98,28 @@ class CanvasController {
         this.canvas.controller = this;
 
         this.updateCanvasTransform();
-        this.renderElements();
+        this._renderQueued = false;
+        this._edgesQueued = false;
+
+        this.requestRender = () => {
+            if (this._renderQueued) return;
+            this._renderQueued = true;
+            requestAnimationFrame(() => {
+                this._renderQueued = false;
+                this.renderElementsImmediately();
+            });
+        };
+        this.requestEdgeUpdate = () => {
+            if (this._edgesQueued) return;
+            this._edgesQueued = true;
+            requestAnimationFrame(() => {
+                this._edgesQueued = false;
+                this.renderEdgesImmediately();
+            });
+        };
+
+        this.requestRender();
+
     }
 
     detach() {
@@ -190,7 +211,7 @@ class CanvasController {
 
     selectElement(id, additive = false) {
         if (!additive) this.selectedElementIds.clear();
-
+        console.log("[Controller] selectElement", id, { additive })
         const el = this.findElementById(id);
         if (el?.group) {
             // pull in every element with the same group ID
@@ -207,13 +228,13 @@ class CanvasController {
             }
         }
 
-        this.renderElements();
+        this.requestRender();
     }
 
     clearSelection() {
         if (this.selectedElementIds.size) {
             this.selectedElementIds.clear();
-            this.renderElements();
+            this.requestRender();
         }
     }
 
@@ -322,9 +343,9 @@ class CanvasController {
         this.saveLocalViewState();
     }
 
-    renderElements() {
+    renderElementsImmediately() {
         if (this.canvas.controller !== this) return;
-        console.log(`renderElements()`);
+        console.log(`requestRender()`);
         const existingIds = new Set(Object.keys(this.elementNodesMap));
         const usedIds = new Set();
 
@@ -351,11 +372,11 @@ class CanvasController {
             }
         });
 
-        this.renderEdges();
+        this.requestEdgeUpdate();
     }
 
-    renderEdges() {
-        // console.log("renderEdges()");
+    renderEdgesImmediately() {
+        // console.log("requestEdgeUpdate()");
 
         // Ensure an SVG marker for arrowheads exists.
         let defs = this.edgesLayer.querySelector("defs");
@@ -582,7 +603,7 @@ class CanvasController {
         };
         this.canvasState.elements.push(elObj);
         this.selectElement(newId);
-        this.renderElements();
+        this.requestRender();
         saveCanvas(this.canvasState);
         return newId;
     }
@@ -698,7 +719,7 @@ class CanvasController {
             if (!el.src && !i.src) {
                 regenerateImage(el).then(() => {
                     saveCanvasLocalOnly();
-                    this.renderElements();
+                    this.requestRender();
                 });
             }
             i.src = el.src || `https://placehold.co/${Math.round(el.width)}x${Math.round(el.height)}?text=${encodeURIComponent(el.content)}&font=lora`;
@@ -738,7 +759,7 @@ class CanvasController {
                 const target = this.findElementOrEdgeById(el.target);
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== target?.id && e.id !== el.id);
                 this.canvasState.edges = this.canvasState.edges.filter(e => e.id !== target?.id);
-                this.renderElements();
+                this.requestRender();
                 saveCanvas(this.canvasState);
             };
 
@@ -749,23 +770,23 @@ class CanvasController {
                     console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el);
                     if (target) {
                         target[el.property] = val;
-                        this.renderEdges();
+                        this.requestEdgeUpdate();
                         saveCanvas(this.canvasState);
                     }
                 }
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
-                this.renderElements();
+                this.requestRender();
             };
             cancelBtn.onclick = () => {
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
-                this.renderElements();
+                this.requestRender();
                 saveCanvas(this.canvasState);
             };
         } else {
             console.warn("Unknown element type", el.type, el)
             console.log("Delete?")
         }
-        
+
         const c = node.querySelector('.content');
         if (c) {
             if (c.clientHeight < c.scrollHeight) {
@@ -899,7 +920,7 @@ class CanvasController {
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         }
         const edges = this.findEdgesByElementId(el.id) || [];
-        this.renderEdges();
+        this.requestEdgeUpdate();
     }
     // ------------------------------------------------------------------
     //  Registry helpers (new)
@@ -1000,7 +1021,7 @@ class CanvasController {
             if (status === 'saved' && updated) {
                 Object.assign(el, updated);               // merge returned changes
                 this.updateElementNode(this.elementNodesMap[el.id], el, true);
-                this.renderEdges();                       // edge labels may have changed
+                this.requestEdgeUpdate();                       // edge labels may have changed
                 saveCanvas(this.canvasState);
             }
         } catch (err) {

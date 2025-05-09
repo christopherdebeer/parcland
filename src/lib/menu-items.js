@@ -26,7 +26,7 @@ import {
   generateNew, inlineEdit, reorder,
   groupSelection, ungroupSelection, canUngroup,
   zoom, zoomToFit, openHistory, exportJSON
-} from './radial-helpers.js';
+} from './menu-item-helpers.js';
 import { autoLayout } from './auto-layout.js';
 import { align } from './align.js';
 

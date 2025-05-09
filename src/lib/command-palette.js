@@ -8,7 +8,7 @@
  *  – ENTER on command   → run the original .action(controller)
  * ------------------------------------------------------------------------- */
 
-import { buildRootItems } from './radial-menu-items.js';
+import { buildRootItems } from './menu-items.js';
 import { editElementWithPrompt } from './generation.js';
 
 /* public entry point -- mirrors installRadialMenu() signature */

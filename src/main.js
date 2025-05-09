@@ -212,35 +212,13 @@ class CanvasController {
   }
 
   _restoreSnapshot({ canvasState, viewState }) {
-  /* 1 .  Adopt the snapshot data (deep-clone to avoid aliasing) */
   this.canvasState = structuredClone(canvasState);
   this.viewState   = structuredClone(viewState);
 
-  /* 2 .  Drop transient UI state that may no longer be valid */
+  // clear selection, keep mode
   this.selectedElementIds.clear();
-  this.hideContextMenu?.();
-  this.removeSelectionBox?.();
-
-  /* 3 .  Strip all element / edge DOM created from the previous state */
-  Object.values(this.elementNodesMap).forEach(n => n.remove());
-  this.elementNodesMap = {};
-
-  Object.values(this.edgeNodesMap).forEach(l => l.remove());
-  this.edgeNodesMap = {};
-
-  if (this.edgeLabelNodesMap) {
-    Object.values(this.edgeLabelNodesMap).forEach(t => t.remove());
-    this.edgeLabelNodesMap = {};
-  }
-
-  /* 4 .  Apply view transform (pan / zoom) from the snapshot */
-  this.updateCanvasTransform();
-
-  /* 5 .  Queue a fresh render; edges will rebuild afterwards */
   this.requestRender();
-
-  /* 6 .  Persist view state so a page refresh stays consistent */
-  this.saveLocalViewState?.();
+  this.updateCanvasTransform();
 }
 
 

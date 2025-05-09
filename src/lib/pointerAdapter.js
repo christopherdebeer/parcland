@@ -105,6 +105,13 @@ export function installPointerAdapter(
   }
   const onKeydown = (ev) => {
     console.log("[PointerAdapter] keydown", ev)
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === 'z') {
+      ev.preventDefault();
+      if (ev.shiftKey) service.state.context.controller.redo();
+      else              service.state.context.controller.undo();
+      return;           // don’t forward to FSM
+  }
+
     send('KEYDOWN', ev, { key: ev.key });
   }
 

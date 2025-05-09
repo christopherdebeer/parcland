@@ -97,6 +97,15 @@ export function installPointerAdapter(
     }
   };
   const onWheel = (ev) => send('WHEEL', ev, { deltaY: ev.deltaY });
+  const onKeyup = (ev) => {
+    console.log("[PointerAdapter] keyup", ev)
+    send('KEYUP', ev, { key: ev.key });
+  }
+  const onKeydown = (ev) => {
+    console.log("[PointerAdapter] keydown", ev)
+    send('KEYDOWN', ev, { key: ev.key });
+  }
+
 
   /* listeners */
   rootEl.addEventListener('pointerdown', onPointerDown, { passive: false });
@@ -104,6 +113,8 @@ export function installPointerAdapter(
   rootEl.addEventListener('pointerup', finishPointer, { passive: false });
   rootEl.addEventListener('pointercancel', finishPointer, { passive: true });
   rootEl.addEventListener('wheel', onWheel, { passive: true });
+  window.addEventListener('keydown', onKeydown, { passive: true });
+  window.addEventListener('keyup', onKeyup, { passive: true });
 
   /* teardown helper */
   return () => {
@@ -112,5 +123,7 @@ export function installPointerAdapter(
     rootEl.removeEventListener('pointerup', finishPointer);
     rootEl.removeEventListener('pointercancel', finishPointer);
     rootEl.removeEventListener('wheel', onWheel);
+    window.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('keyup', onKeyup);
   };
 }

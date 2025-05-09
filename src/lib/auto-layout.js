@@ -50,7 +50,7 @@ function bbox(elements) {
 export async function autoLayout(controller, o = {}) {
   const {
     scope = 'selection',
-    edgeAwareSpacing = 40,
+    edgeAwareSpacing = 100,
     nodePadding = 30,
     direction = 'DOWN',
     algorithm = 'layered',

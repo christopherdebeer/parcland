@@ -19,8 +19,20 @@ export const gestureMachine = createMachine({
     mode: {
       initial: 'navigate',
       states: {
-        navigate: { on: { TOGGLE_MODE: 'direct' } },
-        direct: { on: { TOGGLE_MODE: 'navigate' } }
+        navigate: {
+          entry: 'log',
+          on: {
+            TOGGLE_MODE: 'direct',
+            KEYUP: { cond: 'keyIsEscape', target: 'direct' }
+          }
+        },
+        direct: {
+          entry: 'log',
+          on: {
+            TOGGLE_MODE: 'navigate',
+            KEYUP: { cond: 'keyIsEscape', target: 'navigate' }
+          }
+        }
       }
     },
     gesture: {
@@ -227,7 +239,9 @@ export const gestureMachine = createMachine({
       doubleTapElementNavigate: (_c, e, p) => e.hitElement && p.state.matches('mode.navigate'),
       doubleTapCanvasBlank: (_c, e) => !e.hitElement && !e.edgeLabel,
       doubleTapElement: (_c, e) => e.hitElement && !e.edgeLabel,
-      doubleTapEdgeLabel: (_c, e) => e.edgeLabel
+      doubleTapEdgeLabel: (_c, e) => e.edgeLabel,
+
+      keyIsEscape: (_c, e) => e.key === 'Escape',
     },
 
     actions: {

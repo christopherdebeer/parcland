@@ -380,7 +380,8 @@ export const gestureMachine = createMachine({
       start.set(id,{
         offsetX : el.x - bbox.cx,
         offsetY : el.y - bbox.cy,
-        rotation: el.rotation || 0
+        rotation: el.rotation || 0,
+        scale   : el.scale    || 1
       });
     });
     const pts = Object.values(e.active||{});

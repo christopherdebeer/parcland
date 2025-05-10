@@ -203,7 +203,7 @@ export function createGestureHelpers(controller) {
 
     el.x = cx + rotX;
     el.y = cy + rotY;
-
+    el.scale    = start.scale * scale;    // ➋  propagate group-wide factor
     /* keep *internal* scale intact, only update global rotation */
     el.rotation = start.rotation + dAng * 180/Math.PI;
   });

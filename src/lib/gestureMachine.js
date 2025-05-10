@@ -47,6 +47,7 @@ export const gestureMachine = createMachine({
 
               { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: [ 'hideContextMenu', 'capLasso'] },
               { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: 'capGroupMove' },
+              { cond: 'onePointerGroupNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },          
               { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['selectElement', 'capMove'] },
               { cond: 'onePointerElementNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
 
@@ -230,7 +231,7 @@ export const gestureMachine = createMachine({
       onePointerBlankDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
       onePointerElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.handle && !e.groupSelected && p.state.matches('mode.direct'),
       onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.direct'),
-
+      onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
       twoPointersGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.groupSelected && p.state.matches('mode.direct'),
       twoPointersElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
 

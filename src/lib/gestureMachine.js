@@ -42,7 +42,7 @@ export const gestureMachine = createMachine({
           entry: 'log',
           on: {
             POINTER_DOWN: [
-              { cond: 'twoPointersNavigate', target: 'pinchCanvas', actions: 'capPinch' },
+              { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
               { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'hideContextMenu', 'capPan'] },
 
               { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['clearSelection', 'hideContextMenu', 'capLasso'] },
@@ -75,7 +75,7 @@ export const gestureMachine = createMachine({
           on: {
             POINTER_MOVE: { actions: 'applyCanvasPan' },
             POINTER_DOWN: {
-              cond: 'twoPointersNavigate',
+              cond: 'twoPointersPinch',
               target: 'pinchCanvas',
               actions: 'capPinch'
             },
@@ -217,7 +217,8 @@ export const gestureMachine = createMachine({
     guards: {
       isNavigate: (_c, _e, { state }) => state.matches('mode.navigate'),
       isDirect: (_c, _e, { state }) => state.matches('mode.direct'),
-      twoPointersNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 2 && p.state.matches('mode.navigate'),
+      //twoPointersNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 2 && p.state.matches('mode.navigate'),
+      twoPointersPinch: (_c,e)=>Object.keys(e.active||{}).length===2,
       onePointerBlankNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && p.state.matches('mode.navigate'),
       onePointerElementNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
 

@@ -45,7 +45,7 @@ export const gestureMachine = createMachine({
               { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
               { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'hideContextMenu', 'capPan'] },
 
-              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['clearSelection', 'hideContextMenu', 'capLasso'] },
+              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: [ 'hideContextMenu', 'capLasso'] },
               { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: 'capGroupMove' },
               { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['selectElement', 'capMove'] },
               { cond: 'onePointerElementNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },

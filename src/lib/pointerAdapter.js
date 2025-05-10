@@ -69,10 +69,25 @@ export function installPointerAdapter(
 
     ev.target.setPointerCapture(ev.pointerId);
     send('POINTER_DOWN', ev);
+    startLongPress(ev);
+
   };
+
+  /* — LONG-PRESS helper — */
+let lpTimer     = null;
+const LP_DELAY  = 600;                     // ms
+function startLongPress(ev){
+  lpTimer = setTimeout(()=>{
+    send('LONG_PRESS', ev);                // new pure FSM event
+    lpTimer = null;
+  }, LP_DELAY);
+}
+function cancelLongPress(){ clearTimeout(lpTimer); lpTimer = null; }
+  
   const onPointerMove = (ev) => {
     if (!active.has(ev.pointerId)) return;
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    cancelLongPress();
     send('POINTER_MOVE', ev);
   };
   const finishPointer = (ev) => {
@@ -82,8 +97,7 @@ export function installPointerAdapter(
     const capNode = capturedTargets.get(ev.pointerId) || rootEl;
     capNode.releasePointerCapture(ev.pointerId);
     capturedTargets.delete(ev.pointerId);
-
-
+    
     send('POINTER_UP', ev);
 
     /*  tap / double-tap detection  */

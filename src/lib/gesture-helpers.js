@@ -178,25 +178,29 @@ export function createGestureHelpers(controller) {
     controller.requestRender();
   }
 
-  function applyGroupPinch(ctx, ev) {
-    const pts = Object.values(ev.active || {});
-    if (pts.length !== 2) return;
-    const [p1, p2] = pts;
-    const newDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const factor = newDist / ctx.draft.startDist;
+  function applyGroupPinch(ctx, ev){
+  const pts = Object.values(ev.active||{});
+  if(pts.length!==2) return;
+  const [p1,p2] = pts;
+  const newDist  = Math.hypot(p2.x-p1.x, p2.y-p1.y);
+  const distFac  = newDist / ctx.draft.startDist;
 
-    const bbox = ctx.draft.bboxCenter;
-    controller.selectedElementIds.forEach(id => {
-      const el = controller.findElementById(id);
-      const start = ctx.draft.startPositions.get(id);
-      // Update scale instead of width/height
-      el.scale = (start.scale || 1) * factor;
-      // Position still needs to be adjusted based on the bounding box center
-      el.x = bbox.cx + (start.x - bbox.cx) * factor;
-      el.y = bbox.cy + (start.y - bbox.cy) * factor;
-    });
-    controller.requestRender();
-  }
+/* NEW – rotation */
+  const a0 = ctx.draft.startAngle;
+  const a1 = Math.atan2(p2.y-p1.y , p2.x-p1.x);
+  const dθ = (a1 - a0) * 180/Math.PI;
+
+  const bbox = ctx.draft.bboxCenter;
+  controller.selectedElementIds.forEach(id=>{
+    const el    = controller.findElementById(id);
+    const start = ctx.draft.startPositions.get(id);
+    el.scale    = start.scale * distFac;
+    el.rotation = (start.rotation||0) + dθ;
+    el.x        = bbox.cx + (start.x-bbox.cx)*distFac;
+    el.y        = bbox.cy + (start.y-bbox.cy)*distFac;
+  });
+  controller.requestRender();
+}
 
   function applyLassoUpdate(ctx, ev) {
     controller.updateSelectionBox(

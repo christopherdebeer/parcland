@@ -371,27 +371,27 @@ export const gestureMachine = createMachine({
         }
       }),
       capGroupPinch: assign({
-        draft: (_c, e, { state }) => {
-          const ids = [...state.context.controller.selectedElementIds];
-          const start = new Map();
-          ids.forEach(id => {
-            const el = state.context.controller.findElementById(id);
-            start.set(id, {
-              width: el.width, height: el.height,
-              x: el.x, y: el.y,
-              scale: el.scale || 1, // Store initial scale
-              rotation: el.rotation||0,
-            });
-          });
-          const pts = Object.values(e.active || {});
-          return {
-            startAngle : Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x),
-            startDist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
-            startPositions: start,
-            bboxCenter: state.context.controller.getGroupBBox()
-          };
-        }
-      }),
+  draft: (_c, e, { state }) => {
+    const ids   = [...state.context.controller.selectedElementIds];
+    const start = new Map();
+    const bbox  = state.context.controller.getGroupBBox();
+    ids.forEach(id=>{
+      const el = state.context.controller.findElementById(id);
+      start.set(id,{
+        offsetX : el.x - bbox.cx,
+        offsetY : el.y - bbox.cy,
+        rotation: el.rotation || 0
+      });
+    });
+    const pts = Object.values(e.active||{});
+    return {
+      startDist : Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
+      startAngle: Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x),
+      bboxCenter: bbox,
+      startPositions: start
+    };
+  }
+}),
       capPinchElement: assign({
         draft: (c, e) => {
           const el = c.controller.findElementById(e.elementId);

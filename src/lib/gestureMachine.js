@@ -60,6 +60,7 @@ export const gestureMachine = createMachine({
               { cond: 'twoPointersGroupDirect', target: 'pinchGroup', actions: ['capGroupPinch'] },
               { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: ['capPinchElement'] },
             ],
+            LONG_PRESS : { target:'idle', actions:['buildContextMenu','showContextMenu'] },
             WHEEL: { target: 'wheelZoom' },
             DOUBLE_TAP: [
               { cond: 'doubleTapElementNavigate', target: 'doubleTapElement', actions: ['selectElement', 'switchToDirect'] },

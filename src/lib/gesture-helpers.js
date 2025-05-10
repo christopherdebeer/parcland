@@ -242,19 +242,22 @@ export function createGestureHelpers(controller) {
     }
   }
 
-  function selectElement(_ctx, ev){
-  if(!ev.elementId) return;
-  const already = controller.selectedElementIds.has(ev.elementId);
-  const additiveTap = ev.ev.pointerType==='touch';   // treats 2nd tap as toggle
+  function selectElement(_ctx, ev) {
+  if (!ev.elementId) return;
 
-  if(already && additiveTap){
-    controller.selectedElementIds.delete(ev.elementId);   // deselect
-  }else if(additiveTap){
-    controller.selectedElementIds.add(ev.elementId);      // add
-  }else{
+  const isTouch  = ev.ev.pointerType === 'touch';
+  const inSet    = controller.selectedElementIds.has(ev.elementId);
+  const additive = isTouch && controller.selectedElementIds.size > 0;
+
+  /* ── toggle or single-select ─────────────────── */
+  if (additive) {
+    if (inSet) controller.selectedElementIds.delete(ev.elementId);
+    else       controller.selectedElementIds.add   (ev.elementId);
+  } else {
     controller.selectedElementIds.clear();
-    controller.selectedElementIds.add(ev.elementId);      // normal single select
+    controller.selectedElementIds.add(ev.elementId);
   }
+
   controller.requestRender();
 }
 

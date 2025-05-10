@@ -233,12 +233,21 @@ export function createGestureHelpers(controller) {
     }
   }
 
-  function selectElement(_ctx, ev) {
-    console.log("[FSM] helper selectElement", ev)
-    if (!ev.elementId) return;
-    const additive = ev.ev.ctrlKey || ev.ev.metaKey;
-    controller.selectElement(ev.elementId, additive);
+  function selectElement(_ctx, ev){
+  if(!ev.elementId) return;
+  const already = controller.selectedElementIds.has(ev.elementId);
+  const additiveTap = ev.ev.pointerType==='touch';   // treats 2nd tap as toggle
+
+  if(already && additiveTap){
+    controller.selectedElementIds.delete(ev.elementId);   // deselect
+  }else if(additiveTap){
+    controller.selectedElementIds.add(ev.elementId);      // add
+  }else{
+    controller.selectedElementIds.clear();
+    controller.selectedElementIds.add(ev.elementId);      // normal single select
   }
+  controller.requestRender();
+}
 
   function clearSelection() {
     controller.clearSelection();

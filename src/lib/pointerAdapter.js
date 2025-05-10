@@ -92,6 +92,7 @@ function cancelLongPress(){ clearTimeout(lpTimer); lpTimer = null; }
   };
   const finishPointer = (ev) => {
     ev.preventDefault();
+    cancelLongPress();
     active.delete(ev.pointerId);
     // release capture on whichever node we grabbed
     const capNode = capturedTargets.get(ev.pointerId) || rootEl;

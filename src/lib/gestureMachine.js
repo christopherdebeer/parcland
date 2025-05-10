@@ -370,11 +370,13 @@ export const gestureMachine = createMachine({
             start.set(id, {
               width: el.width, height: el.height,
               x: el.x, y: el.y,
-              scale: el.scale || 1  // Store initial scale
+              scale: el.scale || 1, // Store initial scale
+              rotation: el.rotation||0,
             });
           });
           const pts = Object.values(e.active || {});
           return {
+            startAngle : Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x),
             startDist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
             startPositions: start,
             bboxCenter: state.context.controller.getGroupBBox()

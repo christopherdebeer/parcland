@@ -166,7 +166,11 @@ export function installCommandPalette(controller, opts = {}) {
   /* ----------------------------------------------------------------------- */
   /*  Event wiring                                                           */
   /* ----------------------------------------------------------------------- */
-  $input.addEventListener('focus', () => root.classList.add('focused'));
+  $input.addEventListener('focus', () => {
+    root.classList.add('focused');
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+  });
   $input.addEventListener('blur', () => {
     //root.classList.remove('focused');
     /* keep suggestions open if value exists & element clicked */

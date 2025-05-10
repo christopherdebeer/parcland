@@ -179,26 +179,35 @@ export function createGestureHelpers(controller) {
   }
 
   function applyGroupPinch(ctx, ev){
-  const pts = Object.values(ev.active||{});
-  if(pts.length!==2) return;
-  const [p1,p2] = pts;
-  const newDist  = Math.hypot(p2.x-p1.x, p2.y-p1.y);
-  const distFac  = newDist / ctx.draft.startDist;
+  const pts = Object.values(ev.active || {});
+  if (pts.length !== 2) return;
 
-/* NEW – rotation */
-  const a0 = ctx.draft.startAngle;
-  const a1 = Math.atan2(p2.y-p1.y , p2.x-p1.x);
-  const dθ = (a1 - a0) * 180/Math.PI;
+  /* scale & rotate factors relative to start */
+  const newDist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
+  const scale   = newDist / ctx.draft.startDist;
 
-  const bbox = ctx.draft.bboxCenter;
+  const a1   = Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x);
+  const dAng = a1 - ctx.draft.startAngle;          // radians
+
+  const {cx, cy} = ctx.draft.bboxCenter;
+
   controller.selectedElementIds.forEach(id=>{
     const el    = controller.findElementById(id);
     const start = ctx.draft.startPositions.get(id);
-    el.scale    = start.scale * distFac;
-    el.rotation = (start.rotation||0) + dθ;
-    el.x        = bbox.cx + (start.x-bbox.cx)*distFac;
-    el.y        = bbox.cy + (start.y-bbox.cy)*distFac;
+
+    /* rotate + scale the centre point */
+    const ox = start.offsetX * scale;
+    const oy = start.offsetY * scale;
+    const rotX =  ox * Math.cos(dAng) - oy * Math.sin(dAng);
+    const rotY =  ox * Math.sin(dAng) + oy * Math.cos(dAng);
+
+    el.x = cx + rotX;
+    el.y = cy + rotY;
+
+    /* keep *internal* scale intact, only update global rotation */
+    el.rotation = start.rotation + dAng * 180/Math.PI;
   });
+
   controller.requestRender();
 }
 

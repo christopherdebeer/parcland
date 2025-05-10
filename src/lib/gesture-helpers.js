@@ -248,6 +248,7 @@ export function createGestureHelpers(controller) {
   const isTouch  = ev.ev.pointerType === 'touch';
   const inSet    = controller.selectedElementIds.has(ev.elementId);
   const additive = isTouch && controller.selectedElementIds.size > 0;
+  console.log("[debug multiselect]", {isTouch,inSet,additive, el: ev.elementId, sel: controller.selectedElementIds});
 
   /* ── toggle or single-select ─────────────────── */
   if (additive) {

@@ -231,7 +231,7 @@ export const gestureMachine = createMachine({
       onePointerBlankDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
       onePointerElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.handle && !e.groupSelected && p.state.matches('mode.direct'),
       onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.direct'),
-      onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
+      onePointerGroupNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
       twoPointersGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.groupSelected && p.state.matches('mode.direct'),
       twoPointersElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
 

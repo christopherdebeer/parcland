@@ -107,6 +107,11 @@ export const gestureMachine = createMachine({
         lassoSelect: {
           entry: 'log',
           on: {
+            POINTER_DOWN: {
+  cond   : 'twoPointersPinch',
+  target : 'pinchCanvas',   // jump to the existing pinch state
+  actions: 'clearLasso',
+},
             POINTER_MOVE: { actions: 'applyLassoUpdate' },
             POINTER_UP: { target: 'idle', actions: 'commitLassoSelection' }
           }
@@ -252,6 +257,10 @@ export const gestureMachine = createMachine({
 
     actions: {
       log: (c, e, meta) => console.log('[FSM]', `${meta.state.value.mode}:${meta.state.value.gesture}`, { c, e, meta }),
+      clearLasso: (ctx)=>{                         // tidy up marquee
+    ctx.draft && delete ctx.draft.start;
+    ctx.controller.removeSelectionBox();
+  },
       capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
       capPinch: assign({
         draft: (_c, e) => {

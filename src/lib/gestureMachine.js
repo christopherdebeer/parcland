@@ -73,8 +73,6 @@ export const gestureMachine = createMachine({
                 { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
 
                 // /* ④ ONE-POINTER ON ENTITY  */
-                // { cond: 'onePointerGroupDirect',    target: 'moveGroup',  actions: ['capGroupMove'] },
-                // { cond: 'onePointerGroupNavigate',  target: 'panCanvas',  actions: ['capPan'] },
                 { cond: 'onePointerSelectedDirect',  target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
 
                 // /* ⑤ ONE-POINTER BLANK  */

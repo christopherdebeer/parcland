@@ -1001,43 +1001,52 @@ class CanvasController {
     }
 
     computeIntersection(el, otherEl) {
-        // Our elements' x and y represent the center coordinates.
+        // 1) Center and scale as before
         const cx = el.x;
         const cy = el.y;
-        // IMPORTANT: Factor in the element's scale to compute its visible dimensions.
         const scaleFactor = el.scale || 1;
         const w = (el.width || 10) * scaleFactor;
         const h = (el.height || 10) * scaleFactor;
-
-        // Compute the vector from el's center toward the other element.
+        const halfW = w / 2;
+        const halfH = h / 2;
+    
+        // 2) Vector from el center to otherEl
         let dx = otherEl.x - cx;
         let dy = otherEl.y - cy;
-
-        // If the centers coincide, return the center.
+    
+        // If same point, return center
         if (dx === 0 && dy === 0) {
             return { x: cx, y: cy };
         }
-
-        const halfW = w / 2;
-        const halfH = h / 2;
-
-        // Compute scale factors for hitting the vertical and horizontal borders.
-        let scaleX = Infinity, scaleY = Infinity;
-        if (dx !== 0) {
-            scaleX = halfW / Math.abs(dx);
-        }
-        if (dy !== 0) {
-            scaleY = halfH / Math.abs(dy);
-        }
-
-        // The proper scale is the smaller one, ensuring we hit the closest border.
-        const scale = Math.min(scaleX, scaleY);
-
-        // The intersection point is computed by scaling the direction vector.
-        const ix = cx + dx * scale;
-        const iy = cy + dy * scale;
-        return { x: ix, y: iy };
+    
+        // 3) Un-rotate the direction vector into the rectangle's local axes
+        const theta = ((el.rotation || 0) * Math.PI) / 180;
+        const cosθ = Math.cos(-theta);
+        const sinθ = Math.sin(-theta);
+        const localDX = dx * cosθ - dy * sinθ;
+        const localDY = dx * sinθ + dy * cosθ;
+    
+        // 4) Compute intersection on an axis-aligned box in local space
+        const scaleX = localDX !== 0 ? halfW / Math.abs(localDX) : Infinity;
+        const scaleY = localDY !== 0 ? halfH / Math.abs(localDY) : Infinity;
+        const scale  = Math.min(scaleX, scaleY);
+    
+        const localIX = localDX * scale;
+        const localIY = localDY * scale;
+    
+        // 5) Rotate the intersection point back into world axes
+        const cosθf = Math.cos(theta);
+        const sinθf = Math.sin(theta);
+        const worldIX = localIX * cosθf - localIY * sinθf;
+        const worldIY = localIX * sinθf + localIY * cosθf;
+    
+        // 6) Translate back to world coordinates
+        return {
+            x: cx + worldIX,
+            y: cy + worldIY
+        };
     }
+    
 
     buildContextMenu(elId) {
         const el = this.findElementById(elId) || this.findEdgeElementById(elId);

@@ -99,6 +99,7 @@ export const gestureMachine = createMachine({
         },
         pressPendingNavigate: {
           // we’ve already captured draft.start on entry
+          entry: 'log',
           on: {
             POINTER_MOVE: [
               { cond: 'movedBeyondDeadzone', target: 'panCanvas', actions: 'capPan' },
@@ -111,6 +112,7 @@ export const gestureMachine = createMachine({
           }
         },
         pressPendingDirect: {
+          entry: 'log',
           // we’ve already captured draft.start on entry
           on: {
             POINTER_MOVE: [

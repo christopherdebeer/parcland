@@ -92,7 +92,7 @@ class CanvasController {
             this.canvas,
             this.fsmService,
             () => ({ ...this.viewState }),
-            () => this.selectedElementIds.size > 1
+            () => this.selectedElementIds
         );
         this.setupEventListeners();
 

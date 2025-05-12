@@ -7,6 +7,10 @@ import { createMachine, assign } from 'xstate';
 import { buildContextMenu } from './context-menu';
 
 
+const groupSelected = (e) => {
+  return e.selected.has(e.elementId) && e.selected.size > 1
+}
+
 export const gestureMachine = createMachine({
 
   id: 'canvas',
@@ -234,15 +238,15 @@ export const gestureMachine = createMachine({
       twoPointersPinch      : (_c,e)=>Object.keys(e.active||{}).length===2,
 
       onePointerBlankNavigate: (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.navigate'),
-      onePointerElementNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
+      onePointerElementNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !groupSelected(e) && p.state.matches('mode.navigate'),
 
       onePointerBlankDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
-      onePointerElementDirect:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.handle && !e.groupSelected && p.state.matches('mode.direct'),
-      onePointerGroupDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && e.groupSelected && !e.handle && p.state.matches('mode.direct'),
-      onePointerGroupNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
+      onePointerElementDirect:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.handle && !groupSelected(e) && p.state.matches('mode.direct'),
+      onePointerGroupDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
+      onePointerGroupNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.navigate'),
 
-      twoPointersGroupDirect  : (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.groupSelected && p.state.matches('mode.direct'),
-      twoPointersElementDirect: (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
+      twoPointersGroupDirect  : (_c,e,p)=>Object.keys(e.active||{}).length===2 && groupSelected(e) && p.state.matches('mode.direct'),
+      twoPointersElementDirect: (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.hitElement && !groupSelected(e) && p.state.matches('mode.direct'),
 
       handleResize : (_c,e)=>e.handle==='resize',
       handleScale  : (_c,e)=>e.handle==='scale',

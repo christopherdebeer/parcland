@@ -6,7 +6,7 @@ export function installPointerAdapter(
   rootEl,
   service,
   getViewState,
-  isGroupSelected = () => false
+  selected = () => new Set()
 ) {
 
   const active = new Map(); // pointerId → {x,y}
@@ -43,7 +43,7 @@ export function installPointerAdapter(
       handle: classifyHandle(handleNode),
       edgeLabel: !!edgeLabelNode,
       edgeId: edgeLabelNode ? edgeLabelNode.dataset.id : null,
-      groupSelected: isGroupSelected(),
+      selected: selected(),
       view: getViewState(),
       ev, // raw DOM event
       ...extra

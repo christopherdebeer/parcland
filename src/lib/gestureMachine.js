@@ -42,49 +42,59 @@ export const gestureMachine = createMachine({
         idle: {
           entry: 'log',
           on: {
-            POINTER_DOWN: [
-              { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
-              { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'hideContextMenu', 'capPan'] },
+            /*————————————————————————————————────────────────——————————
+                Order:    1. Handle-specific      (highest specificity)
+                          2. Two-pointer entity  (pinch element / group)
+                          3. Generic two-pointer (pinch canvas)
+                          4. One-pointer entity
+                          5. One-pointer blank
+              ——————————————————————————————————————————————————————————*/
+              POINTER_DOWN: [
+                /* ① HANDLE-SPECIFIC (must precede generic element checks) */
+                { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
+                { cond: 'handleScale',  target: 'scaleElement',  actions: 'capScale'  },
+                { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
+                { cond: 'handleReorder',target: 'reorderElement',actions: 'capReorder'},
+                { cond: 'handleType',   target: 'typeElement',   actions: ['buildContextMenu','showContextMenu'] },
+                { cond: 'edgeHandleDrag',       target: 'createEdge', actions: ['capEdge',  'startTempLine'] },
+                { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode',  'startTempLine'] },
 
-              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['hideContextMenu', 'capLasso'] },
-              { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: ['selectElement', 'capGroupMove'] },
-              { cond: 'onePointerGroupNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
-              { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['selectElement', 'capMove'] },
-              { cond: 'onePointerElementNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
+                /* ② TWO-POINTER ON ENTITY (before generic pinch) */
+                { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
+                { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
 
-              { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
-              { cond: 'handleScale', target: 'scaleElement', actions: 'capScale' },
-              { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
-              { cond: 'handleReorder', target: 'reorderElement', actions: 'capReorder' },
-              { cond: 'handleType', target: 'typeElement', actions: ['buildContextMenu', 'showContextMenu'] },
-              { cond: 'edgeHandleDrag', target: 'createEdge', actions: ['capEdge', 'startTempLine'] },
-              { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode', 'startTempLine'] },
-              { cond: 'twoPointersGroupDirect', target: 'pinchGroup', actions: ['capGroupPinch'] },
-              { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: ['capPinchElement'] },
-            ],
-            LONG_PRESS: { target: 'idle', actions: ['buildContextMenu', 'showContextMenu'] },
-            WHEEL: { target: 'wheelZoom' },
-            DOUBLE_TAP: [
-              { cond: 'doubleTapElementNavigate', target: 'doubleTapElement', actions: ['selectElement', 'switchToDirect'] },
-              { cond: 'doubleTapCanvasBlank', target: 'doubleTapCanvas' },
-              { cond: 'doubleTapElement', target: 'doubleTapElement', actions: ['selectElement', 'openEditModal'] },
-              { cond: 'doubleTapEdgeLabel', target: 'doubleTapEdgeLabel' }
-            ]
+                /* ③ GENERIC TWO-POINTER */
+                { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
+
+                /* ④ ONE-POINTER ON ENTITY  */
+                { cond: 'onePointerGroupDirect',    target: 'moveGroup',  actions: ['selectElement', 'capGroupMove'] },
+                { cond: 'onePointerGroupNavigate',  target: 'panCanvas',  actions: ['selectElement', 'capPan'] },
+                { cond: 'onePointerElementDirect',  target: 'moveElement',actions: ['selectElement', 'capMove'] },
+                { cond: 'onePointerElementNavigate',target: 'panCanvas',  actions: ['selectElement', 'capPan'] },
+
+                /* ⑤ ONE-POINTER BLANK  */
+                { cond: 'onePointerBlankDirect',    target: 'lassoSelect',actions: ['hideContextMenu','capLasso'] },
+                { cond: 'onePointerBlankNavigate',  target: 'panCanvas',  actions: ['clearSelection','hideContextMenu','capPan'] },
+              ],
+
+              LONG_PRESS: { target:'idle', actions:['buildContextMenu','showContextMenu'] },
+
+              WHEEL: { target: 'wheelZoom' },
+
+              DOUBLE_TAP : [
+                { cond: 'doubleTapElementNavigate', target: 'doubleTapElement',     actions: ['selectElement','switchToDirect'] },
+                { cond: 'doubleTapCanvasBlank',     target: 'doubleTapCanvas'                                     },
+                { cond: 'doubleTapElement',         target: 'doubleTapElement',     actions: ['selectElement','openEditModal'] },
+                { cond: 'doubleTapEdgeLabel',       target: 'doubleTapEdgeLabel'                                   }
+              ]
           }
         },
         panCanvas: {
           entry: 'log',
           on: {
             POINTER_MOVE: { actions: 'applyCanvasPan' },
-            POINTER_DOWN: {
-              cond: 'twoPointersPinch',
-              target: 'pinchCanvas',
-              actions: 'capPinch'
-            },
-            POINTER_UP: {
-              target: 'idle',
-              actions: 'persistViewState'
-            }
+            POINTER_DOWN: { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
+            POINTER_UP: { target: 'idle', actions: 'persistViewState' }
           }
         },
         pinchCanvas: {
@@ -109,11 +119,7 @@ export const gestureMachine = createMachine({
         lassoSelect: {
           entry: 'log',
           on: {
-            POINTER_DOWN: {
-              cond: 'twoPointersPinch',
-              target: 'pinchCanvas',
-              actions: 'clearLasso',
-            },
+            POINTER_DOWN: { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'clearLasso' },
             POINTER_MOVE: { actions: 'applyLassoUpdate' },
             POINTER_UP: { target: 'idle', actions: 'commitLassoSelection' }
           }
@@ -222,39 +228,37 @@ export const gestureMachine = createMachine({
 },
   {
     guards: {
-      isNavigate: (_c, _e, { state }) => state.matches('mode.navigate'),
-      isDirect: (_c, _e, { state }) => state.matches('mode.direct'),
-      //twoPointersNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 2 && p.state.matches('mode.navigate'),
-      twoPointersPinch: (_c, e) => Object.keys(e.active || {}).length === 2,
-      onePointerBlankNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && p.state.matches('mode.navigate'),
-      onePointerElementNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
+      isNavigate : (_c,_e,{state}) => state.matches('mode.navigate'),
+      isDirect   : (_c,_e,{state}) => state.matches('mode.direct'),
 
-      onePointerBlankDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
-      onePointerElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.handle && !e.groupSelected && p.state.matches('mode.direct'),
-      onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.direct'),
-      onePointerGroupNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
-      twoPointersGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.groupSelected && p.state.matches('mode.direct'),
-      twoPointersElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
+      twoPointersPinch      : (_c,e)=>Object.keys(e.active||{}).length===2,
 
-      handleResize: (_c, e) => e.handle === 'resize',
-      handleScale: (_c, e) => e.handle === 'scale',
-      handleRotate: (_c, e) => e.handle === 'rotate',
-      handleReorder: (_c, e) => e.handle === 'reorder',
-      handleType: (_c, e) => e.handle === 'type',
+      onePointerBlankNavigate: (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.navigate'),
+      onePointerElementNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
 
-      edgeHandleDrag: (_c, e) => e.handle === 'edge',
-      createNodeHandleDrag: (_c, e) => e.handle === 'createNode',
+      onePointerBlankDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
+      onePointerElementDirect:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.handle && !e.groupSelected && p.state.matches('mode.direct'),
+      onePointerGroupDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && e.groupSelected && !e.handle && p.state.matches('mode.direct'),
+      onePointerGroupNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.groupSelected && !e.handle && p.state.matches('mode.navigate'),
 
-      doubleTapElementNavigate: (_c, e, p) => e.hitElement && p.state.matches('mode.navigate'),
-      doubleTapCanvasBlank: (_c, e) => !e.hitElement && !e.edgeLabel,
-      doubleTapElement: (_c, e) => e.hitElement && !e.edgeLabel,
-      doubleTapEdgeLabel: (_c, e) => e.edgeLabel,
+      twoPointersGroupDirect  : (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.groupSelected && p.state.matches('mode.direct'),
+      twoPointersElementDirect: (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.hitElement && !e.groupSelected && p.state.matches('mode.direct'),
 
-      keyIsEscape: (_c, e) => {
-        const isEscape = e.key === 'Escape';
-        console.log("[FSM] Guard keyIsEscape", isEscape);
-        return isEscape;
-      },
+      handleResize : (_c,e)=>e.handle==='resize',
+      handleScale  : (_c,e)=>e.handle==='scale',
+      handleRotate : (_c,e)=>e.handle==='rotate',
+      handleReorder: (_c,e)=>e.handle==='reorder',
+      handleType   : (_c,e)=>e.handle==='type',
+
+      edgeHandleDrag      : (_c,e)=>e.handle==='edge',
+      createNodeHandleDrag: (_c,e)=>e.handle==='createNode',
+
+      doubleTapElementNavigate:(_c,e,p)=>e.hitElement && p.state.matches('mode.navigate'),
+      doubleTapCanvasBlank    :(_c,e)=>!e.hitElement && !e.edgeLabel,
+      doubleTapElement        :(_c,e)=>e.hitElement && !e.edgeLabel,
+      doubleTapEdgeLabel      :(_c,e)=>e.edgeLabel,
+
+      keyIsEscape: (_c,e)=>e.key==='Escape'
     },
 
     actions: {

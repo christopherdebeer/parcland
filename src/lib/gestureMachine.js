@@ -8,8 +8,10 @@ import { buildContextMenu } from './context-menu';
 
 
 const groupSelected = (e) => {
-  return e.selected.has(e.elementId) && e.selected.size > 1
+  return e.selected.has(e.elementId) && e.selected.size > 0
 }
+
+const guardLog = (g) => {}
 
 export const gestureMachine = createMachine({
 
@@ -70,15 +72,19 @@ export const gestureMachine = createMachine({
                 /* ③ GENERIC TWO-POINTER */
                 { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
 
-                /* ④ ONE-POINTER ON ENTITY  */
-                { cond: 'onePointerGroupDirect',    target: 'moveGroup',  actions: ['selectElement', 'capGroupMove'] },
-                { cond: 'onePointerGroupNavigate',  target: 'panCanvas',  actions: ['selectElement', 'capPan'] },
-                { cond: 'onePointerElementDirect',  target: 'moveElement',actions: ['selectElement', 'capMove'] },
-                { cond: 'onePointerElementNavigate',target: 'panCanvas',  actions: ['selectElement', 'capPan'] },
+                // /* ④ ONE-POINTER ON ENTITY  */
+                // { cond: 'onePointerGroupDirect',    target: 'moveGroup',  actions: ['capGroupMove'] },
+                // { cond: 'onePointerGroupNavigate',  target: 'panCanvas',  actions: ['capPan'] },
+                { cond: 'onePointerSelectedDirect',  target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
 
-                /* ⑤ ONE-POINTER BLANK  */
+                // /* ⑤ ONE-POINTER BLANK  */
                 { cond: 'onePointerBlankDirect',    target: 'lassoSelect',actions: ['hideContextMenu','capLasso'] },
-                { cond: 'onePointerBlankNavigate',  target: 'panCanvas',  actions: ['clearSelection','hideContextMenu','capPan'] },
+                {  
+                  // any 1-finger down in navigate mode
+                  // cond: 'isNavigate'  /* and exactly one pointer */,
+                  target: 'pressPendingNavigate',
+                  actions: ['hideContextMenu', 'capPress']
+                },
               ],
 
               LONG_PRESS: { target:'idle', actions:['buildContextMenu','showContextMenu'] },
@@ -93,6 +99,32 @@ export const gestureMachine = createMachine({
               ]
           }
         },
+        pressPendingNavigate: {
+          // we’ve already captured draft.start on entry
+          on: {
+            POINTER_MOVE: [
+              { cond: 'movedBeyondDeadzone', target: 'panCanvas', actions: 'capPan' },
+              // small moves do nothing
+            ],
+            POINTER_UP: [
+              { cond: (_c,e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
+              { cond: (_c,e) =>  e.hitElement, target: 'idle', actions: 'selectElement' }
+            ]
+          }
+        },
+        pressPendingDirect: {
+          // we’ve already captured draft.start on entry
+          on: {
+            POINTER_MOVE: [
+              { cond: 'movedBeyondDeadzone', target: 'moveGroup', actions: 'capGroupMove' },
+              // small moves do nothing
+            ],
+            POINTER_UP: [
+              { cond: (_c,e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
+              { cond: (_c,e) =>  e.hitElement, target: 'idle', actions: 'selectElement' }
+            ]
+          }
+        },     
         panCanvas: {
           entry: 'log',
           on: {
@@ -235,7 +267,7 @@ export const gestureMachine = createMachine({
       isNavigate : (_c,_e,{state}) => state.matches('mode.navigate'),
       isDirect   : (_c,_e,{state}) => state.matches('mode.direct'),
 
-      twoPointersPinch      : (_c,e)=>Object.keys(e.active||{}).length===2,
+      twoPointersPinch: (_c,e)=>Object.keys(e.active||{}).length===2,
 
       onePointerBlankNavigate: (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.navigate'),
       onePointerElementNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !groupSelected(e) && p.state.matches('mode.navigate'),
@@ -244,6 +276,8 @@ export const gestureMachine = createMachine({
       onePointerElementDirect:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.handle && !groupSelected(e) && p.state.matches('mode.direct'),
       onePointerGroupDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
       onePointerGroupNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.navigate'),
+
+      onePointerSelectedDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
 
       twoPointersGroupDirect  : (_c,e,p)=>Object.keys(e.active||{}).length===2 && groupSelected(e) && p.state.matches('mode.direct'),
       twoPointersElementDirect: (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.hitElement && !groupSelected(e) && p.state.matches('mode.direct'),
@@ -262,7 +296,14 @@ export const gestureMachine = createMachine({
       doubleTapElement        :(_c,e)=>e.hitElement && !e.edgeLabel,
       doubleTapEdgeLabel      :(_c,e)=>e.edgeLabel,
 
-      keyIsEscape: (_c,e)=>e.key==='Escape'
+      keyIsEscape: (_c,e)=>e.key==='Escape',
+      movedBeyondDeadzone: (ctx, e) => {
+        const { start } = ctx.draft;
+        if (!start) return false;
+        const dx = e.xy.x - start.x;
+        const dy = e.xy.y - start.y;
+        return Math.hypot(dx, dy) > 5;    // 5px threshold
+      },
     },
 
     actions: {
@@ -271,6 +312,7 @@ export const gestureMachine = createMachine({
         ctx.draft && delete ctx.draft.start;
         ctx.controller.removeSelectionBox();
       },
+      capPress: assign({ draft: (_c,e) => ({ start: e.xy }) }),
       capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
       capPinch: assign({
         draft: (_c, e) => {

@@ -313,7 +313,7 @@ class CanvasController {
 
     updateModeUI() {
         this.canvas.setAttribute("mode", this.mode);
-        this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'hand' : 'arrows-alt'}"></i> ${this.mode}`;
+        this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'arrow-pointer' : 'hand'}"></i> ${this.mode === 'direct' ? 'Editing' : 'Viewing'}`;
     }
 
     loadLocalViewState() {

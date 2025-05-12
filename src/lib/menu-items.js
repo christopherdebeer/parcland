@@ -38,8 +38,8 @@ export function buildRootItems(cfg) {
   return [
     /* ── Mode toggle ─────────────────────────────────────────────────────── */
     { label: 'Mode', icon: 'fa-arrows-alt', children: [
-      {label: 'Direct', icon: 'fa-arrows-alt', action: c => c.switchMode('direct') },
-      {label: 'Navigate', icon: 'fa-arrows-alt', action: c => c.switchMode('navigate') },
+      {label: 'Edit', icon: 'fa-arrows-alt', action: c => c.switchMode('direct') },
+      {label: 'View', icon: 'fa-arrows-alt', action: c => c.switchMode('navigate') },
       {label: 'Toggle', icon: 'fa-arrows-alt', action: c => c.switchMode() },
     ]},
 

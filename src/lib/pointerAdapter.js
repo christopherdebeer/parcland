@@ -48,7 +48,7 @@ export function installPointerAdapter(
       ev, // raw DOM event
       ...extra
     }
-    if (payload.type !== 'POINTER_MOVE') console.log("[FSM] Pointer adapter event send:", payload)
+    if (payload.type !== 'POINTER_MOVE') console.log("[FSM] Pointer adapter event send:", active.size, ev.pointerId, payload)
     service.send(payload);
   };
 

@@ -65,9 +65,9 @@ export const gestureMachine = createMachine({
                 { cond: 'edgeHandleDrag',       target: 'createEdge', actions: ['capEdge',  'startTempLine'] },
                 { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode',  'startTempLine'] },
 
-                /* ② TWO-POINTER ON ENTITY (before generic pinch) */
-                { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
-                { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
+                // /* ② TWO-POINTER ON ENTITY (before generic pinch) */
+                // { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
+                // { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
 
                 /* ③ GENERIC TWO-POINTER */
                 { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
@@ -90,10 +90,10 @@ export const gestureMachine = createMachine({
               WHEEL: { target: 'wheelZoom' },
 
               DOUBLE_TAP : [
-                { cond: 'doubleTapElementNavigate', target: 'doubleTapElement',     actions: ['selectElement','switchToDirect'] },
-                { cond: 'doubleTapCanvasBlank',     target: 'doubleTapCanvas'                                     },
-                { cond: 'doubleTapElement',         target: 'doubleTapElement',     actions: ['selectElement','openEditModal'] },
-                { cond: 'doubleTapEdgeLabel',       target: 'doubleTapEdgeLabel'                                   }
+                { cond: 'doubleTapElementNavigate', target: 'doubleTapElement',     actions: ['switchToDirect'] },
+                { cond: 'doubleTapCanvasBlank',     target: 'doubleTapCanvas' },
+                { cond: 'doubleTapElement',         target: 'doubleTapElement',     actions: ['openEditModal'] },
+                { cond: 'doubleTapEdgeLabel',       target: 'doubleTapEdgeLabel' }
               ]
           }
         },
@@ -101,6 +101,9 @@ export const gestureMachine = createMachine({
           // we’ve already captured draft.start on entry
           entry: 'log',
           on: {
+            POINTER_DOWN: [
+              { cond: 'twoPointersPinch',   target: 'pinchCanvas',   actions: 'capPinch' },
+            ],
             POINTER_MOVE: [
               { cond: 'movedBeyondDeadzone', target: 'panCanvas', actions: 'capPan' },
               // small moves do nothing
@@ -115,6 +118,9 @@ export const gestureMachine = createMachine({
           entry: 'log',
           // we’ve already captured draft.start on entry
           on: {
+            POINTER_DOWN: [
+              { cond: 'onePointerSelectedDirect',  target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
+            ],
             POINTER_MOVE: [
               { cond: 'movedBeyondDeadzone', target: 'moveGroup', actions: 'capGroupMove' },
               // small moves do nothing

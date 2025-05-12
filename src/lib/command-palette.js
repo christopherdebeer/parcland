@@ -28,7 +28,7 @@ export function installCommandPalette(controller, opts = {}) {
         } catch (err) {
           console.error('Error checking command visibility:', err);
           return;
-        } 
+        }
         const lbl = typeof it.label === 'function' ? it.label(controller, cfg) : it.label;
         const nextPath = [...path, lbl];
         if (it.children) walk(it.children, nextPath);

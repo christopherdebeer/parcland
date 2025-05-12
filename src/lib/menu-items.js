@@ -1,6 +1,6 @@
 /* ────────────────────────────────────────────────────────────────────────────
- *  radial-menu-items.js                   (2025-05-04)
- *  Pure data – the hierarchical menu definition used by radial-menu core.
+ *  menu-items.js                   (2025-05-04)
+ *  Pure data – the hierarchical menu definition
  *
  *  ── Item schema ───────────────────────────────────────────────────────────
  *  An “item” is a plain object with these optional properties
@@ -15,8 +15,7 @@
  *                                                    by the engine for now)
  *
  *  The *controller* argument is the live CanvasController instance so an item
- *  can inspect application state (selection, mode, …).  *cfg* is the menu
- *  configuration object (see radial-menu.js).
+ *  can inspect application state (selection, mode, …). 
  *  ────────────────────────────────────────────────────────────────────────── */
 
 import { saveCanvas } from './storage.js';
@@ -33,32 +32,20 @@ import { align } from './align.js';
 /**
  * buildRootItems(cfg)  → Item[]
  * Constructs and returns the root-level item array.
- * cfg is the *live* configuration object so Settings labels can show the
- * latest numbers.
  */
 export function buildRootItems(cfg) {
 
-  /* helper to shorten Settings actions ------------------------------------ */
-  const bump = (field, delta, controller) => {
-    cfg[field] = Math.round(Math.min(
-      (field === 'transitionTime' ? 1.05 : 400),
-      Math.max(field === 'transitionTime' ? 0.15 : 32, cfg[field] + delta)
-    ) * 100) / 100;
-    localStorage.setItem('parc.radialMenu.cfg', JSON.stringify(cfg));
-    controller.__rm_relayout?.();
-  };
-
   return [
     /* ── Mode toggle ─────────────────────────────────────────────────────── */
-    {
-      label: c => c.mode === 'direct' ? 'Navigate' : 'Direct',
-      icon: c => c.mode === 'direct' ? 'fa-arrows-alt' : 'fa-hand',
-      action: c => c.switchMode(c.mode === 'direct' ? 'navigate' : 'direct')
-    },
+    { label: 'Mode', icon: 'fa-arrows-alt', children: [
+      {label: 'Direct', icon: 'fa-arrows-alt', action: c => c.switchMode('direct') },
+      {label: 'Navigate', icon: 'fa-arrows-alt', action: c => c.switchMode('navigate') },
+      {label: 'Toggle', icon: 'fa-arrows-alt', action: c => c.switchMode() },
+    ]},
 
     /* ── undo/redo ─────────────────────────────────────────────────────── */
-{ label:'Undo', icon:'fa-rotate-left',  action:c=>c.undo() },
-{ label:'Redo', icon:'fa-rotate-right', action:c=>c.redo() },
+    { label: 'Undo', icon: 'fa-rotate-left', action: c => c.undo() },
+    { label: 'Redo', icon: 'fa-rotate-right', action: c => c.redo() },
 
     /* ── Add … ───────────────────────────────────────────────────────────── */
     {
@@ -154,47 +141,5 @@ export function buildRootItems(cfg) {
         { label: 'Export JSON', icon: 'fa-file-export', action: c => exportJSON(c) }
       ]
     },
-
-    /* ── ⚙ Settings  (uses bump helper) ─────────────────────────────────── */
-    {
-      label: 'Settings', icon: 'fa-gear', children: [
-        {
-          label: () => `Orbit  ${cfg.orbitRadius}px  +`, icon: 'fa-plus',
-          action: c => bump('orbitRadius', +20, c)
-        },
-        {
-          label: () => `Orbit  ${cfg.orbitRadius}px  –`, icon: 'fa-minus',
-          action: c => bump('orbitRadius', -20, c)
-        },
-
-        {
-          label: () => `Items  ${cfg.itemSize}px  +`, icon: 'fa-plus',
-          action: c => bump('itemSize', +8, c)
-        },
-        {
-          label: () => `Items  ${cfg.itemSize}px  –`, icon: 'fa-minus',
-          action: c => bump('itemSize', -8, c)
-        },
-
-        {
-          label: () => `Speed  ${cfg.transitionTime}s +`, icon: 'fa-plus',
-          action: c => bump('transitionTime', +.15, c)
-        },
-        {
-          label: () => `Speed  ${cfg.transitionTime}s –`, icon: 'fa-minus',
-          action: c => bump('transitionTime', -.15, c)
-        },
-
-        {
-          label: () => cfg.fullCircle ? 'Use 90° fan' : 'Use 360° ring',
-          icon: 'fa-arrows-spin',
-          action: c => {
-            cfg.fullCircle = !cfg.fullCircle;
-            localStorage.setItem('parc.radialMenu.cfg', JSON.stringify(cfg));
-            c.__rm_relayout?.();
-          }
-        }
-      ]
-    }
   ];
 }

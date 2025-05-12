@@ -74,16 +74,16 @@ export function installPointerAdapter(
   };
 
   /* — LONG-PRESS helper — */
-let lpTimer     = null;
-const LP_DELAY  = 600;                     // ms
-function startLongPress(ev){
-  lpTimer = setTimeout(()=>{
-    send('LONG_PRESS', ev);                // new pure FSM event
-    lpTimer = null;
-  }, LP_DELAY);
-}
-function cancelLongPress(){ clearTimeout(lpTimer); lpTimer = null; }
-  
+  let lpTimer = null;
+  const LP_DELAY = 600;                     // ms
+  function startLongPress(ev) {
+    lpTimer = setTimeout(() => {
+      send('LONG_PRESS', ev);                // new pure FSM event
+      lpTimer = null;
+    }, LP_DELAY);
+  }
+  function cancelLongPress() { clearTimeout(lpTimer); lpTimer = null; }
+
   const onPointerMove = (ev) => {
     if (!active.has(ev.pointerId)) return;
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
@@ -98,7 +98,7 @@ function cancelLongPress(){ clearTimeout(lpTimer); lpTimer = null; }
     const capNode = capturedTargets.get(ev.pointerId) || rootEl;
     capNode.releasePointerCapture(ev.pointerId);
     capturedTargets.delete(ev.pointerId);
-    
+
     send('POINTER_UP', ev);
 
     /*  tap / double-tap detection  */
@@ -123,9 +123,9 @@ function cancelLongPress(){ clearTimeout(lpTimer); lpTimer = null; }
     if ((ev.metaKey || ev.ctrlKey) && ev.key === 'z') {
       ev.preventDefault();
       if (ev.shiftKey) service.state.context.controller.redo();
-      else              service.state.context.controller.undo();
+      else service.state.context.controller.undo();
       return;           // don’t forward to FSM
-  }
+    }
 
     send('KEYDOWN', ev, { key: ev.key });
   }

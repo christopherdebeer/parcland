@@ -56,12 +56,12 @@ class CanvasController {
         this.switchMode('navigate');
 
         /* ── UNDO / REDO stacks ─────────────────────────────────── */
-    this._undo = [];          // stack of past states
-    this._redo = [];          // stack of undone states
-    this._maxHistory = 100;   // ring-buffer size
+        this._undo = [];          // stack of past states
+        this._redo = [];          // stack of undone states
+        this._maxHistory = 100;   // ring-buffer size
 
-    // First entry = pristine state so the user can always go “Back to start”
-    this._pushHistorySnapshot('Init');
+        // First entry = pristine state so the user can always go “Back to start”
+        this._pushHistorySnapshot('Init');
 
         this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
@@ -184,42 +184,42 @@ class CanvasController {
     }
 
     undo() { this._stepHistory(this._undo, this._redo, 'undo'); }
-  redo() { this._stepHistory(this._redo, this._undo, 'redo'); }
+    redo() { this._stepHistory(this._redo, this._undo, 'redo'); }
 
-  _snapshot(label='') {
-    return {
-      label,
-      data : structuredClone({
-        canvasState : this.canvasState,
-        viewState   : this.viewState
-      })
-    };
-  }
+    _snapshot(label = '') {
+        return {
+            label,
+            data: structuredClone({
+                canvasState: this.canvasState,
+                viewState: this.viewState
+            })
+        };
+    }
 
-  _pushHistorySnapshot(label) {
-    const snap = this._snapshot(label);
-    this._undo.push(snap);
-    if (this._undo.length > this._maxHistory) this._undo.shift();
-    this._redo.length = 0;            // clear redo chain
-  }
+    _pushHistorySnapshot(label) {
+        const snap = this._snapshot(label);
+        this._undo.push(snap);
+        if (this._undo.length > this._maxHistory) this._undo.shift();
+        this._redo.length = 0;            // clear redo chain
+    }
 
-  _stepHistory(fromStack, toStack, direction) {
-    if (fromStack.length === 0) return;
-    const cur = this._snapshot();     // current → opposite stack
-    toStack.push(cur);
-    const { data } = fromStack.pop(); // restore previous
-    this._restoreSnapshot(data);
-  }
+    _stepHistory(fromStack, toStack, direction) {
+        if (fromStack.length === 0) return;
+        const cur = this._snapshot();     // current → opposite stack
+        toStack.push(cur);
+        const { data } = fromStack.pop(); // restore previous
+        this._restoreSnapshot(data);
+    }
 
-  _restoreSnapshot({ canvasState, viewState }) {
-  this.canvasState = structuredClone(canvasState);
-  //this.viewState   = structuredClone(viewState);
+    _restoreSnapshot({ canvasState, viewState }) {
+        this.canvasState = structuredClone(canvasState);
+        //this.viewState   = structuredClone(viewState);
 
-  // clear selection, keep mode
-  this.selectedElementIds.clear();
-  this.requestRender();
-  //this.updateCanvasTransform();
-}
+        // clear selection, keep mode
+        this.selectedElementIds.clear();
+        this.requestRender();
+        //this.updateCanvasTransform();
+    }
 
 
     createSelectionBox(startX, startY) {

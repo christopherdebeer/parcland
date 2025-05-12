@@ -110,7 +110,7 @@ export function createGestureHelpers(controller) {
       const contentBox = node.querySelector('.content') || node;
       if (!contentBox) return;
       el.height = contentBox.clientHeight / (el.scale || 1);
-  });
+    });
   }
 
   function applyRotateElement(ctx, ev) {
@@ -178,38 +178,38 @@ export function createGestureHelpers(controller) {
     controller.requestRender();
   }
 
-  function applyGroupPinch(ctx, ev){
-  const pts = Object.values(ev.active || {});
-  if (pts.length !== 2) return;
+  function applyGroupPinch(ctx, ev) {
+    const pts = Object.values(ev.active || {});
+    if (pts.length !== 2) return;
 
-  /* scale & rotate factors relative to start */
-  const newDist = Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y);
-  const scale   = newDist / ctx.draft.startDist;
+    /* scale & rotate factors relative to start */
+    const newDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+    const scale = newDist / ctx.draft.startDist;
 
-  const a1   = Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x);
-  const dAng = a1 - ctx.draft.startAngle;          // radians
+    const a1 = Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+    const dAng = a1 - ctx.draft.startAngle;          // radians
 
-  const {cx, cy} = ctx.draft.bboxCenter;
+    const { cx, cy } = ctx.draft.bboxCenter;
 
-  controller.selectedElementIds.forEach(id=>{
-    const el    = controller.findElementById(id);
-    const start = ctx.draft.startPositions.get(id);
+    controller.selectedElementIds.forEach(id => {
+      const el = controller.findElementById(id);
+      const start = ctx.draft.startPositions.get(id);
 
-    /* rotate + scale the centre point */
-    const ox = start.offsetX * scale;
-    const oy = start.offsetY * scale;
-    const rotX =  ox * Math.cos(dAng) - oy * Math.sin(dAng);
-    const rotY =  ox * Math.sin(dAng) + oy * Math.cos(dAng);
+      /* rotate + scale the centre point */
+      const ox = start.offsetX * scale;
+      const oy = start.offsetY * scale;
+      const rotX = ox * Math.cos(dAng) - oy * Math.sin(dAng);
+      const rotY = ox * Math.sin(dAng) + oy * Math.cos(dAng);
 
-    el.x = cx + rotX;
-    el.y = cy + rotY;
-    el.scale    = start.scale * scale;    // ➋  propagate group-wide factor
-    /* keep *internal* scale intact, only update global rotation */
-    el.rotation = start.rotation + dAng * 180/Math.PI;
-  });
+      el.x = cx + rotX;
+      el.y = cy + rotY;
+      el.scale = start.scale * scale;    // ➋  propagate group-wide factor
+      /* keep *internal* scale intact, only update global rotation */
+      el.rotation = start.rotation + dAng * 180 / Math.PI;
+    });
 
-  controller.requestRender();
-}
+    controller.requestRender();
+  }
 
   function applyLassoUpdate(ctx, ev) {
     controller.updateSelectionBox(
@@ -243,24 +243,24 @@ export function createGestureHelpers(controller) {
   }
 
   function selectElement(_ctx, ev) {
-  if (!ev.elementId) return;
+    if (!ev.elementId) return;
 
-  const isTouch  = ev.ev.pointerType === 'touch';
-  const inSet    = controller.selectedElementIds.has(ev.elementId);
-  const additive = isTouch && controller.selectedElementIds.size > 0;
-  console.log("[debug multiselect]", {isTouch,inSet,additive, el: ev.elementId, sel: controller.selectedElementIds});
+    const isTouch = ev.ev.pointerType === 'touch';
+    const inSet = controller.selectedElementIds.has(ev.elementId);
+    const additive = isTouch && controller.selectedElementIds.size > 0;
+    console.log("[debug multiselect]", { isTouch, inSet, additive, el: ev.elementId, sel: controller.selectedElementIds });
 
-  /* ── toggle or single-select ─────────────────── */
-  if (additive) {
-    if (inSet) controller.selectedElementIds.delete(ev.elementId);
-    else       controller.selectedElementIds.add   (ev.elementId);
-  } else {
-    controller.selectedElementIds.clear();
-    controller.selectedElementIds.add(ev.elementId);
+    /* ── toggle or single-select ─────────────────── */
+    if (additive) {
+      if (inSet) controller.selectedElementIds.delete(ev.elementId);
+      else controller.selectedElementIds.add(ev.elementId);
+    } else {
+      controller.selectedElementIds.clear();
+      controller.selectedElementIds.add(ev.elementId);
+    }
+
+    controller.requestRender();
   }
-
-  controller.requestRender();
-}
 
   function clearSelection() {
     controller.clearSelection();

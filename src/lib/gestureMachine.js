@@ -6,6 +6,7 @@
 import { createMachine, assign } from 'xstate';
 import { buildContextMenu } from './context-menu';
 
+
 export const gestureMachine = createMachine({
 
   id: 'canvas',
@@ -45,9 +46,9 @@ export const gestureMachine = createMachine({
               { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
               { cond: 'onePointerBlankNavigate', target: 'panCanvas', actions: ['clearSelection', 'hideContextMenu', 'capPan'] },
 
-              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: [ 'hideContextMenu', 'capLasso'] },
+              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['hideContextMenu', 'capLasso'] },
               { cond: 'onePointerGroupDirect', target: 'moveGroup', actions: ['selectElement', 'capGroupMove'] },
-              { cond: 'onePointerGroupNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },          
+              { cond: 'onePointerGroupNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
               { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['selectElement', 'capMove'] },
               { cond: 'onePointerElementNavigate', target: 'panCanvas', actions: ['selectElement', 'capPan'] },
 
@@ -61,7 +62,7 @@ export const gestureMachine = createMachine({
               { cond: 'twoPointersGroupDirect', target: 'pinchGroup', actions: ['capGroupPinch'] },
               { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: ['capPinchElement'] },
             ],
-            LONG_PRESS : { target:'idle', actions:['buildContextMenu','showContextMenu'] },
+            LONG_PRESS: { target: 'idle', actions: ['buildContextMenu', 'showContextMenu'] },
             WHEEL: { target: 'wheelZoom' },
             DOUBLE_TAP: [
               { cond: 'doubleTapElementNavigate', target: 'doubleTapElement', actions: ['selectElement', 'switchToDirect'] },
@@ -109,10 +110,10 @@ export const gestureMachine = createMachine({
           entry: 'log',
           on: {
             POINTER_DOWN: {
-  cond   : 'twoPointersPinch',
-  target : 'pinchCanvas',   // jump to the existing pinch state
-  actions: 'clearLasso',
-},
+              cond: 'twoPointersPinch',
+              target: 'pinchCanvas',
+              actions: 'clearLasso',
+            },
             POINTER_MOVE: { actions: 'applyLassoUpdate' },
             POINTER_UP: { target: 'idle', actions: 'commitLassoSelection' }
           }
@@ -224,7 +225,7 @@ export const gestureMachine = createMachine({
       isNavigate: (_c, _e, { state }) => state.matches('mode.navigate'),
       isDirect: (_c, _e, { state }) => state.matches('mode.direct'),
       //twoPointersNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 2 && p.state.matches('mode.navigate'),
-      twoPointersPinch: (_c,e)=>Object.keys(e.active||{}).length===2,
+      twoPointersPinch: (_c, e) => Object.keys(e.active || {}).length === 2,
       onePointerBlankNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && p.state.matches('mode.navigate'),
       onePointerElementNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.groupSelected && p.state.matches('mode.navigate'),
 
@@ -258,10 +259,10 @@ export const gestureMachine = createMachine({
 
     actions: {
       log: (c, e, meta) => console.log('[FSM]', `${meta.state.value.mode}:${meta.state.value.gesture}`, { c, e, meta }),
-      clearLasso: (ctx)=>{                         // tidy up marquee
-    ctx.draft && delete ctx.draft.start;
-    ctx.controller.removeSelectionBox();
-  },
+      clearLasso: (ctx) => {
+        ctx.draft && delete ctx.draft.start;
+        ctx.controller.removeSelectionBox();
+      },
       capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
       capPinch: assign({
         draft: (_c, e) => {
@@ -372,28 +373,28 @@ export const gestureMachine = createMachine({
         }
       }),
       capGroupPinch: assign({
-  draft: (_c, e, { state }) => {
-    const ids   = [...state.context.controller.selectedElementIds];
-    const start = new Map();
-    const bbox  = state.context.controller.getGroupBBox();
-    ids.forEach(id=>{
-      const el = state.context.controller.findElementById(id);
-      start.set(id,{
-        offsetX : el.x - bbox.cx,
-        offsetY : el.y - bbox.cy,
-        rotation: el.rotation || 0,
-        scale   : el.scale    || 1
-      });
-    });
-    const pts = Object.values(e.active||{});
-    return {
-      startDist : Math.hypot(pts[1].x-pts[0].x, pts[1].y-pts[0].y),
-      startAngle: Math.atan2(pts[1].y-pts[0].y, pts[1].x-pts[0].x),
-      bboxCenter: bbox,
-      startPositions: start
-    };
-  }
-}),
+        draft: (_c, e, { state }) => {
+          const ids = [...state.context.controller.selectedElementIds];
+          const start = new Map();
+          const bbox = state.context.controller.getGroupBBox();
+          ids.forEach(id => {
+            const el = state.context.controller.findElementById(id);
+            start.set(id, {
+              offsetX: el.x - bbox.cx,
+              offsetY: el.y - bbox.cy,
+              rotation: el.rotation || 0,
+              scale: el.scale || 1
+            });
+          });
+          const pts = Object.values(e.active || {});
+          return {
+            startDist: Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
+            startAngle: Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x),
+            bboxCenter: bbox,
+            startPositions: start
+          };
+        }
+      }),
       capPinchElement: assign({
         draft: (c, e) => {
           const el = c.controller.findElementById(e.elementId);
@@ -412,13 +413,13 @@ export const gestureMachine = createMachine({
       }),
 
       updateMode: (c, _e, meta) => {
-        console.log("[FSM] action updateMode", );
+        console.log("[FSM] action updateMode",);
         c.controller.mode = meta.state.matches('mode.direct') ? 'direct' : 'navigate';
         c.controller.updateModeUI();
       },
 
       switchToDirect: (c, _e, meta) => {
-        console.log("[FSM] action switchToDirect", meta.state.matches('mode.navigate') )
+        console.log("[FSM] action switchToDirect", meta.state.matches('mode.navigate'))
         if (meta.state.matches('mode.navigate')) {
           c.controller.switchMode('direct');
         }

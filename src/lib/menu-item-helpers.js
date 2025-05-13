@@ -191,3 +191,20 @@ export function exportJSON(c) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+/* Convert selection to a different element type */
+export function changeType(c, newType){
+  if (!c.selectedElementIds.size) return;
+  c.selectedElementIds.forEach(id=>{
+    const el = c.findElementById(id);
+    if (!el || el.type === newType) return;
+    /* 1 . mutate */
+    el.type = newType;
+    /* 2 . refresh DOM */
+    c.updateElementNode(c.elementNodesMap[id], el, true);
+  });
+  /* 3 . redraw & persist */
+  c.requestRender();
+  saveCanvas(c.canvasState);
+  c._pushHistorySnapshot('type change');
+}

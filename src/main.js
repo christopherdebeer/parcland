@@ -1019,7 +1019,7 @@ _showElementError(node, msg = 'Error') {
         let node = this.elementNodesMap[el.id];
         if (node) return node;
 
-        const view = elementRegistry.viewFor(el.type);
+        const view = this.elementRegistry.viewFor(el.type);
         node = document.createElement('div');
         node.classList.add('canvas-element');
         node.dataset.elId = el.id;

@@ -20,7 +20,7 @@
 
 import { saveCanvas } from './storage.js';
 import {
-  addEl, duplicateEl, deleteSelection,
+  addEl, duplicateEl, deleteSelection, changeType,
   copySelection, pasteClipboard, clipboardHasContent,
   generateNew, inlineEdit, reorder,
   groupSelection, ungroupSelection, canUngroup,
@@ -28,6 +28,26 @@ import {
 } from './menu-item-helpers.js';
 import { autoLayout } from './auto-layout.js';
 import { align } from './align.js';
+
+function buildTypeItems(controller){
+  /* 1 – native + plug-ins */
+  const base = [
+    {type:'text',     icon:'fa-font'            },
+    {type:'markdown', icon:'fa-brands fa-markdown'},
+    {type:'img',      icon:'fa-image'           },
+    {type:'html',     icon:'fa-code'            },
+  ];
+  const extras = controller.elementRegistry      // dynamic plug-ins
+        ?.listTypes()
+        .filter(t=>!base.some(b=>b.type===t))
+        .map(t=>({type:t, icon:'fa-cube'})) || [];
+  /* 2 – emit menu items */
+  return [...base, ...extras].map(t=>({
+    label : t.type,
+    icon  : t.icon,
+    action: c=>changeType(c, t.type)
+  }));
+}
 
 /**
  * buildRootItems(cfg)  → Item[]
@@ -89,6 +109,8 @@ export function buildRootItems(cfg) {
             { label: 'Radial', action: c => autoLayout(c, { algorithm: 'radial' }) }
           ]
         },
+        { label: 'Convert Type', icon:'fa-shapes', children: buildTypeItems },
+
       ]
     },
 

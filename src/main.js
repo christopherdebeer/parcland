@@ -32,6 +32,7 @@ class CanvasController {
             translateY: 0
         };
 
+        this.elementRegistry = elementRegistry;
         this.elementNodesMap = {};
         this.edgeNodesMap = {};
 

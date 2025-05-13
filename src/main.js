@@ -555,7 +555,7 @@ class CanvasController {
     }
 
     updateElementNode(node, el, isSelected, skipHandles) {
-        const view = elementRegistry.viewFor(el.type);
+        const view = this.elementRegistry.viewFor(el.type);
         if (view && typeof view.update === 'function') {
             view.update(el, node.firstChild, this);   // firstChild is view root
         } else {

@@ -580,34 +580,70 @@ class CanvasController {
         }
     }
 
+    /**
+ * Visually flag a problem on a canvas element.
+ * Re-invocations replace the message so only one badge is shown.
+ */
+_showElementError(node, msg = 'Error') {
+  if (!node) return;
+
+  let badge = node.querySelector('.el-err');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'el-err';
+    Object.assign(badge.style, {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      maxWidth: '160px',
+      padding: '.2em .4em',
+      fontSize: 'calc(.6rem / var(--zoom))',
+      background: 'crimson',
+      color: '#fff',
+      fontFamily: 'monospace',
+      zIndex: 9999,
+      pointerEvents: 'none',
+      whiteSpace: 'pre-wrap'
+    });
+    node.appendChild(badge);
+  }
+  badge.textContent = `⚠ ${msg}`;
+}
+
     async executeScriptElements(el, node) {
-        const scriptElements = Array.from(node.querySelectorAll('script'));
-        const loadScript = (script) => {
-            console.log("Loading script", script);
-            return new Promise((resolve, reject) => {
-                script.onload = () => resolve();
-                script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-                document.head.appendChild(script);
-            });
-        };
+  const scriptElements = Array.from(node.querySelectorAll('script'));
 
-        for (const scriptElement of scriptElements) {
-            console.log("Encountered script", scriptElement);
-            if (scriptElement.type !== 'module' && !scriptElement.getAttribute('src') && scriptElement.textContent && scriptElement.textContent.trim()) {
-                const code = scriptElement.textContent;
-                try {
-                    const run = new Function('element', 'controller', 'node', code);
-                    run(el, this, node);
-                } catch (err) {
-                    console.warn("Error executing script", el, node, err)
-                }
+  const loadScript = (script) => {
+    return new Promise((resolve, reject) => {
+      script.onload  = resolve;
+      script.onerror = () => {
+        _showElementError(node.closest('.canvas-element'),
+          `Failed to load\n${script.getAttribute('src')}`);
+        reject(new Error(`Failed to load script: ${script.getAttribute('src')}`));
+      };
+      document.head.appendChild(script);
+    });
+  };
 
-            }
-            else {
-                loadScript(scriptElement);
-            }
-        }
+  for (const scriptElement of scriptElements) {
+    if (scriptElement.type !== 'module' &&
+        !scriptElement.getAttribute('src') &&
+        scriptElement.textContent.trim()) {
+
+      try {
+        const fn = new Function('element', 'controller', 'node',
+                                scriptElement.textContent);
+        fn(el, this, node);
+      } catch (err) {
+        console.warn('Inline script error', err);
+        _showElementError(node.closest('.canvas-element'), err.message);
+      }
+
+    } else {
+      await loadScript(scriptElement);
     }
+  }
+}
 
     findElementOrEdgeById(id) {
         console.log(`[DEBUG] findElementOrEdgeById("${id}")`);

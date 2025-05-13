@@ -40,7 +40,7 @@ export function installCommandPalette(controller, opts = {}) {
         });
       });
     }
-    walk(buildRootItems(cfg), []);
+    walk(buildRootItems(controller), []);
     return out;
   }
   let commandPool = () => flattenCommands();

@@ -7,7 +7,7 @@ import { installCommandPalette } from './lib/command-palette.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';
-import { elementRegistry } from './lib/elementRegistry.js';
+import { createRegistry() } from './lib/elementRegistry.js';
 
 class CanvasController {
     constructor(canvasState) {
@@ -32,7 +32,7 @@ class CanvasController {
             translateY: 0
         };
 
-        this.elementRegistry = elementRegistry;
+        this.elementRegistry = createRegistry();
         this.elementNodesMap = {};
         this.edgeNodesMap = {};
 

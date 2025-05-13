@@ -53,7 +53,7 @@ function buildTypeItems(controller){
  * buildRootItems(cfg)  → Item[]
  * Constructs and returns the root-level item array.
  */
-export function buildRootItems(cfg) {
+export function buildRootItems(controller) {
 
   return [
     /* ── Mode toggle ─────────────────────────────────────────────────────── */
@@ -109,7 +109,7 @@ export function buildRootItems(cfg) {
             { label: 'Radial', action: c => autoLayout(c, { algorithm: 'radial' }) }
           ]
         },
-        { label: 'Convert Type', icon:'fa-shapes', children: buildTypeItems },
+        { label: 'Convert Type', icon:'fa-shapes', children: buildTypeItems(controller) },
 
       ]
     },

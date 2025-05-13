@@ -195,7 +195,7 @@ export function exportJSON(c) {
 /* Convert selection to a different element type */
 export function changeType(c, newType){
   if (!c.selectedElementIds.size) return;
-  c.selectedElementIds.forEach(id=>{
+  Array.from(c.selectedElementIds).forEach(id=>{
     const el = c.findElementById(id);
     if (!el || el.type === newType) return;
     /* 1 . mutate */

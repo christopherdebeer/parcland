@@ -568,7 +568,7 @@ class CanvasController {
         if (isSelected) {
             node.classList.add("selected");
         }
-        this.setElementContent(node, el);
+        //this.setElementContent(node, el);
 
         if (!skipHandles) {
             // Remove old handles (if any)
@@ -617,7 +617,7 @@ _showElementError(node, msg = 'Error') {
     return new Promise((resolve, reject) => {
       script.onload  = resolve;
       script.onerror = () => {
-        _showElementError(node.closest('.canvas-element'),
+        this._showElementError(node.closest('.canvas-element'),
           `Failed to load\n${script.getAttribute('src')}`);
         reject(new Error(`Failed to load script: ${script.getAttribute('src')}`));
       };
@@ -636,7 +636,7 @@ _showElementError(node, msg = 'Error') {
         fn(el, this, node);
       } catch (err) {
         console.warn('Inline script error', err);
-        _showElementError(node.closest('.canvas-element'), err.message);
+        this._showElementError(node.closest('.canvas-element'), err.message);
       }
 
     } else {

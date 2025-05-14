@@ -581,3 +581,18 @@ body {
   opacity:1;
 }
 
+#group-box{
+  position:absolute; pointer-events:none; z-index:98;
+}
+#group-box .box{
+  position:absolute; inset:0;
+  border:1px dashed #00aaff;
+  background:rgba(0,170,255,.05);
+}
+#group-box .element-handle{
+  pointer-events:all;               /* so the FSM can grab them */
+}
+#group-box .resize-handle{right:-1.5em;bottom:-1.5em;}
+#group-box .rotate-handle{top:-2em;left:50%;transform:translateX(-50%);}
+#group-box .scale-handle{top:-1.5em;right:-1.5em;}
+

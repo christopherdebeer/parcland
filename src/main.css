@@ -581,18 +581,21 @@ body {
   opacity:1;
 }
 
+/* ─── multi-selection bounding box ───────────────────────────── */
 #group-box{
-  position:absolute; pointer-events:none; z-index:98;
+  position:absolute;
+  z-index:98;
+  pointer-events:none;          /* box itself should never intercept clicks */
 }
+
 #group-box .box{
-  position:absolute; inset:0;
-  border:1px dashed #00aaff;
+  position:absolute;
+  inset:0;
+  border:calc(1px / var(--zoom)) dashed #00aaff;   /* optical 1 px */
   background:rgba(0,170,255,.05);
 }
-#group-box .element-handle{
-  pointer-events:all;               /* so the FSM can grab them */
-}
+
+/* handles recycle existing classes so FSM logic stays unchanged */
 #group-box .resize-handle{right:-1.5em;bottom:-1.5em;}
 #group-box .rotate-handle{top:-2em;left:50%;transform:translateX(-50%);}
 #group-box .scale-handle{top:-1.5em;right:-1.5em;}
-

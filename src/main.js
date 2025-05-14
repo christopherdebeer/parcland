@@ -43,6 +43,15 @@ class CanvasController {
         this.modeBtn = document.getElementById("mode");
         this.drillUpBtn = document.getElementById("drillUp");
         this.edgesLayer = document.getElementById("edges-layer");
+        this.groupBox = document.createElement('div');
+this.groupBox.id = 'group-box';
+this.groupBox.innerHTML = `
+  <div class="box"></div>
+  <div class="element-handle resize-handle"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
+  <div class="element-handle rotate-handle"><i class="fa-solid fa-rotate"></i></div>
+  <div class="element-handle scale-handle"><i class="fa-solid fa-up-down-left-right"></i></div>`;
+this.canvas.appendChild(this.groupBox);
+this.groupBox.style.display='none';
 
         this.MAX_SCALE = 10;
         this.MIN_SCALE = 0.1;
@@ -275,13 +284,14 @@ class CanvasController {
                 this.selectedElementIds.add(id);
             }
         }
-
+        this.updateGroupBox()
         this.requestRender();
     }
 
     clearSelection() {
         if (this.selectedElementIds.size) {
             this.selectedElementIds.clear();
+            this.updateGroupBox()
             this.requestRender();
         }
     }
@@ -304,6 +314,19 @@ class CanvasController {
             cy: (Math.min(...ys) + Math.max(...ye)) / 2
         };
     }
+
+    updateGroupBox(){
+  if(this.selectedElementIds.size < 2){ this.groupBox.style.display='none'; return; }
+  const bb = this.getGroupBBox();
+  if(!bb){ this.groupBox.style.display='none'; return; }
+  const scale=this.viewState.scale;
+  this.groupBox.style.display='block';
+  this.groupBox.style.left  = (bb.x1) + 'px';
+  this.groupBox.style.top   = (bb.y1) + 'px';
+  this.groupBox.style.width = (bb.x2-bb.x1) + 'px';
+  this.groupBox.style.height= (bb.y2-bb.y1) + 'px';
+  this.groupBox.style.transform = `translate(${this.viewState.translateX}px,${this.viewState.translateY}px) scale(${scale})`;
+}
 
     switchMode(m) {
         if (m && this.mode === m) return;
@@ -364,6 +387,8 @@ class CanvasController {
         // matches the visible region.
         this.edgesLayer.setAttribute("viewBox", `${visibleX} ${visibleY} ${visibleWidth} ${visibleHeight}`);
         // console.log("[DEBUG] SVG viewBox updated to:", visibleX, visibleY, visibleWidth, visibleHeight);
+
+        this.updateGroupBox()
     }
 
     recenterOnElement(elId) {
@@ -419,7 +444,7 @@ class CanvasController {
                 delete this.elementNodesMap[id];
             }
         });
-
+        this.updateGroupBox()
         this.requestEdgeUpdate();
     }
 

@@ -50,7 +50,7 @@ this.groupBox.innerHTML = `
   <div class="element-handle resize-handle"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
   <div class="element-handle rotate-handle"><i class="fa-solid fa-rotate"></i></div>
   <div class="element-handle scale-handle"><i class="fa-solid fa-up-down-left-right"></i></div>`;
-this.canvas.appendChild(this.groupBox);
+this.container.appendChild(this.groupBox);
 this.groupBox.style.display='none';
 
         this.MAX_SCALE = 10;
@@ -316,16 +316,22 @@ this.groupBox.style.display='none';
     }
 
     updateGroupBox(){
-  if(this.selectedElementIds.size < 2){ this.groupBox.style.display='none'; return; }
+  if(this.selectedElementIds.size < 2){
+    this.groupBox.style.display = 'none';
+    return;
+  }
+
   const bb = this.getGroupBBox();
-  if(!bb){ this.groupBox.style.display='none'; return; }
-  const scale=this.viewState.scale;
-  this.groupBox.style.display='block';
-  this.groupBox.style.left  = (bb.x1) + 'px';
-  this.groupBox.style.top   = (bb.y1) + 'px';
-  this.groupBox.style.width = (bb.x2-bb.x1) + 'px';
-  this.groupBox.style.height= (bb.y2-bb.y1) + 'px';
-  this.groupBox.style.transform = `translate(${this.viewState.translateX}px,${this.viewState.translateY}px) scale(${scale})`;
+  if(!bb){
+    this.groupBox.style.display = 'none';
+    return;
+  }
+
+  this.groupBox.style.display = 'block';
+  this.groupBox.style.left   = bb.x1 + 'px';           // canvas-space
+  this.groupBox.style.top    = bb.y1 + 'px';
+  this.groupBox.style.width  = (bb.x2 - bb.x1) + 'px';
+  this.groupBox.style.height = (bb.y2 - bb.y1) + 'px';
 }
 
     switchMode(m) {

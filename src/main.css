@@ -533,6 +533,7 @@ body {
   cursor:pointer; opacity:.4;
 }
 #cmd-clear:hover{opacity:.8;}
+#cmd-palette.empty:not(.awaiting) #cmd-clear { display: none; }
 #cmd-palette.awaiting input{border-color:#ff9800;}
 
 /* suggestions pop upward ──────────────────────────────────────────────── */

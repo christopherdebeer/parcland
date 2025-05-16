@@ -642,6 +642,8 @@ _showElementError(node, msg = 'Error') {
 }
 
     async executeScriptElements(el, node) {
+        // defer execution
+        await new Promise(r => requestAnimationFrame(r));
   const scriptElements = Array.from(node.querySelectorAll('script'));
 
   const loadScript = (script) => {

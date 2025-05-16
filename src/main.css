@@ -518,11 +518,22 @@ body {
   outline:none;
   background:#fff;
   box-shadow:0 2px 6px rgba(0,0,0,.15);
+  padding-right:2.3em;
 }
 #cmd-palette input:focus{
   border-color:#2196F3;
   box-shadow:0 0 0 2px rgba(33,150,243,.25);
 }
+#cmd-clear{
+  position:absolute;
+  right:.6em; top:50%;
+  transform:translateY(-50%);
+  border:none; background:transparent;
+  font-size:1.2em; line-height:1;
+  cursor:pointer; opacity:.4;
+}
+#cmd-clear:hover{opacity:.8;}
+#cmd-palette.awaiting input{border-color:#ff9800;}
 
 /* suggestions pop upward ──────────────────────────────────────────────── */
 #cmd-palette .suggestions{

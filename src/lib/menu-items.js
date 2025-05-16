@@ -1,23 +1,3 @@
-/* ────────────────────────────────────────────────────────────────────────────
- *  menu-items.js                   (2025-05-04)
- *  Pure data – the hierarchical menu definition
- *
- *  ── Item schema ───────────────────────────────────────────────────────────
- *  An “item” is a plain object with these optional properties
- *
- *    label    : string | (controller,cfg)=>string
- *    icon     : string | (controller,cfg)=>string   (Font-Awesome class list)
- *    action   : (controller)=>void                  (no return value expected)
- *    children : Item[]                              (turns this item into a
- *                                                    submenu parent)
- *    visible  : (controller)=>boolean               (default true)
- *    enabled  : (controller)=>boolean               (default true — ignored
- *                                                    by the engine for now)
- *
- *  The *controller* argument is the live CanvasController instance so an item
- *  can inspect application state (selection, mode, …). 
- *  ────────────────────────────────────────────────────────────────────────── */
-
 import { saveCanvas } from './storage.js';
 import {
   addEl, duplicateEl, deleteSelection, changeType,
@@ -70,11 +50,11 @@ export function buildRootItems(controller) {
     /* ── Add … ───────────────────────────────────────────────────────────── */
     {
       label: 'Add', icon: 'fa-plus-circle', children: [
-        { label: 'Text', icon: 'fa-font', action: c => addEl(c, 'text') },
-        { label: 'Markdown', icon: 'fa-brands fa-markdown', action: c => addEl(c, 'markdown') },
-        { label: 'Image', icon: 'fa-image', action: c => addEl(c, 'img') },
+        { label: 'Text', icon: 'fa-font', needsInput:true, action: (c,text) => addEl(c, 'text', text) },
+        { label: 'Markdown', icon: 'fa-brands fa-markdown', needsInput:true, action: (c,text) => addEl(c, 'markdown', text) },
+        { label: 'Image', icon: 'fa-image', needsInput:true, action: (c,text) => addEl(c, 'img', text) },
         { label: 'Canvas', icon: 'fa-object-group', action: c => addEl(c, 'canvas-container') },
-        { label: 'AI-Generate', icon: 'fa-wand-magic-sparkles', action: c => addEl(c, 'markdown', 'generating…') }
+        { label: 'AI-Generate', icon: 'fa-wand-magic-sparkles', needsInput:true, action: (c,text) => addEl(c, 'markdown', text || 'generating…') }
       ]
     },
 

@@ -90,14 +90,14 @@ export function installCommandPalette(controller, opts = {}) {
     pending=cmd;
     $input.value='';
     $input.placeholder=cmd.path.at(-1)+'…';
-    $clear.style.display='block';
+    
     root.classList.add('awaiting');
     filtered=[]; sel=-1; render();
   };
   const quitInput=()=>{
     mode='browse'; pending=null;
     $input.placeholder='› Type a command…';
-    $clear.style.display='none';
+    
     reset();
   };
 

@@ -90,7 +90,7 @@ export function installCommandPalette(controller, opts = {}) {
     pending=cmd;
     $input.value='';
     $input.placeholder=cmd.path.at(-1)+'…';
-    
+    $input.focus();
     root.classList.add('awaiting');
     filtered=[]; sel=-1; render();
   };

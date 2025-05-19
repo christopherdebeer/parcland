@@ -19,7 +19,7 @@ function _plainToY(doc, snap) {
   const meta = doc.getMap('meta');
   meta.clear();
   Object.entries(snap).forEach(([k, v]) => {
-    if (k === 'elements' || k === 'edges') return;
+    if (k.startsWith("__") || k === 'elements' || k === 'edges') return;
     meta.set(k, v);
   });
 }

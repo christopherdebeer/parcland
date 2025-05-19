@@ -8,15 +8,18 @@ import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';
 import { elementRegistry } from './lib/elementRegistry.js';
+import { createCrdtAdapter } from './lib/crdt-adapter.js';
 
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
+        this.__crdt = createCrdtAdapter(canvasState); 
+        canvasState.__crdt = this.__crdt;               
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
         }
-
+        
         this.selectedElementIds = new Set();   // multiselect aware
         Object.defineProperty(this, 'selectedElementId', {  // legacy shim
             get: () => (this.selectedElementIds.size === 1 ? [...this.selectedElementIds][0] : null),

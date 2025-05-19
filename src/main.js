@@ -203,7 +203,7 @@ this.groupBox.style.display='none';
         return {
             label,
             data: structuredClone({
-                canvasState: this.canvasState,
+                canvasState: {...this.canvasState, __crdt: undefined},
                 viewState: this.viewState
             })
         };

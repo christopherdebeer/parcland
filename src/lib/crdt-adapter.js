@@ -1,45 +1,66 @@
 import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.9/+esm';
 
-// -- internal helpers ---------------------------------------------------------
-function _plainToY(root, snap) {
-  // we copy the two big arrays 1-to-1; anything extra just JSON-stringifies
-  const yEls   = root.getArray('elements');
-  const yEdges = root.getArray('edges');
-  yEls.delete(0, yEls.length);               // clear & refill
-  yEdges.delete(0, yEdges.length);
-  yEls.push(snap.elements   ?? []);
-  yEdges.push(snap.edges    ?? []);
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                           */
+/* ------------------------------------------------------------------ */
 
-  // any other top-level keys (canvasId, versionHistory, …)
-  Object.entries(snap).forEach(([k,v])=>{
-    if(k==='elements'||k==='edges') return;
-    root.set(k, v);
+/** push plain JS `snap` into the Yjs structures in-place */
+function _plainToY(doc, snap) {
+  const yEls   = doc.getArray('elements');
+  const yEdges = doc.getArray('edges');
+
+  // Clear and refill arrays (keeps indices identical to plain list)
+  yEls.delete(0, yEls.length);
+  yEdges.delete(0, yEdges.length);
+  yEls.push(snap.elements ?? []);
+  yEdges.push(snap.edges   ?? []);
+
+  // copy every other top-level scalar / object into a map
+  const meta = doc.getMap('meta');
+  meta.clear();
+  Object.entries(snap).forEach(([k, v]) => {
+    if (k === 'elements' || k === 'edges') return;
+    meta.set(k, v);
   });
 }
 
-function _yToPlain(root){
-  return root.toJSON();                       // same tree you had before
+/** Convert the current Y.Doc state back to the exact JSON your app expects */
+function _yToPlain(doc) {
+  const meta   = doc.getMap('meta').toJSON();
+  return {
+    ...meta,
+    elements: doc.getArray('elements').toJSON(),
+    edges   : doc.getArray('edges').toJSON()
+  };
 }
 
-// -- public API ---------------------------------------------------------------
-export function createCrdtAdapter(initialSnap){
-  const doc  = new Y.Doc();
-  const root = doc.getMap('canvas');
-  _plainToY(root, initialSnap);
+/* ------------------------------------------------------------------ */
+/*  Public factory – called once per CanvasController                 */
+/* ------------------------------------------------------------------ */
+export function createCrdtAdapter(initialSnap) {
+  const doc = new Y.Doc();
 
-  /* 1 ◇ push a plain-JSON snapshot (for legacy /save) */
-  function exportSnapshot(){ return _yToPlain(root); }
+  /* lazily create shared types the first time */
+  doc.getArray('elements');   // instantiate
+  doc.getArray('edges');
+  doc.getMap('meta');
 
-  /* 2 ◇ replay an incoming binary Yjs update (future WS step) */
-  function applyRemote(update){ Y.applyUpdate(doc, update); }
+  _plainToY(doc, initialSnap);
 
-  /* 3 ◇ cheap sync for “shim only” phase */
-  function refreshFromPlain(latestPlain){ _plainToY(root, latestPlain); }
+  /* API surface that the controller / storage layer will use */
+  return {
+    doc,
 
-  /* 4 ◇ hook to ship deltas later */
-  function onLocalUpdate(cb){
-    doc.on('update', cb);            // gives Uint8Array update frame
-  }
+    /** Get a full plain-JSON snapshot (for /save, undo, etc.) */
+    exportSnapshot() { return _yToPlain(doc); },
 
-  return { doc, exportSnapshot, applyRemote, refreshFromPlain, onLocalUpdate };
+    /** Feed an incoming binary update (when you add WebSocket sync) */
+    applyRemote(update) { Y.applyUpdate(doc, update); },
+
+    /** During the “shim” phase, copy fresh JS → CRDT before we save */
+    refreshFromPlain(snap) { _plainToY(doc, snap); },
+
+    /** Subscribe to local changes (to broadcast later) */
+    onLocalUpdate(cb) { doc.on('update', cb); }
+  };
 }

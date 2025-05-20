@@ -100,13 +100,11 @@ body {
 
 .canvas-element>.content {
     width: var(--width);
-    /* height: var(--height); */
     border: 1px solid transparent;
     border-width: calc(1px / var(--scale) / var(--zoom));
-
     box-sizing: border-box;
-    /* overflow: auto; */
-    /* really? */
+    /* :( not right yet) */
+    /* padding: var(--padding); */
 }
 
 /* images and html still get exactly the canvas’s width & height */
@@ -158,7 +156,7 @@ body {
 }
 
 .canvas-element.selected>.content {
-    border: 1px solid var(--highlight);
+    border-color: var(--highlight);
 }
 
 .canvas-element[type="edit-prompt"]>.content .CodeMirror {
@@ -580,27 +578,27 @@ body {
 #cmd-palette .s-icon i{width:1em;}
 
 /* breadcrumb crumbs */
-#cmd-palette .crumb{
+#cmd-palette .crumb {
   opacity:.6;
   white-space:nowrap;
 }
 #cmd-palette .suggestion.active .crumb,
-#cmd-palette .suggestion:hover .crumb{
+#cmd-palette .suggestion:hover .crumb {
   opacity:1;
 }
-#cmd-palette .crumb:last-child{
+#cmd-palette .crumb:last-child {
   font-weight:600;
   opacity:1;
 }
 
 /* ─── multi-selection bounding box ───────────────────────────── */
-#group-box{
+#group-box {
   position:absolute;
   z-index:98;
   pointer-events:none;          /* box itself should never intercept clicks */
 }
 
-#group-box .box{
+#group-box .box {
   position:absolute;
   inset:0;
   border: 1px solid var(--highlight);
@@ -609,6 +607,7 @@ body {
 }
 
 /* handles recycle existing classes so FSM logic stays unchanged */
+#canvas[mode="navigate"] #group-box .element-handle { display: none;}
 #group-box .resize-handle{right:-1.5em;bottom:-1.5em;}
 #group-box .rotate-handle{top:-2em;left:50%;transform:translateX(-50%);}
 #group-box .scale-handle{top:-1.5em;right:-1.5em;}

@@ -135,5 +135,5 @@ export async function loadInitialCanvas(defaultState, paramToken) {
 }
 
 function serializeCanvas(obj) {
-  return JSON.stringify(obj);
+  return JSON.stringify({...obj, __crdt: undefined });
 }

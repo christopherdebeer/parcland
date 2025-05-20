@@ -48,9 +48,12 @@ export function installCommandPalette(controller, opts = {}) {
   root.id = 'cmd-palette';
   root.classList.add('empty');
   root.innerHTML = `
-    <input type="text" autocomplete="off" spellcheck="false" placeholder="› Type a command…" />
-    <button id="cmd-clear">&times;</button>
-    <ul class="suggestions"></ul>`;
+    <ul class="suggestions"></ul>
+    <div class="cmd-wrapper">
+      <input type="text" autocomplete="off" spellcheck="false" placeholder="› Type a command…" />
+      <button id="cmd-clear">&times;</button>
+    </div>
+    `;
   document.body.appendChild(root);
 
   const $input  = root.querySelector('input');

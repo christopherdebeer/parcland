@@ -13,6 +13,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
+    --highlight: #00aaff;
 }
 
 #canvas {
@@ -102,6 +103,7 @@ body {
     /* height: var(--height); */
     border: 1px solid transparent;
     border-width: calc(1px / var(--scale) / var(--zoom));
+
     box-sizing: border-box;
     /* overflow: auto; */
     /* really? */
@@ -141,8 +143,7 @@ body {
 
 .canvas-element[type="edit-prompt"]>.content {
     z-index: 999;
-    border: 1px solid grey;
-    border-width: calc(1px / var(--scale) / var(--zoom));
+    border-color: grey;
     box-sizing: border-box;
     overflow: auto;
     background-color: white;
@@ -157,8 +158,7 @@ body {
 }
 
 .canvas-element.selected>.content {
-    border: 1px dashed #00aaff;
-    border-width: calc(1px / var(--scale) / var(--zoom));
+    border: 1px solid var(--highlight);
 }
 
 .canvas-element[type="edit-prompt"]>.content .CodeMirror {
@@ -603,7 +603,8 @@ body {
 #group-box .box{
   position:absolute;
   inset:0;
-  border:calc(1px / var(--zoom)) dashed #00aaff;   /* optical 1 px */
+  border: 1px solid var(--highlight);
+  border-width: calc(1px / var(--zoom));
   background:rgba(0,170,255,.05);
 }
 

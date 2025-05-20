@@ -13,8 +13,9 @@ import { createCrdtAdapter } from './lib/crdt-adapter.js';
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
+        try {
         this.__crdt = createCrdtAdapter(canvasState, {
-  room: canvasState.canvasId          // every peer must pass the same string
+  room: canvasState.canvasId,          // every peer must pass the same string
   // rtc : { password: 'optional-pw' }  // any y-webrtc option
 }); 
         // React to CRDT changes…
@@ -22,7 +23,8 @@ this.__crdt.onLocalUpdate(update => {
   console.log('local change →', update.byteLength, 'bytes');
 });
 
-        canvasState.__crdt = this.__crdt;               
+        canvasState.__crdt = this.__crdt;
+        } catch(err) { console.error("Failed to setup CRDT adapter", err); }
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];

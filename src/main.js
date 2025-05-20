@@ -13,7 +13,15 @@ import { createCrdtAdapter } from './lib/crdt-adapter.js';
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
-        this.__crdt = createCrdtAdapter(canvasState); 
+        this.__crdt = createCrdtAdapter(canvasState, {
+  room: canvasState.canvasId          // every peer must pass the same string
+  // rtc : { password: 'optional-pw' }  // any y-webrtc option
+}); 
+        // React to CRDT changes…
+this.__crdt.onLocalUpdate(update => {
+  console.log('local change →', update.byteLength, 'bytes');
+});
+
         canvasState.__crdt = this.__crdt;               
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {

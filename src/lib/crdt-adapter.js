@@ -72,6 +72,37 @@ export function createCrdtAdapter(initialSnap, opts = {}) {
     ...rtc
   });
 
+ 
+
+// helper – count the maps the provider updates for us
+function peerCount () {
+  // 1 (this tab) + direct WebRTC connections + same-browser BroadcastChannel peers
+  const rtc = provider.room.webrtcConns.size;   // Map<peerId, WebrtcConn>
+  const bc  = provider.room.bcConns.size;       // Set<tabClientId>
+  return 1 + rtc + bc;
+}
+
+/* ---------------------------------------------------------- */
+/* 1 · log every connect / disconnect                          */
+/* ---------------------------------------------------------- */
+provider.on('peers', (payload) => {
+  // y-webrtc emits `[ { added, removed, webrtcPeers, bcPeers } ]`
+  const { added = [], removed = [] } = Array.isArray(payload) ? payload[0] : payload;
+
+  added.forEach(id   => console.info('🟢 peer joined :', id));
+  removed.forEach(id => console.info('🔴 peer left   :', id));
+
+  console.info('👥  total peers now →', peerCount());
+});
+
+/* ---------------------------------------------------------- */
+/* 2 · (OPTIONAL) react to awareness presence changes          */
+/*    gives one entry per device / tab, not per transport      */
+/* ---------------------------------------------------------- */
+provider.awareness.on('update', () => {
+  console.debug('presence map size =', provider.awareness.getStates().size);
+});
+
   /* ------------- 3. Adapter API (same as before) ------------------ */
   return {
     doc,          // expose for power-users / debugging

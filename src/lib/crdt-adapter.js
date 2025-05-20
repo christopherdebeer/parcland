@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /*  Imports – Yjs core + WebRTC provider                              */
 /* ------------------------------------------------------------------ */
-import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@13.6.9/+esm';
-import { WebrtcProvider } from 'https://cdn.jsdelivr.net/npm/y-webrtc@10.3.11/+esm';
+import * as Y from 'https://cdn.jsdelivr.net/npm/yjs@latest/+esm';
+import { WebrtcProvider } from 'https://cdn.jsdelivr.net/npm/y-webrtc@latest/+esm';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers (unchanged)                                               */

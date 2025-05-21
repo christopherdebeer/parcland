@@ -68,7 +68,7 @@ export function createCrdtAdapter(initialSnap, opts = {}) {
   // one provider per adapter; starts signalling immediately
   const provider = new WebrtcProvider(room, doc, {
     // keep defaults but allow caller to override anything
-    signaling : ['wss://signaling.yjs.dev'],
+    signaling : ['wss://y-webrtc-ckynwnzncc.now.sh'],
     ...rtc
   });
 

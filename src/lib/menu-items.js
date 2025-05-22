@@ -58,7 +58,25 @@ export function buildRootItems(controller) {
         { label: 'Markdown', icon: 'fa-brands fa-markdown', category: 'Create', shortcut: '⌘N M', needsInput: true, action: (c, text) => addEl(c, 'markdown', text) },
         { label: 'Image', icon: 'fa-image', category: 'Create', shortcut: '⌘N I', needsInput: true, action: (c, text) => addEl(c, 'img', text) },
         { label: 'Canvas', icon: 'fa-object-group', category: 'Create', shortcut: '⌘N C', action: c => addEl(c, 'canvas-container') },
-        { label: 'AI-Generate', icon: 'fa-wand-magic-sparkles', category: 'AI', shortcut: '⌘N A', needsInput: true, action: (c, text) => addEl(c, 'markdown', text || 'generating…') }
+        { 
+  label: 'AI-Generate', 
+  icon: 'fa-wand-magic-sparkles', 
+  category: 'AI', 
+  shortcut: '⌘N A', 
+  needsInput: true, 
+  action: async (c, text) => {
+    const { innerWidth: W, innerHeight: H } = window;
+    const pt = c.screenToCanvas(W / 2, H / 2);
+    const elId = c.createNewElement(pt.x, pt.y, 'markdown', text || 'generating…');
+    const el = c.findElementById(elId);
+    const newContent = await generateContent(text, el, c);
+    if (newContent) {
+      el.content = newContent;
+      c.updateElementNode(c.elementNodesMap[elId], el, true);
+      saveCanvas(c.canvasState);
+    }
+  }
+},
       ]
     },
 

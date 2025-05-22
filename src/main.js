@@ -1190,7 +1190,7 @@ class CanvasController {
             // Launch the self-contained modal and wait for the user to finish
             const { status, el: updated } = await showModal(el, {
                 /* Callback the modal can use for the “Generate” button */
-                generateContent: (seed) => generateContent(seed, el)
+                generateContent: (seed) => generateContent(seed, el, this)
             });
 
             // Persist changes if the user hit “Save”

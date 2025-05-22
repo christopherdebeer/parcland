@@ -8,6 +8,7 @@ import {
 } from './menu-item-helpers.js';
 import { autoLayout } from './auto-layout.js';
 import { align } from './align.js';
+import { generateContent } from './generation.js';
 
 function buildTypeItems(controller) {
   /* 1 – native + plug-ins */

@@ -316,15 +316,46 @@ class CanvasController {
     getGroupBBox() {
         if (this.selectedElementIds.size === 0) return null;
         const els = [...this.selectedElementIds].map(id => this.findElementById(id));
-        const xs = els.map(e => e.x - (e.width * (e.scale || 1)) / 2);
-        const ys = els.map(e => e.y - (e.height * (e.scale || 1)) / 2);
-        const xe = els.map(e => e.x + (e.width * (e.scale || 1)) / 2);
-        const ye = els.map(e => e.y + (e.height * (e.scale || 1)) / 2);
+        
+        // Calculate corners for each element considering rotation
+        const allCorners = [];
+        
+        els.forEach(el => {
+            const scaleFactor = el.scale || 1;
+            const halfW = (el.width * scaleFactor) / 2;
+            const halfH = (el.height * scaleFactor) / 2;
+            const cx = el.x;
+            const cy = el.y;
+            const theta = ((el.rotation || 0) * Math.PI) / 180;
+            const cosθ = Math.cos(theta);
+            const sinθ = Math.sin(theta);
+            
+            // Calculate the four corners of the rotated rectangle
+            const corners = [
+                { x: -halfW, y: -halfH }, // top-left
+                { x: halfW, y: -halfH },  // top-right
+                { x: halfW, y: halfH },   // bottom-right
+                { x: -halfW, y: halfH }   // bottom-left
+            ].map(pt => {
+                // Rotate point
+                const rx = pt.x * cosθ - pt.y * sinθ;
+                const ry = pt.x * sinθ + pt.y * cosθ;
+                // Translate to element position
+                return { x: cx + rx, y: cy + ry };
+            });
+            
+            allCorners.push(...corners);
+        });
+        
+        // Find min/max coordinates from all corners
+        const xs = allCorners.map(pt => pt.x);
+        const ys = allCorners.map(pt => pt.y);
+        
         return {
             x1: Math.min(...xs), y1: Math.min(...ys),
-            x2: Math.max(...xe), y2: Math.max(...ye),
-            cx: (Math.min(...xs) + Math.max(...xe)) / 2,
-            cy: (Math.min(...ys) + Math.max(...ye)) / 2
+            x2: Math.max(...xs), y2: Math.max(...ys),
+            cx: (Math.min(...xs) + Math.max(...xs)) / 2,
+            cy: (Math.min(...ys) + Math.max(...ys)) / 2
         };
     }
 

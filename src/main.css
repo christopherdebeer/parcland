@@ -531,6 +531,7 @@ div#cmd-palette:before {
 #cmd-palette .cmd-wrapper {
     position: relative;
 }
+
 #cmd-palette input {
     width: 100%;
     box-sizing: border-box;
@@ -587,7 +588,8 @@ div#cmd-palette:before {
     max-height: 50vh;
     overflow-y: auto;
     margin-bottom: 0.6em;
-    display: none;  /* toggled by JS */
+    display: none;
+    /* toggled by JS */
 }
 
 #cmd-palette.focused:not(.empty) .suggestions {

@@ -10,14 +10,14 @@ import { WebrtcProvider } from 'https://cdn.jsdelivr.net/npm/y-webrtc@latest/+es
 
 /** push plain JS `snap` into the Yjs structures in-place */
 function _plainToY(doc, snap) {
-  const yEls   = doc.getArray('elements');
+  const yEls = doc.getArray('elements');
   const yEdges = doc.getArray('edges');
 
   // Clear and refill arrays (keeps indices identical to plain list)
   yEls.delete(0, yEls.length);
   yEdges.delete(0, yEdges.length);
   yEls.push(snap.elements ?? []);
-  yEdges.push(snap.edges   ?? []);
+  yEdges.push(snap.edges ?? []);
 
   // copy every other top-level scalar / object into a map
   const meta = doc.getMap('meta');
@@ -30,11 +30,11 @@ function _plainToY(doc, snap) {
 
 /** Convert the current Y.Doc state back to the exact JSON your app expects */
 function _yToPlain(doc) {
-  const meta   = doc.getMap('meta').toJSON();
+  const meta = doc.getMap('meta').toJSON();
   return {
     ...meta,
     elements: doc.getArray('elements').toJSON(),
-    edges   : doc.getArray('edges').toJSON()
+    edges: doc.getArray('edges').toJSON()
   };
 }
 
@@ -62,46 +62,46 @@ export function createCrdtAdapter(initialSnap, opts = {}) {
   /* ------------- 2. Wire it to WebRTC ----------------------------- */
   const {
     room = 'demo-room',
-    rtc  = {}
+    rtc = {}
   } = opts;
 
   // one provider per adapter; starts signalling immediately
   const provider = new WebrtcProvider(room, doc, {
     // keep defaults but allow caller to override anything
-    signaling : ['wss://y-webrtc-ckynwnzncc.now.sh'],
+    signaling: ['wss://y-webrtc-ckynwnzncc.now.sh'],
     ...rtc
   });
 
- 
 
-// helper – count the maps the provider updates for us
-function peerCount () {
-  // 1 (this tab) + direct WebRTC connections + same-browser BroadcastChannel peers
-  const rtc = provider.room.webrtcConns.size;   // Map<peerId, WebrtcConn>
-  const bc  = provider.room.bcConns.size;       // Set<tabClientId>
-  return 1 + rtc + bc;
-}
 
-/* ---------------------------------------------------------- */
-/* 1 · log every connect / disconnect                          */
-/* ---------------------------------------------------------- */
-provider.on('peers', (payload) => {
-  // y-webrtc emits `[ { added, removed, webrtcPeers, bcPeers } ]`
-  const { added = [], removed = [] } = Array.isArray(payload) ? payload[0] : payload;
+  // helper – count the maps the provider updates for us
+  function peerCount() {
+    // 1 (this tab) + direct WebRTC connections + same-browser BroadcastChannel peers
+    const rtc = provider.room.webrtcConns.size;   // Map<peerId, WebrtcConn>
+    const bc = provider.room.bcConns.size;       // Set<tabClientId>
+    return 1 + rtc + bc;
+  }
 
-  added.forEach(id   => console.info('🟢 peer joined :', id));
-  removed.forEach(id => console.info('🔴 peer left   :', id));
+  /* ---------------------------------------------------------- */
+  /* 1 · log every connect / disconnect                          */
+  /* ---------------------------------------------------------- */
+  provider.on('peers', (payload) => {
+    // y-webrtc emits `[ { added, removed, webrtcPeers, bcPeers } ]`
+    const { added = [], removed = [] } = Array.isArray(payload) ? payload[0] : payload;
 
-  console.info('👥  total peers now →', peerCount());
-});
+    added.forEach(id => console.info('🟢 peer joined :', id));
+    removed.forEach(id => console.info('🔴 peer left   :', id));
 
-/* ---------------------------------------------------------- */
-/* 2 · (OPTIONAL) react to awareness presence changes          */
-/*    gives one entry per device / tab, not per transport      */
-/* ---------------------------------------------------------- */
-provider.awareness.on('update', () => {
-  console.debug('presence map size =', provider.awareness.getStates().size);
-});
+    console.info('👥  total peers now →', peerCount());
+  });
+
+  /* ---------------------------------------------------------- */
+  /* 2 · (OPTIONAL) react to awareness presence changes          */
+  /*    gives one entry per device / tab, not per transport      */
+  /* ---------------------------------------------------------- */
+  provider.awareness.on('update', () => {
+    console.debug('presence map size =', provider.awareness.getStates().size);
+  });
 
   /* ------------- 3. Adapter API (same as before) ------------------ */
   return {

@@ -9,23 +9,23 @@ import {
 import { autoLayout } from './auto-layout.js';
 import { align } from './align.js';
 
-function buildTypeItems(controller){
+function buildTypeItems(controller) {
   /* 1 – native + plug-ins */
   const base = [
-    {type:'text',     icon:'fa-font'            },
-    {type:'markdown', icon:'fa-brands fa-markdown'},
-    {type:'img',      icon:'fa-image'           },
-    {type:'html',     icon:'fa-code'            },
+    { type: 'text', icon: 'fa-font' },
+    { type: 'markdown', icon: 'fa-brands fa-markdown' },
+    { type: 'img', icon: 'fa-image' },
+    { type: 'html', icon: 'fa-code' },
   ];
   const extras = controller.elementRegistry      // dynamic plug-ins
-        ?.listTypes()
-        .filter(t=>!base.some(b=>b.type===t))
-        .map(t=>({type:t, icon:'fa-cube'})) || [];
+    ?.listTypes()
+    .filter(t => !base.some(b => b.type === t))
+    .map(t => ({ type: t, icon: 'fa-cube' })) || [];
   /* 2 – emit menu items */
-  return [...base, ...extras].map(t=>({
-    label : t.type,
-    icon  : t.icon,
-    action: c=>changeType(c, t.type)
+  return [...base, ...extras].map(t => ({
+    label: t.type,
+    icon: t.icon,
+    action: c => changeType(c, t.type)
   }));
 }
 
@@ -37,11 +37,13 @@ export function buildRootItems(controller) {
 
   return [
     /* ── Mode toggle ─────────────────────────────────────────────────────── */
-    { label: 'Mode', icon: 'fa-arrows-alt', children: [
-      {label: 'Edit', icon: 'fa-arrows-alt', action: c => c.switchMode('direct') },
-      {label: 'View', icon: 'fa-arrows-alt', action: c => c.switchMode('navigate') },
-      {label: 'Toggle', icon: 'fa-arrows-alt', action: c => c.switchMode() },
-    ]},
+    {
+      label: 'Mode', icon: 'fa-arrows-alt', children: [
+        { label: 'Edit', icon: 'fa-arrows-alt', action: c => c.switchMode('direct') },
+        { label: 'View', icon: 'fa-arrows-alt', action: c => c.switchMode('navigate') },
+        { label: 'Toggle', icon: 'fa-arrows-alt', action: c => c.switchMode() },
+      ]
+    },
 
     /* ── undo/redo ─────────────────────────────────────────────────────── */
     { label: 'Undo', icon: 'fa-rotate-left', action: c => c.undo() },
@@ -50,11 +52,11 @@ export function buildRootItems(controller) {
     /* ── Add … ───────────────────────────────────────────────────────────── */
     {
       label: 'Add', icon: 'fa-plus-circle', children: [
-        { label: 'Text', icon: 'fa-font', needsInput:true, action: (c,text) => addEl(c, 'text', text) },
-        { label: 'Markdown', icon: 'fa-brands fa-markdown', needsInput:true, action: (c,text) => addEl(c, 'markdown', text) },
-        { label: 'Image', icon: 'fa-image', needsInput:true, action: (c,text) => addEl(c, 'img', text) },
+        { label: 'Text', icon: 'fa-font', needsInput: true, action: (c, text) => addEl(c, 'text', text) },
+        { label: 'Markdown', icon: 'fa-brands fa-markdown', needsInput: true, action: (c, text) => addEl(c, 'markdown', text) },
+        { label: 'Image', icon: 'fa-image', needsInput: true, action: (c, text) => addEl(c, 'img', text) },
         { label: 'Canvas', icon: 'fa-object-group', action: c => addEl(c, 'canvas-container') },
-        { label: 'AI-Generate', icon: 'fa-wand-magic-sparkles', needsInput:true, action: (c,text) => addEl(c, 'markdown', text || 'generating…') }
+        { label: 'AI-Generate', icon: 'fa-wand-magic-sparkles', needsInput: true, action: (c, text) => addEl(c, 'markdown', text || 'generating…') }
       ]
     },
 
@@ -89,7 +91,7 @@ export function buildRootItems(controller) {
             { label: 'Radial', action: c => autoLayout(c, { algorithm: 'radial' }) }
           ]
         },
-        { label: 'Convert Type', icon:'fa-shapes', children: buildTypeItems(controller) },
+        { label: 'Convert Type', icon: 'fa-shapes', children: buildTypeItems(controller) },
 
       ]
     },

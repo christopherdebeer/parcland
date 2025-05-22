@@ -14,22 +14,22 @@ class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
         try {
-        this.__crdt = createCrdtAdapter(canvasState, {
-  room: canvasState.canvasId,          // every peer must pass the same string
-  // rtc : { password: 'optional-pw' }  // any y-webrtc option
-}); 
-        // React to CRDT changes…
-this.__crdt.onLocalUpdate(update => {
-  console.log('local change →', update.byteLength, 'bytes');
-});
+            this.__crdt = createCrdtAdapter(canvasState, {
+                room: canvasState.canvasId,          // every peer must pass the same string
+                // rtc : { password: 'optional-pw' }  // any y-webrtc option
+            });
+            // React to CRDT changes…
+            this.__crdt.onLocalUpdate(update => {
+                console.log('local change →', update.byteLength, 'bytes');
+            });
 
-        canvasState.__crdt = this.__crdt;
-        } catch(err) { console.error("Failed to setup CRDT adapter", err); }
+            canvasState.__crdt = this.__crdt;
+        } catch (err) { console.error("Failed to setup CRDT adapter", err); }
         this.canvasState = canvasState;
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
         }
-        
+
         this.selectedElementIds = new Set();   // multiselect aware
         Object.defineProperty(this, 'selectedElementId', {  // legacy shim
             get: () => (this.selectedElementIds.size === 1 ? [...this.selectedElementIds][0] : null),
@@ -57,14 +57,14 @@ this.__crdt.onLocalUpdate(update => {
         this.drillUpBtn = document.getElementById("drillUp");
         this.edgesLayer = document.getElementById("edges-layer");
         this.groupBox = document.createElement('div');
-this.groupBox.id = 'group-box';
-this.groupBox.innerHTML = `
+        this.groupBox.id = 'group-box';
+        this.groupBox.innerHTML = `
   <div class="box"></div>
   <div class="element-handle resize-handle"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
   <div class="element-handle rotate-handle"><i class="fa-solid fa-rotate"></i></div>
   <div class="element-handle scale-handle"><i class="fa-solid fa-up-down-left-right"></i></div>`;
-this.container.appendChild(this.groupBox);
-this.groupBox.style.display='none';
+        this.container.appendChild(this.groupBox);
+        this.groupBox.style.display = 'none';
 
         this.MAX_SCALE = 10;
         this.MIN_SCALE = 0.1;
@@ -213,7 +213,7 @@ this.groupBox.style.display='none';
         return {
             label,
             data: structuredClone({
-                canvasState: {...this.canvasState, __crdt: undefined},
+                canvasState: { ...this.canvasState, __crdt: undefined },
                 viewState: this.viewState
             })
         };
@@ -328,24 +328,24 @@ this.groupBox.style.display='none';
         };
     }
 
-    updateGroupBox(){
-  if(this.selectedElementIds.size < 2){
-    this.groupBox.style.display = 'none';
-    return;
-  }
+    updateGroupBox() {
+        if (this.selectedElementIds.size < 2) {
+            this.groupBox.style.display = 'none';
+            return;
+        }
 
-  const bb = this.getGroupBBox();
-  if(!bb){
-    this.groupBox.style.display = 'none';
-    return;
-  }
+        const bb = this.getGroupBBox();
+        if (!bb) {
+            this.groupBox.style.display = 'none';
+            return;
+        }
 
-  this.groupBox.style.display = 'block';
-  this.groupBox.style.left   = bb.x1 + 'px';           // canvas-space
-  this.groupBox.style.top    = bb.y1 + 'px';
-  this.groupBox.style.width  = (bb.x2 - bb.x1) + 'px';
-  this.groupBox.style.height = (bb.y2 - bb.y1) + 'px';
-}
+        this.groupBox.style.display = 'block';
+        this.groupBox.style.left = bb.x1 + 'px';           // canvas-space
+        this.groupBox.style.top = bb.y1 + 'px';
+        this.groupBox.style.width = (bb.x2 - bb.x1) + 'px';
+        this.groupBox.style.height = (bb.y2 - bb.y1) + 'px';
+    }
 
     switchMode(m) {
         if (m && this.mode === m) return;

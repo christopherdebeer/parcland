@@ -18,12 +18,12 @@ export function installPointerAdapter(
 
   const classifyHandle = (node) => {
     if (!node) return null;
-    if(node.id === 'group-box') return null;         // click on the bbox itself
-if(node.closest('#group-box')){
-  if(node.classList.contains('resize-handle')) return 'resize';
-  if(node.classList.contains('rotate-handle')) return 'rotate';
-  if(node.classList.contains('scale-handle'))  return 'scale';
-}
+    if (node.id === 'group-box') return null;         // click on the bbox itself
+    if (node.closest('#group-box')) {
+      if (node.classList.contains('resize-handle')) return 'resize';
+      if (node.classList.contains('rotate-handle')) return 'rotate';
+      if (node.classList.contains('scale-handle')) return 'scale';
+    }
     if (node.classList.contains('resize-handle')) return 'resize';
     if (node.classList.contains('scale-handle')) return 'scale';
     if (node.classList.contains('rotate-handle')) return 'rotate';
@@ -31,7 +31,7 @@ if(node.closest('#group-box')){
     if (node.classList.contains('edge-handle')) return 'edge';
     if (node.classList.contains('create-handle')) return 'createNode';
     if (node.classList.contains('type-handle')) return 'type';
-    
+
     return null;
   };
 

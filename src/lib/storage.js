@@ -48,17 +48,17 @@ async function _saveCanvas(canvasState) {
   }
 
   const namespace = 'websim';
-  const canvasId  = snapshot.canvasId;
+  const canvasId = snapshot.canvasId;
   try {
     const res = await fetch(
       `https://c15r-parcland_backpack.web.val.run/${namespace}/${canvasId}`,
       {
-        method : 'PUT',
+        method: 'PUT',
         headers: {
-          'Content-Type' : 'application/json',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body   : serializeCanvas(snapshot)
+        body: serializeCanvas(snapshot)
       }
     );
     const json = await res.json();
@@ -82,12 +82,12 @@ export async function setBackpackItem(key, val) {
     const res = await fetch(
       `https://c15r-parcland_backpack.web.val.run/websim/${key}`,
       {
-        method : 'PUT',
+        method: 'PUT',
         headers: {
-          'Content-Type' : 'application/json',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body   : val
+        body: val
       }
     );
     console.log(`Backpack item ${key} saved`, await res.json());
@@ -118,7 +118,7 @@ export async function loadInitialCanvas(defaultState, paramToken) {
   let token = paramToken || localStorage.getItem(TOKEN_KEY) || 'TBC';
   localStorage.setItem(TOKEN_KEY, token);
 
-  const localKey  = 'myCanvasData_' + defaultState.canvasId;
+  const localKey = 'myCanvasData_' + defaultState.canvasId;
   const localCopy = localStorage.getItem(localKey);
 
   try {
@@ -135,5 +135,5 @@ export async function loadInitialCanvas(defaultState, paramToken) {
 }
 
 function serializeCanvas(obj) {
-  return JSON.stringify({...obj, __crdt: undefined });
+  return JSON.stringify({ ...obj, __crdt: undefined });
 }

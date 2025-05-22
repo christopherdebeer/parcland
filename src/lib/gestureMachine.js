@@ -11,7 +11,7 @@ const groupSelected = (e) => {
   return e.selected.has(e.elementId) && e.selected.size > 0
 }
 
-const guardLog = (g) => {}
+const guardLog = (g) => { }
 
 export const gestureMachine = createMachine({
 
@@ -55,46 +55,46 @@ export const gestureMachine = createMachine({
                           4. One-pointer entity
                           5. One-pointer blank
               ——————————————————————————————————————————————————————————*/
-              POINTER_DOWN: [
-                /* ① HANDLE-SPECIFIC (must precede generic element checks) */
-                { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
-                { cond: 'handleScale',  target: 'scaleElement',  actions: 'capScale'  },
-                { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
-                { cond: 'handleReorder',target: 'reorderElement',actions: 'capReorder'},
-                { cond: 'handleType',   target: 'typeElement',   actions: ['buildContextMenu','showContextMenu'] },
-                { cond: 'edgeHandleDrag',       target: 'createEdge', actions: ['capEdge',  'startTempLine'] },
-                { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode',  'startTempLine'] },
+            POINTER_DOWN: [
+              /* ① HANDLE-SPECIFIC (must precede generic element checks) */
+              { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
+              { cond: 'handleScale', target: 'scaleElement', actions: 'capScale' },
+              { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
+              { cond: 'handleReorder', target: 'reorderElement', actions: 'capReorder' },
+              { cond: 'handleType', target: 'typeElement', actions: ['buildContextMenu', 'showContextMenu'] },
+              { cond: 'edgeHandleDrag', target: 'createEdge', actions: ['capEdge', 'startTempLine'] },
+              { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode', 'startTempLine'] },
 
-                // /* ② TWO-POINTER ON ENTITY (before generic pinch) */
-                // { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
-                // { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
+              // /* ② TWO-POINTER ON ENTITY (before generic pinch) */
+              // { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
+              // { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
 
-                /* ③ GENERIC TWO-POINTER */
-                { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
+              /* ③ GENERIC TWO-POINTER */
+              { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
 
-                // /* ④ ONE-POINTER ON ENTITY  */
-                { cond: 'onePointerSelectedDirect',  target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
+              // /* ④ ONE-POINTER ON ENTITY  */
+              { cond: 'onePointerSelectedDirect', target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
 
-                // /* ⑤ ONE-POINTER BLANK  */
-                { cond: 'onePointerBlankDirect',    target: 'lassoSelect',actions: ['hideContextMenu','capLasso'] },
-                {  
-                  // any 1-finger down in navigate mode
-                  // cond: 'isNavigate'  /* and exactly one pointer */,
-                  target: 'pressPendingNavigate',
-                  actions: ['hideContextMenu', 'capPress']
-                },
-              ],
+              // /* ⑤ ONE-POINTER BLANK  */
+              { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['hideContextMenu', 'capLasso'] },
+              {
+                // any 1-finger down in navigate mode
+                // cond: 'isNavigate'  /* and exactly one pointer */,
+                target: 'pressPendingNavigate',
+                actions: ['hideContextMenu', 'capPress']
+              },
+            ],
 
-              LONG_PRESS: { target:'idle', actions:['buildContextMenu','showContextMenu'] },
+            LONG_PRESS: { target: 'idle', actions: ['buildContextMenu', 'showContextMenu'] },
 
-              WHEEL: { target: 'wheelZoom' },
+            WHEEL: { target: 'wheelZoom' },
 
-              DOUBLE_TAP : [
-                { cond: 'doubleTapElementNavigate', target: 'doubleTapElement',     actions: ['switchToDirect'] },
-                { cond: 'doubleTapCanvasBlank',     target: 'doubleTapCanvas' },
-                { cond: 'doubleTapElement',         target: 'doubleTapElement',     actions: ['openEditModal'] },
-                { cond: 'doubleTapEdgeLabel',       target: 'doubleTapEdgeLabel' }
-              ]
+            DOUBLE_TAP: [
+              { cond: 'doubleTapElementNavigate', target: 'doubleTapElement', actions: ['switchToDirect'] },
+              { cond: 'doubleTapCanvasBlank', target: 'doubleTapCanvas' },
+              { cond: 'doubleTapElement', target: 'doubleTapElement', actions: ['openEditModal'] },
+              { cond: 'doubleTapEdgeLabel', target: 'doubleTapEdgeLabel' }
+            ]
           }
         },
         pressPendingNavigate: {
@@ -102,15 +102,15 @@ export const gestureMachine = createMachine({
           entry: 'log',
           on: {
             POINTER_DOWN: [
-              { cond: 'twoPointersPinch',   target: 'pinchCanvas',   actions: 'capPinch' },
+              { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
             ],
             POINTER_MOVE: [
               { cond: 'movedBeyondDeadzone', target: 'panCanvas', actions: 'capPan' },
               // small moves do nothing
             ],
             POINTER_UP: [
-              { cond: (_c,e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
-              { cond: (_c,e) =>  e.hitElement, target: 'idle', actions: 'selectElement' }
+              { cond: (_c, e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
+              { cond: (_c, e) => e.hitElement, target: 'idle', actions: 'selectElement' }
             ]
           }
         },
@@ -119,18 +119,18 @@ export const gestureMachine = createMachine({
           // we’ve already captured draft.start on entry
           on: {
             POINTER_DOWN: [
-              { cond: 'onePointerSelectedDirect',  target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
+              { cond: 'onePointerSelectedDirect', target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
             ],
             POINTER_MOVE: [
               { cond: 'movedBeyondDeadzone', target: 'moveGroup', actions: 'capGroupMove' },
               // small moves do nothing
             ],
             POINTER_UP: [
-              { cond: (_c,e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
-              { cond: (_c,e) =>  e.hitElement, target: 'idle', actions: 'selectElement' }
+              { cond: (_c, e) => !e.hitElement, target: 'idle', actions: 'clearSelection' },
+              { cond: (_c, e) => e.hitElement, target: 'idle', actions: 'selectElement' }
             ]
           }
-        },     
+        },
         panCanvas: {
           entry: 'log',
           on: {
@@ -270,39 +270,39 @@ export const gestureMachine = createMachine({
 },
   {
     guards: {
-      isNavigate : (_c,_e,{state}) => state.matches('mode.navigate'),
-      isDirect   : (_c,_e,{state}) => state.matches('mode.direct'),
+      isNavigate: (_c, _e, { state }) => state.matches('mode.navigate'),
+      isDirect: (_c, _e, { state }) => state.matches('mode.direct'),
 
-      twoPointersPinch: (_c,e)=>Object.keys(e.active||{}).length===2,
+      twoPointersPinch: (_c, e) => Object.keys(e.active || {}).length === 2,
 
-      onePointerBlankNavigate: (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && p.state.matches('mode.navigate'),
-      onePointerElementNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !groupSelected(e) && p.state.matches('mode.navigate'),
+      onePointerBlankNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && p.state.matches('mode.navigate'),
+      onePointerElementNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !groupSelected(e) && p.state.matches('mode.navigate'),
 
-      onePointerBlankDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
-      onePointerElementDirect:(_c,e,p)=>Object.keys(e.active||{}).length===1 && e.hitElement && !e.handle && !groupSelected(e) && p.state.matches('mode.direct'),
-      onePointerGroupDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
-      onePointerGroupNavigate:(_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.navigate'),
+      onePointerBlankDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && !e.hitElement && !e.handle && p.state.matches('mode.direct'),
+      onePointerElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && e.hitElement && !e.handle && !groupSelected(e) && p.state.matches('mode.direct'),
+      onePointerGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
+      onePointerGroupNavigate: (_c, e, p) => Object.keys(e.active || {}).length === 1 && groupSelected(e) && !e.handle && p.state.matches('mode.navigate'),
 
-      onePointerSelectedDirect : (_c,e,p)=>Object.keys(e.active||{}).length===1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
+      onePointerSelectedDirect: (_c, e, p) => Object.keys(e.active || {}).length === 1 && groupSelected(e) && !e.handle && p.state.matches('mode.direct'),
 
-      twoPointersGroupDirect  : (_c,e,p)=>Object.keys(e.active||{}).length===2 && groupSelected(e) && p.state.matches('mode.direct'),
-      twoPointersElementDirect: (_c,e,p)=>Object.keys(e.active||{}).length===2 && e.hitElement && !groupSelected(e) && p.state.matches('mode.direct'),
+      twoPointersGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && groupSelected(e) && p.state.matches('mode.direct'),
+      twoPointersElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.hitElement && !groupSelected(e) && p.state.matches('mode.direct'),
 
-      handleResize : (_c,e)=>e.handle==='resize',
-      handleScale  : (_c,e)=>e.handle==='scale',
-      handleRotate : (_c,e)=>e.handle==='rotate',
-      handleReorder: (_c,e)=>e.handle==='reorder',
-      handleType   : (_c,e)=>e.handle==='type',
+      handleResize: (_c, e) => e.handle === 'resize',
+      handleScale: (_c, e) => e.handle === 'scale',
+      handleRotate: (_c, e) => e.handle === 'rotate',
+      handleReorder: (_c, e) => e.handle === 'reorder',
+      handleType: (_c, e) => e.handle === 'type',
 
-      edgeHandleDrag      : (_c,e)=>e.handle==='edge',
-      createNodeHandleDrag: (_c,e)=>e.handle==='createNode',
+      edgeHandleDrag: (_c, e) => e.handle === 'edge',
+      createNodeHandleDrag: (_c, e) => e.handle === 'createNode',
 
-      doubleTapElementNavigate:(_c,e,p)=>e.hitElement && p.state.matches('mode.navigate'),
-      doubleTapCanvasBlank    :(_c,e)=>!e.hitElement && !e.edgeLabel,
-      doubleTapElement        :(_c,e)=>e.hitElement && !e.edgeLabel,
-      doubleTapEdgeLabel      :(_c,e)=>e.edgeLabel,
+      doubleTapElementNavigate: (_c, e, p) => e.hitElement && p.state.matches('mode.navigate'),
+      doubleTapCanvasBlank: (_c, e) => !e.hitElement && !e.edgeLabel,
+      doubleTapElement: (_c, e) => e.hitElement && !e.edgeLabel,
+      doubleTapEdgeLabel: (_c, e) => e.edgeLabel,
 
-      keyIsEscape: (_c,e)=>e.key==='Escape',
+      keyIsEscape: (_c, e) => e.key === 'Escape',
       movedBeyondDeadzone: (ctx, e) => {
         const { start } = ctx.draft;
         if (!start) return false;
@@ -318,7 +318,7 @@ export const gestureMachine = createMachine({
         ctx.draft && delete ctx.draft.start;
         ctx.controller.removeSelectionBox();
       },
-      capPress: assign({ draft: (_c,e) => ({ start: e.xy }) }),
+      capPress: assign({ draft: (_c, e) => ({ start: e.xy }) }),
       capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
       capPinch: assign({
         draft: (_c, e) => {

@@ -11,7 +11,9 @@ const groupSelected = (e) => {
   return e.selected.has(e.elementId) && e.selected.size > 0
 }
 
-const guardLog = (g) => { }
+const guardLog = (g) => { 
+  console.log("[Guard]", g);
+}
 
 export const gestureMachine = createMachine({
 
@@ -65,15 +67,16 @@ export const gestureMachine = createMachine({
               { cond: 'edgeHandleDrag', target: 'createEdge', actions: ['capEdge', 'startTempLine'] },
               { cond: 'createNodeHandleDrag', target: 'createNode', actions: ['capNode', 'startTempLine'] },
 
-              // /* ② TWO-POINTER ON ENTITY (before generic pinch) */
-              // { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
-              // { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
+              /* ② TWO-POINTER ON ENTITY (before generic pinch) */
+              { cond: 'twoPointersGroupDirect',   target: 'pinchGroup',   actions: 'capGroupPinch'   },
+              { cond: 'twoPointersElementDirect', target: 'pinchElement', actions: 'capPinchElement' },
 
               /* ③ GENERIC TWO-POINTER */
               { cond: 'twoPointersPinch', target: 'pinchCanvas', actions: 'capPinch' },
 
-              // /* ④ ONE-POINTER ON ENTITY  */
+              /* ④ ONE-POINTER ON ENTITY  */
               { cond: 'onePointerSelectedDirect', target: 'pressPendingDirect', actions: ['hideContextMenu', 'capPress'] },
+              { cond: 'onePointerElementDirect', target: 'moveElement', actions: ['hideContextMenu', 'capMove'] },
 
               // /* ⑤ ONE-POINTER BLANK  */
               { cond: 'onePointerBlankDirect', target: 'lassoSelect', actions: ['hideContextMenu', 'capLasso'] },
@@ -143,7 +146,11 @@ export const gestureMachine = createMachine({
           entry: 'log',
           on: {
             POINTER_MOVE: { actions: 'applyCanvasPinch' },
-            POINTER_UP: { target: 'idle', actions: 'persistViewState' }
+            POINTER_UP: [
+              { cond: 'hasOnePointerRemaining', target: 'panCanvas', actions: 'capRemainingPointer' },
+              { target: 'idle', actions: 'persistViewState' }
+            ],
+            KEYUP: { cond: 'keyIsEscape', target: 'idle', actions: 'persistViewState' }
           }
         },
         wheelZoom: {
@@ -178,7 +185,8 @@ export const gestureMachine = createMachine({
             POINTER_UP: {
               target: 'idle',
               actions: 'commitElementMutation'
-            }
+            },
+            KEYUP: { cond: 'keyIsEscape', target: 'idle', actions: 'cancelGroupOperation' }
           }
         },
         pinchGroup: {
@@ -248,14 +256,16 @@ export const gestureMachine = createMachine({
           entry: 'log',
           on: {
             POINTER_MOVE: { actions: 'applyEdgeDrag' },
-            POINTER_UP: { target: 'idle', actions: 'commitEdgeCreation' }
+            POINTER_UP: { target: 'idle', actions: 'commitEdgeCreation' },
+            KEYUP: { cond: 'keyIsEscape', target: 'idle', actions: 'cancelEdgeCreation' }
           }
         },
         createNode: {
           entry: 'log',
           on: {
             POINTER_MOVE: { actions: 'applyEdgeDrag' },
-            POINTER_UP: { target: 'idle', actions: 'commitNodeCreation' }
+            POINTER_UP: { target: 'idle', actions: 'commitNodeCreation' },
+            KEYUP: { cond: 'keyIsEscape', target: 'idle', actions: 'cancelEdgeCreation' }
           }
         },
         doubleTapCanvas: { entry: ['log', 'spawnNewElementAtTap', 'switchToDirect'], after: { 100: 'idle' } },
@@ -303,6 +313,7 @@ export const gestureMachine = createMachine({
       doubleTapEdgeLabel: (_c, e) => e.edgeLabel,
 
       keyIsEscape: (_c, e) => e.key === 'Escape',
+      hasOnePointerRemaining: (_c, e) => Object.keys(e.active || {}).length === 1,
       movedBeyondDeadzone: (ctx, e) => {
         const { start } = ctx.draft;
         if (!start) return false;

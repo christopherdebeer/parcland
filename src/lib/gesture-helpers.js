@@ -172,10 +172,25 @@ export function createGestureHelpers(controller) {
     controller.selectedElementIds.forEach(id => {
       const el = controller.findElementById(id);
       const start = ctx.draft.startPositions.get(id);
-      el.x = start.x + dx;
-      el.y = start.y + dy;
+      if (el && start) {
+        el.x = start.x + dx;
+        el.y = start.y + dy;
+      }
     });
     controller.requestRender();
+  }
+  
+  function cancelGroupOperation(ctx) {
+    if (ctx.draft.startPositions) {
+      ctx.draft.startPositions.forEach((start, id) => {
+        const el = controller.findElementById(id);
+        if (el) {
+          el.x = start.x;
+          el.y = start.y;
+        }
+      });
+      controller.requestRender();
+    }
   }
 
   function applyGroupPinch(ctx, ev) {
@@ -247,7 +262,8 @@ export function createGestureHelpers(controller) {
 
     const isTouch = ev.ev.pointerType === 'touch';
     const inSet = controller.selectedElementIds.has(ev.elementId);
-    const additive = true; // isTouch && controller.selectedElementIds.size > 0;
+    // Use modifier keys for additive selection on non-touch devices
+    const additive = isTouch || (ev.ev.shiftKey || ev.ev.metaKey || ev.ev.ctrlKey);
     console.log("[debug multiselect]", { isTouch, inSet, additive, el: ev.elementId, sel: controller.selectedElementIds });
 
     /* ── toggle or single-select ─────────────────── */
@@ -333,6 +349,13 @@ export function createGestureHelpers(controller) {
       controller._pushHistorySnapshot('Add edge');
     }
   }
+  
+  function cancelEdgeCreation(ctx) {
+    if (ctx.draft.tempLine) {
+      ctx.draft.tempLine.remove();
+      delete ctx.draft.tempLine;
+    }
+  }
 
   async function commitNodeCreation(ctx, ev) {
     if (!ctx.draft.tempLine) return;
@@ -381,6 +404,16 @@ export function createGestureHelpers(controller) {
     controller.openEditModal(controller.findElementById(e.elementId))
   }
 
+  function capRemainingPointer(ctx, ev) {
+    // Capture the remaining pointer for pan operation
+    const pointerId = Object.keys(ev.active || {})[0];
+    if (pointerId) {
+      const point = ev.active[pointerId];
+      return { draft: { start: point, view: ev.view } };
+    }
+    return {};
+  }
+
   return {
     editEdgeLabel,
     spawnNewElementAtTap,
@@ -394,6 +427,7 @@ export function createGestureHelpers(controller) {
     applyCanvasPinch,
     applyWheelZoom,
     persistViewState,
+    capRemainingPointer,
 
     /* single element */
     applyMoveElement,
@@ -410,10 +444,12 @@ export function createGestureHelpers(controller) {
     applyEdgeDrag,
     commitEdgeCreation,
     commitNodeCreation,
+    cancelEdgeCreation,
 
     /* groups */
     applyGroupMove,
     applyGroupPinch,
+    cancelGroupOperation,
 
     /* selection */
     selectElement,

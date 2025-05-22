@@ -97,7 +97,7 @@ export function createGestureHelpers(controller) {
     const dx = (ev.xy.x - ctx.draft.resize.startX) / dpi();
     const dy = (ev.xy.y - ctx.draft.resize.startY) / dpi();
     el.width = Math.max(20, ctx.draft.resize.startW + dx);
-    //el.height = Math.max(20, ctx.draft.resize.startH + dy);
+    el.height = Math.max(20, ctx.draft.resize.startH + dy);
     const node = controller.elementNodesMap[el.id];
     controller.updateElementNode(
       node,

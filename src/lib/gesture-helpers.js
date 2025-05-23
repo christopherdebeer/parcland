@@ -178,6 +178,51 @@ export function createGestureHelpers(controller) {
     controller.requestRender();
   }
 
+    /* ---------------- group resize (single-handle drag) ---------------- */
+  function applyGroupResize(ctx, ev) {
+    const { resize } = ctx.draft;               if (!resize) return;
+    const dpi  = () => controller.viewState.scale || 1;
+    const dx   = (ev.xy.x - resize.startX) / dpi();
+    const dy   = (ev.xy.y - resize.startY) / dpi();
+
+    /* proportional factors per axis */
+    const sx = (resize.startW + dx) / resize.startW;
+    const sy = (resize.startH + dy) / resize.startH;
+
+    controller.selectedElementIds.forEach(id => {
+      const el    = controller.findElementById(id);
+      const offX  = (el.x - resize.cx) * sx;
+      const offY  = (el.y - resize.cy) * sy;
+      el.x        = resize.cx + offX;
+      el.y        = resize.cy + offY;
+      el.scale    = (el.scale || 1) * Math.max(sx, sy);   // uniform
+    });
+    controller.requestRender();
+  }
+
+  /* --------------- group scale (diagonal ↕ handle) ------------------- */
+  const applyGroupScale = applyGroupResize;   /* identical behaviour   */
+
+  /* ---------------- group rotate (ring handle) ----------------------- */
+  function applyGroupRotate(ctx, ev) {
+    const { rotate } = ctx.draft;              if (!rotate) return;
+    const a1 = Math.atan2(ev.xy.y - rotate.center.y,
+                          ev.xy.x - rotate.center.x);
+    const dA = a1 - rotate.startAng;           // radians
+
+    controller.selectedElementIds.forEach(id => {
+      const el = controller.findElementById(id);
+      const dx = el.x - rotate.center.x;
+      const dy = el.y - rotate.center.y;
+      const rx =  dx * Math.cos(dA) - dy * Math.sin(dA);
+      const ry =  dx * Math.sin(dA) + dy * Math.cos(dA);
+      el.x      = rotate.center.x + rx;
+      el.y      = rotate.center.y + ry;
+      el.rotation = (el.rotation || 0) + dA*180/Math.PI;
+    });
+    controller.requestRender();
+  }
+
   function applyGroupPinch(ctx, ev) {
     const pts = Object.values(ev.active || {});
     if (pts.length !== 2) return;
@@ -414,6 +459,9 @@ export function createGestureHelpers(controller) {
     /* groups */
     applyGroupMove,
     applyGroupPinch,
+    applyGroupResize,
+    applyGroupScale,
+    applyGroupRotate,
 
     /* selection */
     selectElement,

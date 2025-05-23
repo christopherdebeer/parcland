@@ -57,6 +57,12 @@ export const gestureMachine = createMachine({
               ——————————————————————————————————————————————————————————*/
             POINTER_DOWN: [
               /* ① HANDLE-SPECIFIC (must precede generic element checks) */
+              { cond: 'handleResizeGroup', target: 'resizeGroup',
+                actions: 'capGroupResize' },
+              { cond: 'handleScaleGroup',  target: 'scaleGroup',
+                actions: 'capGroupScale'  },
+              { cond: 'handleRotateGroup', target: 'rotateGroup',
+                actions: 'capGroupRotate' },
               { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
               { cond: 'handleScale', target: 'scaleElement', actions: 'capScale' },
               { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },
@@ -188,6 +194,27 @@ export const gestureMachine = createMachine({
             POINTER_UP: { target: 'idle', actions: 'commitElementMutation' }
           }
         },
+                resizeGroup : {
+          entry : 'log',
+          on : {
+            POINTER_MOVE : { actions:'applyGroupResize' },
+            POINTER_UP   : { target:'idle', actions:'commitElementMutation' }
+          }
+        },
+        scaleGroup  : {
+          entry : 'log',
+          on : {
+            POINTER_MOVE : { actions:'applyGroupScale' },
+            POINTER_UP   : { target:'idle', actions:'commitElementMutation' }
+          }
+        },
+        rotateGroup : {
+          entry : 'log',
+          on : {
+            POINTER_MOVE : { actions:'applyGroupRotate' },
+            POINTER_UP   : { target:'idle', actions:'commitElementMutation' }
+          }
+        },
         moveElement: {
           entry: 'log',
           on: {
@@ -288,6 +315,10 @@ export const gestureMachine = createMachine({
       twoPointersGroupDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && groupSelected(e) && p.state.matches('mode.direct'),
       twoPointersElementDirect: (_c, e, p) => Object.keys(e.active || {}).length === 2 && e.hitElement && !groupSelected(e) && p.state.matches('mode.direct'),
 
+      handleResizeGroup : (_c,e,p) => e.handle === 'resize' && p.state.context.controller.selectedElementIds.size > 1,
+      handleScaleGroup  : (_c,e,p) => e.handle === 'scale'  && p.state.context.controller.selectedElementIds.size > 1,
+      handleRotateGroup : (_c,e,p) => e.handle === 'rotate' && p.state.context.controller.selectedElementIds.size > 1,
+
       handleResize: (_c, e) => e.handle === 'resize',
       handleScale: (_c, e) => e.handle === 'scale',
       handleRotate: (_c, e) => e.handle === 'rotate',
@@ -382,6 +413,36 @@ export const gestureMachine = createMachine({
           return { origin: e.xy, startPositions: start };
         }
       }),
+             capGroupResize : assign({
+         draft : (_c,e,{state}) => {
+           const c   = state.context.controller;
+           const box = c.getGroupBBox();
+           return {
+             resize : {
+               startX : e.xy.x,
+               startY : e.xy.y,
+               startW : box.x2 - box.x1,
+               startH : box.y2 - box.y1,
+               cx     : box.cx,
+               cy     : box.cy
+             }
+           };
+         }
+       }),
+       capGroupScale : (_=>_.draft),      /* same data – reuse */
+       capGroupRotate: assign({
+         draft : (_c,e,{state}) => {
+           const c   = state.context.controller;
+           const box = c.getGroupBBox();
+           return {
+             rotate : {
+               startScreen : e.xy,
+               center      : { x:box.cx, y:box.cy },
+               startAng    : Math.atan2(e.xy.y-box.cy, e.xy.x-box.cx)
+             }
+           };
+         }
+       }),
 
       capResize: assign({
         draft: (c, e) => {

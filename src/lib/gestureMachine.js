@@ -57,12 +57,12 @@ export const gestureMachine = createMachine({
               ——————————————————————————————————————————————————————————*/
             POINTER_DOWN: [
               /* ① HANDLE-SPECIFIC (must precede generic element checks) */
-              { cond: 'handleResizeGroup', target: 'resizeGroup',
-                actions: 'capGroupResize' },
-              { cond: 'handleScaleGroup',  target: 'scaleGroup',
-                actions: 'capGroupScale'  },
-              { cond: 'handleRotateGroup', target: 'rotateGroup',
-                actions: 'capGroupRotate' },
+              // { cond: 'handleResizeGroup', target: 'resizeGroup',
+              //   actions: 'capGroupResize' },
+              // { cond: 'handleScaleGroup',  target: 'scaleGroup',
+              //   actions: 'capGroupScale'  },
+              // { cond: 'handleRotateGroup', target: 'rotateGroup',
+              //   actions: 'capGroupRotate' },
               { cond: 'handleResize', target: 'resizeElement', actions: 'capResize' },
               { cond: 'handleScale', target: 'scaleElement', actions: 'capScale' },
               { cond: 'handleRotate', target: 'rotateElement', actions: 'capRotate' },

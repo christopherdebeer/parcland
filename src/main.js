@@ -19,8 +19,11 @@ class CanvasController {
                 // rtc : { password: 'optional-pw' }  // any y-webrtc option
             });
             // React to CRDT changes…
-            this.__crdt.onLocalUpdate(update => {
-                console.log('local change →', update.byteLength, 'bytes');
+            this.__crdt.onUpdate((update, origin) => {
+                // console.log('[y-webrtc] change →', update.byteLength, 'bytes. ', origin ? `From peer: ${origin.peerId}` : '');
+                // this.canvasState = this.__crdt.exportSnapshot();
+                // this.canvasState.__crdt = this.__crdt;
+                // this.requestRender();
             });
 
             canvasState.__crdt = this.__crdt;
@@ -235,7 +238,18 @@ class CanvasController {
     }
 
     _restoreSnapshot({ canvasState, viewState }) {
+        // Preserve the CRDT adapter
+        const crdt = this.canvasState.__crdt;
+        
         this.canvasState = structuredClone(canvasState);
+        
+        // Restore the CRDT adapter
+        if (crdt) {
+            this.canvasState.__crdt = crdt;
+            // Update the CRDT with the new state
+            crdt.refreshFromPlain(this.canvasState);
+        }
+        
         //this.viewState   = structuredClone(viewState);
 
         // clear selection, keep mode

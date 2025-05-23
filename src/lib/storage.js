@@ -29,7 +29,7 @@ export function saveCanvas(canvasState) {
 
 async function _saveCanvas(canvasState) {
   /* ①  Is a CRDT adapter present for this controller? */
-  const adapter = false; //canvasState?.__crdt;
+  const adapter = canvasState?.__crdt;
 
   /* ②  Keep the adapter up-to-date with the *mutable* model */
   if (adapter) adapter.refreshFromPlain(canvasState);

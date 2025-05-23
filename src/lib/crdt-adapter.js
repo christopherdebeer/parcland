@@ -23,7 +23,7 @@ function _plainToY(doc, snap) {
   const meta = doc.getMap('meta');
   meta.clear();
   Object.entries(snap).forEach(([k, v]) => {
-    if (k === 'elements' || k === 'edges') return;
+    if (k === 'elements' || k === 'edges' || k === '__crdt') return;
     meta.set(k, v);
   });
 }
@@ -105,6 +105,7 @@ export function createCrdtAdapter(initialSnap, opts = {}) {
 
   /* ------------- 3. Adapter API (same as before) ------------------ */
   return {
+    adapter: this,
     doc,          // expose for power-users / debugging
     provider,     // (new) – lets callers inspect awareness, etc.
 
@@ -127,11 +128,9 @@ export function createCrdtAdapter(initialSnap, opts = {}) {
      *
      * The callback receives the Yjs binary `update`.
      */
-    onLocalUpdate(cb) {
+    onUpdate(cb) {
       doc.on('update', (update, origin) => {
-        // y-webrtc tags remote updates with the provider instance.
-        if (origin === provider) return;     // remote – ignore
-        cb(update);                          // local – notify caller
+        cb(update, origin)
       });
     }
   };

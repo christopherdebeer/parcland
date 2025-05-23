@@ -55,29 +55,29 @@ export function buildRootItems(controller) {
     /* ── Add … ───────────────────────────────────────────────────────────── */
     {
       label: 'Add', icon: 'fa-plus-circle', category: 'Create', children: [
-        { label: 'Text', icon: 'fa-font', category: 'Create', shortcut: '⌘N T', needsInput: true, action: (c, text) => addEl(c, 'text', text) },
-        { label: 'Markdown', icon: 'fa-brands fa-markdown', category: 'Create', shortcut: '⌘N M', needsInput: true, action: (c, text) => addEl(c, 'markdown', text) },
-        { label: 'Image', icon: 'fa-image', category: 'Create', shortcut: '⌘N I', needsInput: true, action: (c, text) => addEl(c, 'img', text) },
+        { label: 'Text', icon: 'fa-font', category: 'Create', shortcut: '⌘N T', needsInput: "Text", action: (c, text) => addEl(c, 'text', text) },
+        { label: 'Markdown', icon: 'fa-brands fa-markdown', category: 'Create', shortcut: '⌘N M', needsInput: "Content", action: (c, text) => addEl(c, 'markdown', text) },
+        { label: 'Image', icon: 'fa-image', category: 'Create', shortcut: '⌘N I', needsInput: "Prompt", action: (c, text) => addEl(c, 'img', text) },
         { label: 'Canvas', icon: 'fa-object-group', category: 'Create', shortcut: '⌘N C', action: c => addEl(c, 'canvas-container') },
-        { 
-  label: 'AI-Generate', 
-  icon: 'fa-wand-magic-sparkles', 
-  category: 'AI', 
-  shortcut: '⌘N A', 
-  needsInput: true, 
-  action: async (c, text) => {
-    const { innerWidth: W, innerHeight: H } = window;
-    const pt = c.screenToCanvas(W / 2, H / 2);
-    const elId = c.createNewElement(pt.x, pt.y, 'markdown', text || 'generating…');
-    const el = c.findElementById(elId);
-    const newContent = await generateContent(text, el, c);
-    if (newContent) {
-      el.content = newContent;
-      c.updateElementNode(c.elementNodesMap[elId], el, true);
-      saveCanvas(c.canvasState);
-    }
-  }
-},
+        {
+          label: 'Generate',
+          icon: 'fa-wand-magic-sparkles',
+          category: 'AI',
+          shortcut: '⌘N A',
+          needsInput: 'Prompt',
+          action: async (c, text) => {
+            const { innerWidth: W, innerHeight: H } = window;
+            const pt = c.screenToCanvas(W / 2, H / 2);
+            const elId = c.createNewElement(pt.x, pt.y, 'markdown', text || 'generating…');
+            const el = c.findElementById(elId);
+            const newContent = await generateContent(text, el, c);
+            if (newContent) {
+              el.content = newContent;
+              c.updateElementNode(c.elementNodesMap[elId], el, true);
+              saveCanvas(c.canvasState);
+            }
+          }
+        },
       ]
     },
 

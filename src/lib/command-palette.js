@@ -28,7 +28,7 @@ export function installCommandPalette(controller, opts = {}) {
           kind: 'command',
           path: nextPath,
           action: it.action,
-          needsInput: !!it.needsInput,
+          needsInput: it.needsInput,
           shortcut: it.shortcut || null,
           category: currentCategory,
           icon: it.icon || null,
@@ -109,14 +109,25 @@ export function installCommandPalette(controller, opts = {}) {
     </div>
     <ul class="suggestions"></ul>
     <div class="cmd-wrapper">
-      <span class="cmd-icon"><i class="fa-solid fa-search"></i></span>
+      <span class="cmd-icon">
+        <i class="fa-solid fa-search"></i>
+        <i class="fa-solid fa-spinner"></i>
+        <i class="fa-solid fa-terminal"></i>
+      </span>
       <input type="text" autocomplete="off" spellcheck="false" placeholder="› Type a command…" />
       <button id="cmd-clear">&times;</button>
     </div>
     <div class="cmd-footer">
-      <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
-      <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
-      <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
+      <div class="desktop">
+        <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
+        <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
+        <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
+      </div>
+      <div class="mobile">
+        <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
+        <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
+        <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
+      </div>
     </div>
     `;
   document.body.appendChild(root);
@@ -128,7 +139,7 @@ export function installCommandPalette(controller, opts = {}) {
 
   /* ── state ── */
   let filtered = [], sel = -1;
-  let mode = 'browse';           // 'browse' | 'awaiting'
+  let mode = 'browse';           // 'browse' | 'awaiting' | 'pending'
   let pending = null;            // command awaiting free-text
   let showingRecent = false;     // whether we're showing recent commands
 
@@ -137,7 +148,7 @@ export function installCommandPalette(controller, opts = {}) {
     $list.innerHTML = '';
     $recentLabel.style.display = showingRecent ? 'block' : 'none';
     
-    filtered.forEach((it, i) => {
+    (mode === 'browse' ? filtered: []).forEach((it, i) => {
       const li = document.createElement('li');
       li.className = 'suggestion' + (i === sel ? ' active' : '');
       
@@ -150,6 +161,11 @@ export function installCommandPalette(controller, opts = {}) {
         let categoryHtml = '';
         if (it.category) {
           categoryHtml = `<span class="cmd-category">${it.category}</span>`;
+        }
+
+        let inputHtml = '';
+        if (it.needsInput) {
+          inputHtml = `<span class="cmd-input"><kbd>${it.needsInput}</kbd></span>`;
         }
         
         let shortcutHtml = '';
@@ -166,8 +182,9 @@ export function installCommandPalette(controller, opts = {}) {
           ${iconHtml}
           <div class="cmd-content">
             ${pathHtml}
-            ${categoryHtml}
+            ${inputHtml}
           </div>
+          ${categoryHtml}
           ${shortcutHtml}
         `;
       } else {
@@ -234,10 +251,19 @@ export function installCommandPalette(controller, opts = {}) {
   };
   const quitInput = () => {
     mode = 'browse'; pending = null;
+    root.classList.remove('awaiting');
+    root.classList.remove('pending');
     $input.placeholder = '› Type a command…';
-
     reset();
   };
+
+  const enterPending = (p) => {
+    mode = 'pending'; pending = p;
+    $input.value = '';
+    root.classList.add('pending');
+    root.classList.remove('awaiting');
+    p?.then(quitInput);
+  }
 
   /* ── run ── */
   function run(item) {
@@ -297,7 +323,11 @@ export function installCommandPalette(controller, opts = {}) {
     render();
   });
 
-  $input.addEventListener('keydown', e => {
+  $input.addEventListener('blur', e => {
+    root.classList.remove('focused');
+  });
+
+  $input.addEventListener('keydown', async (e) => {
     // Tab completion - select first item
     if (e.key === 'Tab' && filtered.length && sel === -1) {
       sel = 0; 
@@ -320,7 +350,8 @@ export function installCommandPalette(controller, opts = {}) {
     else if (e.key === 'Enter') {
       const val = $input.value.trim();
       if (mode === 'awaiting') { 
-        pending?.action?.(controller, val); 
+        enterPending();
+        const res = await pending?.action?.(controller, val); 
         quitInput(); 
         return; 
       }

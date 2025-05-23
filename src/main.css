@@ -275,6 +275,8 @@ body {
     cursor: crosshair;
 }
 
+#canvas.group-selected .canvas-element .element-handle { display: none; }
+
 #context-menu {
     position: absolute;
     background: #fff;

@@ -362,14 +362,18 @@ class CanvasController {
     updateGroupBox() {
         if (this.selectedElementIds.size < 2) {
             this.groupBox.style.display = 'none';
+            this.canvas.classList.remove('group-selected')
             return;
         }
 
         const bb = this.getGroupBBox();
         if (!bb) {
             this.groupBox.style.display = 'none';
+            this.canvas.classList.remove('group-selected')
             return;
         }
+
+        this.canvas.classList.add('group-selected')
 
         this.groupBox.style.display = 'block';
         this.groupBox.style.left = bb.x1 + 'px';           // canvas-space

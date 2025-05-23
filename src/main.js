@@ -29,8 +29,9 @@ class CanvasController {
             });
             // React to CRDT changes…
             this.__crdt.onUpdate((update, origin) => {
-                // console.log('[y-webrtc] change →', update.byteLength, 'bytes. ', origin ? `From peer: ${origin.peerId}` : '');
-                // const snap = this.__crdt.exportSnapshot()
+                console.log(`[y-webrtc] [${origin ? 'Remote' : 'Local'}] Change →`, update.byteLength, 'bytes. ', origin ? `From peer: ${origin.peerId}` : '');
+                const snap = this.__crdt.exportSnapshot();
+                console.log(snap);
                 // console.log(snap)
                 // this.canvasState.elements = dedupeElements(snap.elements, i => i.id.split('-')[1]);
                 // this.canvasState.edges = dedupeElements(snap.edges, i => i.source + i.target);

@@ -1,8 +1,8 @@
 /* ──────────────────────────────────────────────────────────────────────────────
  *  menu item helper functions for parc.land            (2025-04-29)
  * ──────────────────────────────────────────────────────────────────────────── */
-import { saveCanvas } from './storage.js';
-import { generateContent } from './generation.js';
+import { saveCanvas } from '../storage.js';
+import { generateContent } from '../generation.js';
 
 /* internal clipboard — page-lifetime only */
 const _clip = { elements: null };

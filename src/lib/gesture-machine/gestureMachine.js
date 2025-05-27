@@ -4,7 +4,7 @@
  * ---------------------------------------------------------------------------
  */
 import { createMachine, assign } from 'xstate';
-import { buildContextMenu } from './context-menu';
+import { buildContextMenu } from '../context-menu';
 
 
 const groupSelected = (e) => {

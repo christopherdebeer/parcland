@@ -1,9 +1,9 @@
 import { interpret } from 'xstate';
-import { gestureMachine } from './lib/gestureMachine.js';
-import { installPointerAdapter } from './lib/pointerAdapter.js';
-import { createGestureHelpers } from './lib/gesture-helpers.js';
+import { gestureMachine } from './lib/gesture-machine/gestureMachine.js';
+import { installPointerAdapter } from './lib/gesture-machine/pointerAdapter.js';
+import { createGestureHelpers } from './lib/gesture-machine/gesture-helpers.js';
 import { buildContextMenu } from './lib/context-menu';
-import { installCommandPalette } from './lib/command-palette.js';
+import { installCommandPalette } from './lib/cmd-palette/command-palette.js';
 import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';

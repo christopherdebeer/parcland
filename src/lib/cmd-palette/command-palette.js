@@ -1,7 +1,7 @@
 /* command-palette.js  – enhanced command palette with categories, shortcuts, and recent commands */
 
 import { buildRootItems } from './menu-items.js';
-import { editElementWithPrompt } from './generation.js';
+import { editElementWithPrompt } from '../generation.js';
 import { installKeyboardShortcuts } from './keyboard-shortcuts.js';
 
 // Import CSS

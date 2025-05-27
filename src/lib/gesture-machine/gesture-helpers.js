@@ -3,8 +3,8 @@
  * the DOM outside controller methods.  They are injected into gestureMachine
  * as XState actions.
  */
-import { saveCanvas } from './storage.js';
-import { generateContent } from './generation.js';
+import { saveCanvas } from '../storage.js';
+import { generateContent } from '../generation.js';
 
 export function createGestureHelpers(controller) {
 

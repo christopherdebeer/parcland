@@ -1,10 +1,5 @@
 /* ---------------------------------------------------------------------------
- *  storage.js                   (CRDT-aware version – May 2025)
- *  - Keeps the existing save/​load API exactly the same.
- *  - If the current CanvasController has attached a Yjs adapter
- *    on canvasState.__crdt, we:
- *        1.  push the latest plain JS mutations into the Y.Doc
- *        2.  serialise the adapter’s snapshot instead of the raw object
+ *  storage.js
  * ------------------------------------------------------------------------- */
 
 let saveTimeout;
@@ -28,19 +23,8 @@ export function saveCanvas(canvasState) {
 /* ------------------------------------------------------------------ */
 
 async function _saveCanvas(canvasState) {
-  /* ①  Is a CRDT adapter present for this controller? */
-  const adapter = canvasState?.__crdt;
+  saveCanvasLocalOnly(canvasState);
 
-  /* ②  Keep the adapter up-to-date with the *mutable* model */
-  if (adapter) adapter.refreshFromPlain(canvasState);
-
-  /* ③  Decide what we actually persist */
-  const snapshot = adapter ? adapter.exportSnapshot() : canvasState;
-
-  /* ----- 3a.  localStorage backup (debounced) --------------------- */
-  saveCanvasLocalOnly(snapshot);
-
-  /* ----- 3b.  PUT to your backend ------------------------------- */
   const token = getAuthToken();
   if (!token) {
     console.warn('No auth token found – skipping remote save');
@@ -48,7 +32,7 @@ async function _saveCanvas(canvasState) {
   }
 
   const namespace = 'websim';
-  const canvasId = snapshot.canvasId;
+  const canvasId = canvasState.canvasId;
   try {
     const res = await fetch(
       `https://c15r-parcland_backpack.web.val.run/${namespace}/${canvasId}`,
@@ -58,7 +42,7 @@ async function _saveCanvas(canvasState) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: serializeCanvas(snapshot)
+        body: serializeCanvas(canvasState)
       }
     );
     const json = await res.json();
@@ -135,5 +119,5 @@ export async function loadInitialCanvas(defaultState, paramToken) {
 }
 
 function serializeCanvas(obj) {
-  return JSON.stringify({ ...obj, __crdt: undefined });
+  return JSON.stringify(obj);
 }

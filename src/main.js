@@ -8,40 +8,12 @@ import { generateContent, regenerateImage } from './lib/generation';
 import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
 import { showModal } from './lib/modal.js';
 import { elementRegistry } from './lib/elementRegistry.js';
-import { createCrdtAdapter } from './lib/crdt-adapter.js';
-
-
-function dedupeElements(arr, fn) {
-    const map = {};
-    arr.forEach( item => {
-        map[fn(item)] = item;
-    })
-    return Object.keys(map).map( k => map[k])
-}
 
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
-        try {
-            this.__crdt = createCrdtAdapter(canvasState, {
-                room: canvasState.canvasId,          // every peer must pass the same string
-                // rtc : { password: 'optional-pw' }  // any y-webrtc option
-            });
-            // React to CRDT changes…
-            this.__crdt.onUpdate((update, origin) => {
-                console.log(`[y-webrtc] [${origin ? 'Remote' : 'Local'}] Change →`, update.byteLength, 'bytes. ', origin ? `From peer: ${origin.peerId}` : '');
-                const snap = this.__crdt.exportSnapshot();
-                console.log(snap);
-                // console.log(snap)
-                // this.canvasState.elements = dedupeElements(snap.elements, i => i.id.split('-')[1]);
-                // this.canvasState.edges = dedupeElements(snap.edges, i => i.source + i.target);
-                // this.canvasState.__crdt = this.__crdt;
-                // this.requestRender();
-            });
-
-            canvasState.__crdt = this.__crdt;
-        } catch (err) { console.error("Failed to setup CRDT adapter", err); }
         this.canvasState = canvasState;
+        
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
         }
@@ -229,7 +201,7 @@ class CanvasController {
         return {
             label,
             data: structuredClone({
-                canvasState: { ...this.canvasState, __crdt: undefined },
+                canvasState: this.canvasState,
                 viewState: this.viewState
             })
         };
@@ -251,18 +223,8 @@ class CanvasController {
     }
 
     _restoreSnapshot({ canvasState, viewState }) {
-        // Preserve the CRDT adapter
-        const crdt = this.canvasState.__crdt;
         
         this.canvasState = structuredClone(canvasState);
-        
-        // Restore the CRDT adapter
-        if (crdt) {
-            this.canvasState.__crdt = crdt;
-            // Update the CRDT with the new state
-            crdt.refreshFromPlain(this.canvasState);
-        }
-        
         //this.viewState   = structuredClone(viewState);
 
         // clear selection, keep mode

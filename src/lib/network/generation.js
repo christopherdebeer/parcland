@@ -23,7 +23,7 @@ export async function editElementWithPrompt(prompt, el, controller) {
 
   try {
     const resp = await fetch(
-      "https://c15r--2ac72f16e02411efa75ee6cdfca9ef9f.web.val.run",
+      "https://gen.parc.land",
       {
         method: "POST",
         headers: {
@@ -111,7 +111,7 @@ export async function generateContent(content, el, c) {
   const token = getAuthToken();
   if (!token || token === 'TBC') return await this.generateContentOld(content, type);
   try {
-    const response = await fetch('https://c15r--2ac72f16e02411efa75ee6cdfca9ef9f.web.val.run', {
+    const response = await fetch('https://gen.parc.land', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -176,7 +176,7 @@ result: string;
 
 export async function regenerateImage(el) {
   try {
-    const response = await fetch("https://c15r-replicate_base.web.val.run/generate", {
+    const response = await fetch("https://img.parc.land/generate", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${getAuthToken()}`

@@ -18,7 +18,15 @@ class CanvasController {
         this.crdt = new CrdtAdapter(canvasState.canvasId);
 
         this.crdt.onUpdate( (ev) => {
-            console.log("[CRDT] Update", ev )
+            console.log("[CRDT] Update local?:", ev.transaction.local )
+            if (!ev.transaction.local) {
+                const els = this.crdt.elements.toJSON();
+                const edges = this.crdt.edges.toJSON();
+                console.log(`[CRDT] remote updates`, els, edges)
+                this.canvasState.elements = Object.values(els);
+                this.canvasState.edges = Object.values(edges);
+                // this.requestRender();
+            }
         })
         
         if (!this.canvasState.edges) {

@@ -35,7 +35,7 @@ async function _saveCanvas(canvasState) {
   const canvasId = canvasState.canvasId;
   try {
     const res = await fetch(
-      `https://c15r-parcland_backpack.web.val.run/${namespace}/${canvasId}`,
+      `https://backpack.parc.land/${namespace}/${canvasId}`,
       {
         method: 'PUT',
         headers: {
@@ -64,7 +64,7 @@ export async function setBackpackItem(key, val) {
   }
   try {
     const res = await fetch(
-      `https://c15r-parcland_backpack.web.val.run/websim/${key}`,
+      `https://backpack.parc.land/websim/${key}`,
       {
         method: 'PUT',
         headers: {
@@ -107,7 +107,7 @@ export async function loadInitialCanvas(defaultState, paramToken) {
 
   try {
     const res = await fetch(
-      `https://c15r-parcland_backpack.web.val.run/websim/${defaultState.canvasId}`,
+      `https://backpack.parc.land/websim/${defaultState.canvasId}`,
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
     if (res.ok) return await res.json();

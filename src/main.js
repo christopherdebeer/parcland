@@ -4,15 +4,22 @@ import { installPointerAdapter } from './lib/gesture-machine/pointerAdapter.js';
 import { createGestureHelpers } from './lib/gesture-machine/gesture-helpers.js';
 import { buildContextMenu } from './lib/context-menu';
 import { installCommandPalette } from './lib/cmd-palette/command-palette.js';
-import { generateContent, regenerateImage } from './lib/generation';
-import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/storage';
+import { generateContent, regenerateImage } from './lib/network/generation.js';
+import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/network/storage.js';
 import { showModal } from './lib/modal.js';
-import { elementRegistry } from './lib/elementRegistry.js';
+import { elementRegistry } from './lib/elements/elementRegistry.js';
+import { CrdtAdapter } from './lib/network/crdt.js';
+
 
 class CanvasController {
     constructor(canvasState) {
         updateCanvasController(this)
         this.canvasState = canvasState;
+        this.crdt = new CrdtAdapter(canvasState.canvasId);
+
+        this.crdt.onUpdate( (ev) => {
+            console.log("[CRDT] Update", ev )
+        })
         
         if (!this.canvasState.edges) {
             this.canvasState.edges = [];
@@ -623,6 +630,7 @@ class CanvasController {
     }
 
     updateElementNode(node, el, isSelected, skipHandles) {
+        this.crdt?.updateElement(el.id, el)
         const view = this.elementRegistry.viewFor(el.type);
         if (view && typeof view.update === 'function') {
             view.update(el, node.firstChild, this);   // firstChild is view root

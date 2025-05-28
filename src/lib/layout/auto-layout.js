@@ -4,7 +4,7 @@
  *  centre fixed **and** inserting extra clearance so straight edges &
  *  mid-point labels have breathing space.
  *  ------------------------------------------------------------------------- */
-import { saveCanvas } from '../storage.js';
+import { saveCanvas } from '../network/storage.js';
 
 /* —— 1.  Elk singleton ———————————————————————————————— */
 let _elk = null;

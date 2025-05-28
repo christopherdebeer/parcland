@@ -1,4 +1,4 @@
-import { setBackpackItem, saveCanvas, loadInitialCanvas } from './storage.js';
+import { setBackpackItem, saveCanvas, loadInitialCanvas } from './network/storage.js';
 
 function buildContextMenu(el, controller) {
     if (!el) return;

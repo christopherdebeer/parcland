@@ -1,4 +1,4 @@
-import { saveCanvas } from '../storage.js';
+import { saveCanvas } from '../network/storage.js';
 import {
   addEl, duplicateEl, deleteSelection, changeType,
   copySelection, pasteClipboard, clipboardHasContent,
@@ -8,7 +8,7 @@ import {
 } from './menu-item-helpers.js';
 import { autoLayout } from '../layout/auto-layout.js';
 import { align } from '../layout/align.js';
-import { generateContent } from '../generation.js';
+import { generateContent } from '../network/generation.js';
 
 function buildTypeItems(controller) {
   /* 1 – native + plug-ins */

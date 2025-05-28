@@ -18,7 +18,7 @@ class CanvasController {
         this.crdt = new CrdtAdapter(canvasState.canvasId);
 
         this.crdt.onUpdate( (ev) => {
-            console.log("[CRDT] Update local?:", ev.transaction.local )
+            console.log("[CRDT] Update local?:", ev.transaction.local, ev )
             if (!ev.transaction.local) {
                 const els = this.crdt.elements.toJSON();
                 const edges = this.crdt.edges.toJSON();

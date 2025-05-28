@@ -120,16 +120,14 @@ export function installCommandPalette(controller, opts = {}) {
       <button id="cmd-clear">&times;</button>
     </div>
     <div class="cmd-footer">
+      <span class="presence"></span>
       <div class="desktop">
-        <span class="presence"></span>
         <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
         <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
         <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
       </div>
       <div class="mobile">
-        <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
-        <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
-        <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
+        
       </div>
     </div>
     `;
@@ -149,7 +147,8 @@ export function installCommandPalette(controller, opts = {}) {
 
 
   controller.crdt.onPresenceChange( (awareness) => {
-    $presence.innerHTML = `${awareness.length} peers`;
+    console.log('presence change', awareness);
+    $presence.innerHTML = `${awareness.map( p => `<span class="client">${p.client.clientId}</span>`).join('')}<span class="total">${awareness.length} peers</span>`;
   })
 
   /* ── render ── */

@@ -18,14 +18,15 @@ class CanvasController {
         this.crdt = new CrdtAdapter(canvasState.canvasId);
 
         this.crdt.onUpdate( (ev) => {
-            if (!ev.transaction.local) {
-                console.log("[CRDT] Update from remote", !!ev.transaction.local, ev )
+            const remote = !ev.transaction.local;
+            if (remote) {
+                console.log("[CRDT] Update from remote", ev )
                 const els = this.crdt.elements.toJSON();
                 const edges = this.crdt.edges.toJSON();
                 console.log(`[CRDT] remote updates`, els, edges)
                 this.canvasState.elements = Object.values(els);
                 this.canvasState.edges = Object.values(edges);
-                // this.requestRender();
+                this.requestRender();
             }
         })
         
@@ -301,6 +302,7 @@ class CanvasController {
                 this.selectedElementIds.add(id);
             }
         }
+        this.crdt.updateSelection(this.selectedElementIds);
         this.updateGroupBox()
         this.requestRender();
     }
@@ -308,6 +310,7 @@ class CanvasController {
     clearSelection() {
         if (this.selectedElementIds.size) {
             this.selectedElementIds.clear();
+            this.crdt.updateSelection(this.selectedElementIds);
             this.updateGroupBox()
             this.requestRender();
         }
@@ -640,7 +643,7 @@ class CanvasController {
     }
 
     updateElementNode(node, el, isSelected, skipHandles) {
-        this.crdt?.updateElement(el.id, el)
+        this.crdt.updateElement(el.id, el)
         const view = this.elementRegistry.viewFor(el.type);
         if (view && typeof view.update === 'function') {
             view.update(el, node.firstChild, this);   // firstChild is view root

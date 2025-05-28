@@ -33,10 +33,12 @@ export class CrdtAdapter {
         const delta = JSON.stringify(existing) !== JSON.stringify(data);
         
         // deep equality check
-        if (existing && delta) {
+        if (!delta && existing) {
+            // console.log("[CRDT] No change", id, {delta}, {prev: JSON.stringify(existing), next: JSON.stringify(data)});
             return;
         }
-        console.log("[CRDT] Update element", id, {delta}, {prev: existing, next: data});
+        debugger;
+        console.log("[CRDT] Update element", id, {delta}, {prev: JSON.stringify(existing), next: JSON.stringify(data)});
         this.elements.set(id, data);
     }
 
@@ -46,6 +48,10 @@ export class CrdtAdapter {
 
     updateView(data) {
         this.provider.awareness.setLocalStateField("viewState", data);
+    }
+
+    updateSelection(data) {
+        this.provider.awareness.setLocalStateField("selection", data);
     }
 
     onPresenceChange(callback) {

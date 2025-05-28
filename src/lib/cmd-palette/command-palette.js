@@ -147,7 +147,7 @@ export function installCommandPalette(controller, opts = {}) {
 
 
   controller.crdt.onPresenceChange( (awareness) => {
-    console.log('presence change', awareness);
+    controller.requestRender();
     $presence.innerHTML = `${awareness.map( p => `<span class="client">${p.client.clientId}</span>`).join('')}<span class="total">${awareness.length} peers</span>`;
   })
 

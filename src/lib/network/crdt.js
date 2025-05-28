@@ -22,9 +22,14 @@ export class CrdtAdapter {
             console.log("[CRDT] Synced", isSynced);
         });
 
-        this.provider.awareness.setLocalStateField("client", {
+        const clientInfo = {
             clientId: this.provider.awareness.clientID,
             user: 'Unknown'
+        }
+
+        this.provider.awareness.setLocalStateField("client", {
+            ...clientInfo,
+            selection: [],
         });
     }
 
@@ -37,7 +42,6 @@ export class CrdtAdapter {
             // console.log("[CRDT] No change", id, {delta}, {prev: JSON.stringify(existing), next: JSON.stringify(data)});
             return;
         }
-        debugger;
         console.log("[CRDT] Update element", id, {delta}, {prev: JSON.stringify(existing), next: JSON.stringify(data)});
         this.elements.set(id, data);
     }
@@ -51,7 +55,10 @@ export class CrdtAdapter {
     }
 
     updateSelection(data) {
-        this.provider.awareness.setLocalStateField("selection", data);
+        this.provider.awareness.setLocalStateField("client", {
+            ...this.clientInfo,
+            selection: Array.from(data),
+        });
     }
 
     onPresenceChange(callback) {

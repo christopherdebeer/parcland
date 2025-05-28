@@ -20,13 +20,25 @@ class CanvasController {
         this.crdt.onUpdate( (ev) => {
             const remote = !ev.transaction.local;
             if (remote) {
-                console.log("[CRDT] Update from remote", ev )
-                const els = this.crdt.elements.toJSON();
-                const edges = this.crdt.edges.toJSON();
-                console.log(`[CRDT] remote updates`, els, edges)
-                this.canvasState.elements = Object.values(els);
-                this.canvasState.edges = Object.values(edges);
-                this.requestRender();
+                console.log(`[CRDT] Update from ${remote ? 'Remote' : 'Local'}`, ev )
+                // const els = this.crdt.elements.toJSON();
+                // const edges = this.crdt.edges.toJSON();
+                // console.log(`[CRDT] remote updates`, els, edges)
+                // this.canvasState.elements = Object.values(els);
+                // this.canvasState.edges = Object.values(edges);
+
+                if (ev.currentTarget === this.crdt.elements) {
+                    const keys = Array.from(ev.keysChanged);
+                    console.log(`[CRDT] Remote element(s) update`, keys)
+                    // keys.forEach( id => {
+                    //     const el = this.findElementById(id)
+                    //     const yel = this.crdt.elements.get(id)
+                    //     Object.keys(el).forEach( k => {
+                    //         el[k] = yel[k]
+                    //     })
+                    // })
+                }
+                // this.requestRender();
             }
         })
         
@@ -657,6 +669,16 @@ class CanvasController {
         if (isSelected) {
             node.classList.add("selected");
         }
+        const peerSelected = Array.from(this.crdt.provider.awareness.getStates().values())
+            .filter( p => p.client.clientId !== this.crdt.provider.awareness.clientID)
+            .flatMap( p => p.client.selection || [])
+        
+        if (peerSelected.indexOf(el.id) >= 0) {
+            node.classList.add("peer-selected");
+        } else {
+            node.classList.remove("peer-selected");
+        }
+        if (this.crdt.provider.awareness.getStates())
         //this.setElementContent(node, el);
 
         if (!skipHandles) {

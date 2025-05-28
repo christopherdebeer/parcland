@@ -159,6 +159,10 @@ body {
     border-color: var(--highlight);
 }
 
+.canvas-element.peer-selected>.content {
+    border-color: red;
+}
+
 .canvas-element[type="edit-prompt"]>.content .CodeMirror {
     height: 100%;
     width: 100%;

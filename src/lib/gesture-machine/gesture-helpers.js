@@ -304,6 +304,8 @@ export function createGestureHelpers(controller) {
       controller.selectedElementIds.add(ev.elementId);
     }
 
+    controller.crdt.updateSelection(controller.selectedElementIds)
+
     controller.requestRender();
   }
 

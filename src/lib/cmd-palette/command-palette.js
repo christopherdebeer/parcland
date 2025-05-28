@@ -10,6 +10,8 @@ import './command-palette.css';
 export function installCommandPalette(controller, opts = {}) {
   const cfg = { maxResults: 10, fuzziness: true, recentCommandsCount: 5, ...opts };
 
+  
+
   /* ── flatten commands ── */
   function flattenCommands() {
     const out = [];
@@ -119,6 +121,7 @@ export function installCommandPalette(controller, opts = {}) {
     </div>
     <div class="cmd-footer">
       <div class="desktop">
+        <span class="presence"></span>
         <span class="cmd-tip"><kbd>↑</kbd><kbd>↓</kbd> to navigate</span>
         <span class="cmd-tip"><kbd>Enter</kbd> to select</span>
         <span class="cmd-tip"><kbd>Esc</kbd> to dismiss</span>
@@ -136,12 +139,18 @@ export function installCommandPalette(controller, opts = {}) {
   const $list = root.querySelector('.suggestions');
   const $clear = root.querySelector('#cmd-clear');
   const $recentLabel = root.querySelector('.recent-commands-label');
+  const $presence = root.querySelector('.cmd-footer .presence');
 
   /* ── state ── */
   let filtered = [], sel = -1;
   let mode = 'browse';           // 'browse' | 'awaiting' | 'pending'
   let pending = null;            // command awaiting free-text
   let showingRecent = false;     // whether we're showing recent commands
+
+
+  controller.crdt.onPresenceChange( (awareness) => {
+    $presence.innerHTML = `${awareness.length} peers`;
+  })
 
   /* ── render ── */
   const render = () => {

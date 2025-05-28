@@ -18,8 +18,8 @@ class CanvasController {
         this.crdt = new CrdtAdapter(canvasState.canvasId);
 
         this.crdt.onUpdate( (ev) => {
-            console.log("[CRDT] Update local?:", ev.transaction.local, ev )
             if (!ev.transaction.local) {
+                console.log("[CRDT] Update from remote", !!ev.transaction.local, ev )
                 const els = this.crdt.elements.toJSON();
                 const edges = this.crdt.edges.toJSON();
                 console.log(`[CRDT] remote updates`, els, edges)
@@ -434,6 +434,8 @@ class CanvasController {
         const canvasRect = this.canvas.getBoundingClientRect();
         const W = canvasRect.width;
         const H = canvasRect.height;
+
+        this.crdt.updateView(this.viewState);
 
         // Compute the visible region in canvas coordinates:
         const visibleX = -this.viewState.translateX / this.viewState.scale;

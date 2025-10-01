@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add proper types
 
 let $root = null;    // modal shell (created on-demand)
 let $contentEditorHost = null;    // div that will hold CodeMirror

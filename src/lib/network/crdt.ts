@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add proper types
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
 

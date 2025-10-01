@@ -1,8 +1,9 @@
+// @ts-nocheck - TODO: Add proper types
 /* command-palette.js  – enhanced command palette with categories, shortcuts, and recent commands */
 
-import { buildRootItems } from './menu-items.js';
-import { editElementWithPrompt } from '../network/generation.js';
-import { installKeyboardShortcuts } from './keyboard-shortcuts.js';
+import { buildRootItems } from './menu-items.ts';
+import { editElementWithPrompt } from '../network/generation.ts';
+import { installKeyboardShortcuts } from './keyboard-shortcuts.ts';
 
 // Import CSS
 import './command-palette.css';

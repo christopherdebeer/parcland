@@ -1,6 +1,7 @@
+// @ts-nocheck - TODO: Add proper types
 /* keyboard-shortcuts.js - register global keyboard shortcuts */
 
-import { buildRootItems } from './menu-items.js';
+import { buildRootItems } from './menu-items.ts';
 
 /**
  * Maps keyboard shortcuts to their corresponding actions

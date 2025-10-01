@@ -1,4 +1,4 @@
-import { saveCanvas } from '../network/storage.js';
+import { saveCanvas } from '../network/storage.ts';
 
 export function align(c, { axis = 'x', pos = 'min' } = {}) {
   if (c.selectedElementIds.size < 2) return;

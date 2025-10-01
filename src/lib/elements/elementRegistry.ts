@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add proper types
 /* ---------------------------------------------------------------------------
  * elementRegistry.js                (2025-05-04)
  * Simple plug-in registry for canvas element types.

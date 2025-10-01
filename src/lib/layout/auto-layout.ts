@@ -1,10 +1,11 @@
+// @ts-nocheck - TODO: Add proper types
 /* ---------------------------------------------------------------------------
  *  auto-layout.js                (2025-05-09 r3)
  *  Tidy selection / whole canvas with elk.js while keeping the geometric
  *  centre fixed **and** inserting extra clearance so straight edges &
  *  mid-point labels have breathing space.
  *  ------------------------------------------------------------------------- */
-import { saveCanvas } from '../network/storage.js';
+import { saveCanvas } from '../network/storage.ts';
 
 /* —— 1.  Elk singleton ———————————————————————————————— */
 let _elk = null;

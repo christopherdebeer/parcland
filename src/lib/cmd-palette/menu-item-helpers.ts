@@ -1,8 +1,9 @@
+// @ts-nocheck - TODO: Add proper types
 /* ──────────────────────────────────────────────────────────────────────────────
  *  menu item helper functions for parc.land            (2025-04-29)
  * ──────────────────────────────────────────────────────────────────────────── */
-import { saveCanvas } from '../network/storage.js';
-import { generateContent } from '../network/generation.js';
+import { saveCanvas } from '../network/storage.ts';
+import { generateContent } from '../network/generation.ts';
 
 /* internal clipboard — page-lifetime only */
 const _clip = { elements: null };

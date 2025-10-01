@@ -1,8 +1,9 @@
+// @ts-nocheck - TODO: Add proper types
 /* ---------------------------------------------------------------------------
  * elementTypes/json.js
  * Example “json” element – renders element.data as <pre>{…}</pre>
  * ------------------------------------------------------------------------- */
-import { elementRegistry } from '../elementRegistry.js';
+import { elementRegistry } from '../elementRegistry.ts';
 
 elementRegistry.register('json', {
   mount(el /* ElementModel */, _c) {

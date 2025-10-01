@@ -1,14 +1,15 @@
+// @ts-nocheck - TODO: Add proper types
 import { interpret } from 'xstate';
-import { gestureMachine } from './lib/gesture-machine/gestureMachine.js';
-import { installPointerAdapter } from './lib/gesture-machine/pointerAdapter.js';
-import { createGestureHelpers } from './lib/gesture-machine/gesture-helpers.js';
+import { gestureMachine } from './lib/gesture-machine/gestureMachine.ts';
+import { installPointerAdapter } from './lib/gesture-machine/pointerAdapter.ts';
+import { createGestureHelpers } from './lib/gesture-machine/gesture-helpers.ts';
 import { buildContextMenu } from './lib/context-menu';
-import { installCommandPalette } from './lib/cmd-palette/command-palette.js';
-import { generateContent, regenerateImage } from './lib/network/generation.js';
-import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/network/storage.js';
-import { showModal } from './lib/modal.js';
-import { elementRegistry } from './lib/elements/elementRegistry.js';
-import { CrdtAdapter } from './lib/network/crdt.js';
+import { installCommandPalette } from './lib/cmd-palette/command-palette.ts';
+import { generateContent, regenerateImage } from './lib/network/generation.ts';
+import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/network/storage.ts';
+import { showModal } from './lib/modal.ts';
+import { elementRegistry } from './lib/elements/elementRegistry.ts';
+import { CrdtAdapter } from './lib/network/crdt.ts';
 
 
 class CanvasController {
@@ -732,7 +733,8 @@ class CanvasController {
                 script.onload = resolve;
                 script.onerror = () => {
                     this._showElementError(node.closest('.canvas-element'),
-                        `Failed to load\n${script.getAttribute('src')}`);
+                        `Failed to load
+${script.getAttribute('src')}`);
                     reject(new Error(`Failed to load script: ${script.getAttribute('src')}`));
                 };
                 document.head.appendChild(script);

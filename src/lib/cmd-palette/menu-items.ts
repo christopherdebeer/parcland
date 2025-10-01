@@ -1,14 +1,14 @@
-import { saveCanvas } from '../network/storage.js';
+import { saveCanvas } from '../network/storage.ts';
 import {
   addEl, duplicateEl, deleteSelection, changeType,
   copySelection, pasteClipboard, clipboardHasContent,
   generateNew, inlineEdit, reorder,
   groupSelection, ungroupSelection, canUngroup,
   zoom, zoomToFit, openHistory, exportJSON
-} from './menu-item-helpers.js';
-import { autoLayout } from '../layout/auto-layout.js';
-import { align } from '../layout/align.js';
-import { generateContent } from '../network/generation.js';
+} from './menu-item-helpers.ts';
+import { autoLayout } from '../layout/auto-layout.ts';
+import { align } from '../layout/align.ts';
+import { generateContent } from '../network/generation.ts';
 
 function buildTypeItems(controller) {
   /* 1 – native + plug-ins */

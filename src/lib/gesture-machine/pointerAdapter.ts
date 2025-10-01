@@ -1,3 +1,4 @@
+// @ts-nocheck - TODO: Add proper types
 // ----------------------------------------------------------------------------
 // Thin DOM ⇆ FSM bridge.
 // Converts native pointer / wheel events into *pure* FSM events.

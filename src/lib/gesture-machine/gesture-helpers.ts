@@ -1,10 +1,11 @@
+// @ts-nocheck - TODO: Add proper types
 /**
  * CanvasController-aware helpers that *mutate model objects* but never touch
  * the DOM outside controller methods.  They are injected into gestureMachine
  * as XState actions.
  */
-import { saveCanvas } from '../network/storage.js';
-import { generateContent } from '../network/generation.js';
+import { saveCanvas } from '../network/storage.ts';
+import { generateContent } from '../network/generation.ts';
 
 export function createGestureHelpers(controller) {
 

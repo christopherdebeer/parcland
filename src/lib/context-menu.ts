@@ -1,4 +1,5 @@
-import { setBackpackItem, saveCanvas, loadInitialCanvas } from './network/storage.js';
+// @ts-nocheck - TODO: Add proper types
+import { setBackpackItem, saveCanvas, loadInitialCanvas } from './network/storage.ts';
 
 function buildContextMenu(el, controller) {
     if (!el) return;

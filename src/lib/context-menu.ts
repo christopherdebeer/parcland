@@ -1,7 +1,7 @@
-// @ts-nocheck - TODO: Add proper types
 import { setBackpackItem, saveCanvas, loadInitialCanvas } from './network/storage.ts';
+import type { CanvasElement, CanvasController } from '../types.ts';
 
-function buildContextMenu(el, controller) {
+function buildContextMenu(el: CanvasElement, controller: CanvasController): void {
     if (!el) return;
     controller.contextMenu.innerHTML = "";
 
@@ -51,8 +51,9 @@ function buildContextMenu(el, controller) {
         blendSelect.appendChild(option);
     });
     blendSelect.value = el.blendMode || 'normal';
-    blendSelect.onchange = (ev) => {
-        el.blendMode = ev.target.value;
+    blendSelect.onchange = (ev: Event) => {
+        const target = ev.target as HTMLSelectElement;
+        el.blendMode = target.value;
         controller.updateElementNode(controller.elementNodesMap[el.id], el, (el.id === controller.selectedElementId));
         saveCanvas(controller.canvasState);
     };
@@ -73,8 +74,9 @@ function buildContextMenu(el, controller) {
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = el.color || "#000000";
-        colorInput.addEventListener('change', (ev) => {
-            el.color = ev.target.value;
+        colorInput.addEventListener('change', (ev: Event) => {
+            const target = ev.target as HTMLInputElement;
+            el.color = target.value;
             controller.updateElementNode(controller.elementNodesMap[el.id], el, (el.id === controller.selectedElementId));
             saveCanvas(controller.canvasState);
         });
@@ -141,7 +143,7 @@ function buildContextMenu(el, controller) {
 
     const editIllineBtn = document.createElement("button");
     editIllineBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit inline';
-    controller.clickCapture(editIllineBtn, (ev) => {
+    controller.clickCapture(editIllineBtn, (ev: Event) => {
         controller.createEditElement(ev, el, "content");
         controller.hideContextMenu();
     });
@@ -178,7 +180,7 @@ function buildContextMenu(el, controller) {
     });
     controller.contextMenu.appendChild(duplicateBtn);
 
-    const idEl = document.createElement("span")
+    const idEl = document.createElement("span");
     idEl.classList.add("id-label");
     idEl.innerHTML = el.id;
     controller.contextMenu.appendChild(idEl);

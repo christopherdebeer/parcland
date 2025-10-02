@@ -3,20 +3,20 @@
 // Converts native pointer / wheel events into *pure* FSM events.
 // ----------------------------------------------------------------------------
 export function installPointerAdapter(
-  rootEl,
-  service,
-  getViewState,
-  selected = () => new Set()
-) {
+  rootEl: HTMLElement,
+  service: any,
+  getViewState: () => any,
+  selected: () => Set<string> = () => new Set()
+): () => void {
 
-  const active = new Map(); // pointerId → {x,y}
-  const capturedTargets = new Map(); // pointerId → element that we called setPointerCapture on
+  const active = new Map<number, { x: number; y: number }>(); // pointerId → {x,y}
+  const capturedTargets = new Map<number, Element>(); // pointerId → element that we called setPointerCapture on
 
-  let lastTap = { t: 0, x: 0, y: 0 };
+  let lastTap: { t: number; x: number; y: number } = { t: 0, x: 0, y: 0 };
   const TAP_MS = 300;
   const TAP_DIST = 10;
 
-  const classifyHandle = (node) => {
+  const classifyHandle = (node: Element | null): string | null => {
     if (!node) return null;
     if (node.id === 'group-box') return null;         // click on the bbox itself
     if (node.closest('#group-box')) {
@@ -35,69 +35,69 @@ export function installPointerAdapter(
     return null;
   };
 
-  const send = (type, ev, extra = {}) => {
-    const xy = { x: ev.clientX, y: ev.clientY };
-    const elementNode = ev.target.closest('.canvas-element');
-    const handleNode = ev.target.closest('.element-handle');
-    const edgeLabelNode = ev.target.closest('text[data-id]');
+  const send = (type: string, ev: PointerEvent | WheelEvent | KeyboardEvent, extra: Record<string, any> = {}): void => {
+    const xy = { x: (ev as any).clientX || 0, y: (ev as any).clientY || 0 };
+    const elementNode = (ev.target as Element)?.closest('.canvas-element');
+    const handleNode = (ev.target as Element)?.closest('.element-handle');
+    const edgeLabelNode = (ev.target as Element)?.closest('text[data-id]');
 
     const payload = {
       type,
       xy,
       active: Object.fromEntries(active),
       hitElement: !!elementNode,
-      elementId: elementNode ? elementNode.dataset.elId : null,
+      elementId: elementNode ? (elementNode as HTMLElement).dataset.elId : null,
       handle: classifyHandle(handleNode),
       edgeLabel: !!edgeLabelNode,
-      edgeId: edgeLabelNode ? edgeLabelNode.dataset.id : null,
+      edgeId: edgeLabelNode ? (edgeLabelNode as HTMLElement).dataset.id : null,
       selected: selected(),
       view: getViewState(),
       ev, // raw DOM event
       ...extra
-    }
+    };
     if (payload.type !== 'POINTER_MOVE') console.log("[FSM] Pointer adapter event send:", active.size, ev.pointerId, payload)
     service.send(payload);
   };
 
-  const onPointerDown = (ev) => {
+  const onPointerDown = (ev: PointerEvent): void => {
     ev.preventDefault();
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
-    const handleNode = ev.target.closest('.element-handle');
-    const edgeLabelNode = ev.target.closest('text[data-id]');
-    const elementNode = ev.target.closest('.canvas-element');
-    const captureNode = handleNode
+    const handleNode = (ev.target as Element)?.closest('.element-handle');
+    const edgeLabelNode = (ev.target as Element)?.closest('text[data-id]');
+    const elementNode = (ev.target as Element)?.closest('.canvas-element');
+    const captureNode = (handleNode
       || edgeLabelNode
       || elementNode
-      || rootEl;
+      || rootEl) as Element;
 
     // 3) capture on that node and store it
     captureNode.setPointerCapture(ev.pointerId);
     capturedTargets.set(ev.pointerId, captureNode);
 
-    ev.target.setPointerCapture(ev.pointerId);
+    (ev.target as Element).setPointerCapture(ev.pointerId);
     send('POINTER_DOWN', ev);
     startLongPress(ev);
 
   };
 
   /* — LONG-PRESS helper — */
-  let lpTimer = null;
+  let lpTimer: ReturnType<typeof setTimeout> | null = null;
   const LP_DELAY = 600;                     // ms
-  function startLongPress(ev) {
+  function startLongPress(ev: PointerEvent): void {
     lpTimer = setTimeout(() => {
       send('LONG_PRESS', ev);                // new pure FSM event
       lpTimer = null;
     }, LP_DELAY);
   }
-  function cancelLongPress() { clearTimeout(lpTimer); lpTimer = null; }
+  function cancelLongPress(): void { if (lpTimer) clearTimeout(lpTimer); lpTimer = null; }
 
-  const onPointerMove = (ev) => {
+  const onPointerMove = (ev: PointerEvent): void => {
     if (!active.has(ev.pointerId)) return;
     active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     cancelLongPress();
     send('POINTER_MOVE', ev);
   };
-  const finishPointer = (ev) => {
+  const finishPointer = (ev: PointerEvent): void => {
     ev.preventDefault();
     cancelLongPress();
     active.delete(ev.pointerId);
@@ -120,12 +120,12 @@ export function installPointerAdapter(
       }
     }
   };
-  const onWheel = (ev) => send('WHEEL', ev, { deltaY: ev.deltaY });
-  const onKeyup = (ev) => {
+  const onWheel = (ev: WheelEvent): void => send('WHEEL', ev, { deltaY: ev.deltaY });
+  const onKeyup = (ev: KeyboardEvent): void => {
     console.log("[PointerAdapter] keyup", ev)
     send('KEYUP', ev, { key: ev.key });
   }
-  const onKeydown = (ev) => {
+  const onKeydown = (ev: KeyboardEvent): void => {
     console.log("[PointerAdapter] keydown", ev)
     if ((ev.metaKey || ev.ctrlKey) && ev.key === 'z') {
       ev.preventDefault();

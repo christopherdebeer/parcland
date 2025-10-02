@@ -1,17 +1,23 @@
-/* keyboard-shortcuts.js - register global keyboard shortcuts */
+/* keyboard-shortcuts.ts - register global keyboard shortcuts */
 
-import { buildRootItems } from './menu-items.js';
+import { buildRootItems } from './menu-items.ts';
+
+interface MenuItem {
+  shortcut?: string;
+  action?: (controller: any) => void;
+  children?: MenuItem[];
+}
 
 /**
  * Maps keyboard shortcuts to their corresponding actions
- * @param {Object} controller - The canvas controller
- * @returns {Map} A map of shortcut strings to action functions
+ * @param controller - The canvas controller
+ * @returns A map of shortcut strings to action functions
  */
-function buildShortcutMap(controller) {
-  const shortcutMap = new Map();
-  
-  function walkItems(items) {
-    items.forEach(item => {
+function buildShortcutMap(controller: any): Map<string, (controller: any) => void> {
+  const shortcutMap = new Map<string, (controller: any) => void>();
+
+  function walkItems(items: MenuItem[]): void {
+    items.forEach((item: MenuItem) => {
       if (item.shortcut && item.action) {
         shortcutMap.set(item.shortcut, item.action);
       }
@@ -28,10 +34,10 @@ function buildShortcutMap(controller) {
 
 /**
  * Normalizes a keyboard event to a shortcut string
- * @param {KeyboardEvent} e - The keyboard event
- * @returns {string} A normalized shortcut string
+ * @param e - The keyboard event
+ * @returns A normalized shortcut string
  */
-function normalizeKeyboardEvent(e) {
+function normalizeKeyboardEvent(e: KeyboardEvent): string {
   const modifiers = [];
   if (e.metaKey) modifiers.push('⌘');
   if (e.ctrlKey) modifiers.push('Ctrl');
@@ -57,14 +63,15 @@ function normalizeKeyboardEvent(e) {
 
 /**
  * Installs keyboard shortcuts for the application
- * @param {Object} controller - The canvas controller
+ * @param controller - The canvas controller
  */
-export function installKeyboardShortcuts(controller) {
+export function installKeyboardShortcuts(controller: any): void {
   const shortcutMap = buildShortcutMap(controller);
   
-  window.addEventListener('keydown', (e) => {
+  window.addEventListener('keydown', (e: KeyboardEvent) => {
     // Don't trigger shortcuts when typing in input fields
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
       return;
     }
     

@@ -1,14 +1,21 @@
 /* ---------------------------------------------------------------------------
- * elementRegistry.js                (2025-05-04)
+ * elementRegistry.ts                (2025-05-04)
  * Simple plug-in registry for canvas element types.
  * ------------------------------------------------------------------------- */
 
+import type { CanvasElement } from '../../types';
+
+interface ElementView {
+  mount: (el: CanvasElement, controller: any) => HTMLElement;
+  update?: (el: CanvasElement, dom: HTMLElement, controller: any) => void;
+  unmount?: (dom: HTMLElement) => void;
+}
+
 export function createRegistry() {
-  /** @type {Record<string,ElementView>} */
-  const _views = {};
+  const _views: Record<string, ElementView> = {};
 
   /** Register (or overwrite) a type */
-  function register(type, view) {
+  function register(type: string, view: ElementView): void {
     if (typeof type !== 'string' || !view || typeof view.mount !== 'function') {
       throw new Error('register(type, view) – type string & view.mount() required');
     }
@@ -16,10 +23,14 @@ export function createRegistry() {
   }
 
   /** Return the view object for a type, or undefined */
-  function viewFor(type) { return _views[type]; }
+  function viewFor(type: string): ElementView | undefined {
+    return _views[type];
+  }
 
   /** Shallow copy of the currently known set */
-  function listTypes() { return Object.keys(_views); }
+  function listTypes(): string[] {
+    return Object.keys(_views);
+  }
 
   return { register, viewFor, listTypes };
 }
@@ -29,7 +40,7 @@ export const elementRegistry = createRegistry();
 
 /* make dynamic registration trivial for inline <script>                     */
 if (typeof window !== 'undefined') {
-  window.registerElementType = elementRegistry.register;
+  (window as any).registerElementType = elementRegistry.register;
 }
 
 /* -- Typing hint -----------------------------------------------------------

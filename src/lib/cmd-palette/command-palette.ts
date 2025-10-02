@@ -1,21 +1,30 @@
 /* command-palette.js  – enhanced command palette with categories, shortcuts, and recent commands */
 
-import { buildRootItems } from './menu-items.js';
-import { editElementWithPrompt } from '../network/generation.js';
-import { installKeyboardShortcuts } from './keyboard-shortcuts.js';
+import { buildRootItems } from './menu-items.ts';
+import { editElementWithPrompt } from '../network/generation.ts';
+import { installKeyboardShortcuts } from './keyboard-shortcuts.ts';
+import type { CanvasController, CommandItem, ElementSuggestion, SuggestionItem, MenuItem } from '../../types.ts';
 
 // Import CSS
 import './command-palette.css';
 
-export function installCommandPalette(controller, opts = {}) {
-  const cfg = { maxResults: 10, fuzziness: true, recentCommandsCount: 5, ...opts };
+interface CommandPaletteConfig {
+  maxResults: number;
+  fuzziness: boolean;
+  recentCommandsCount: number;
+}
+
+type PaletteMode = 'browse' | 'awaiting' | 'pending';
+
+export function installCommandPalette(controller: CanvasController, opts: Partial<CommandPaletteConfig> = {}): (() => void) | undefined {
+  const cfg: CommandPaletteConfig = { maxResults: 10, fuzziness: true, recentCommandsCount: 5, ...opts };
 
   
 
   /* ── flatten commands ── */
-  function flattenCommands() {
-    const out = [];
-    function walk(items, path, category = null) {
+  function flattenCommands(): CommandItem[] {
+    const out: CommandItem[] = [];
+    function walk(items: MenuItem[], path: string[], category: string | null = null): void {
       items.forEach(it => {
         try {
           if (it.visible && !it.visible(controller)) return;
@@ -24,7 +33,7 @@ export function installCommandPalette(controller, opts = {}) {
         const lbl = typeof it.label === 'function' ? it.label(controller, cfg) : it.label;
         const nextPath = [...path, lbl];
         const currentCategory = it.category || category;
-        
+
         if (it.children) walk(it.children, nextPath, currentCategory);
         else out.push({
           kind: 'command',
@@ -41,19 +50,19 @@ export function installCommandPalette(controller, opts = {}) {
     walk(buildRootItems(controller), []);
     return out;
   }
-  const commandPool = () => flattenCommands();
+  const commandPool = (): CommandItem[] => flattenCommands();
   
   // Store recent commands
-  const recentCommands = [];
-  const addToRecent = (cmd) => {
+  const recentCommands: CommandItem[] = [];
+  const addToRecent = (cmd: CommandItem): void => {
     // Remove if already exists
-    const index = recentCommands.findIndex(c => 
+    const index = recentCommands.findIndex(c =>
       c.path.join(' ') === cmd.path.join(' '));
     if (index > -1) recentCommands.splice(index, 1);
-    
+
     // Add to beginning
     recentCommands.unshift(cmd);
-    
+
     // Keep only the specified number of recent commands
     if (recentCommands.length > cfg.recentCommandsCount) {
       recentCommands.pop();
@@ -61,32 +70,32 @@ export function installCommandPalette(controller, opts = {}) {
   };
 
   /* ── element suggestions ── */
-  const iconForType = t =>
+  const iconForType = (t: string): string =>
     t === 'img' ? 'fa-image' : t === 'markdown' ? 'fa-brands fa-markdown' :
       t === 'html' ? 'fa-code' : 'fa-font';
 
-  const buildElementPool = () => controller.canvasState.elements.map(el => {
+  const buildElementPool = (): ElementSuggestion[] => controller.canvasState.elements.map(el => {
     const raw = (el.content ?? '').replace(/\s+/g, ' ').trim();
     const txt = raw.length > 40 ? raw.slice(0, 40) + '…' : raw || '(empty)';
-    return { 
-      kind: 'element', 
-      id: el.id, 
-      label: txt, 
-      icon: iconForType(el.type), 
+    return {
+      kind: 'element' as const,
+      id: el.id,
+      label: txt,
+      icon: iconForType(el.type),
       type: el.type,
       searchText: txt.toLowerCase() + ' ' + el.type.toLowerCase()
     };
   });
   
   /* ── fuzzy search ── */
-  function fuzzyMatch(text, query) {
+  function fuzzyMatch(text: string, query: string): boolean {
     if (!cfg.fuzziness) return text.includes(query);
-    
+
     // Simple fuzzy matching algorithm
     let textIndex = 0;
     let queryIndex = 0;
     let score = 0;
-    
+
     while (textIndex < text.length && queryIndex < query.length) {
       if (text[textIndex] === query[queryIndex]) {
         score += 2; // Consecutive matches get higher score
@@ -96,7 +105,7 @@ export function installCommandPalette(controller, opts = {}) {
       }
       textIndex++;
     }
-    
+
     // Return true if we matched all query characters with a positive score
     return queryIndex === query.length && score > 0;
   }
@@ -133,33 +142,34 @@ export function installCommandPalette(controller, opts = {}) {
     `;
   document.body.appendChild(root);
 
-  const $input = root.querySelector('input');
-  const $list = root.querySelector('.suggestions');
-  const $clear = root.querySelector('#cmd-clear');
-  const $recentLabel = root.querySelector('.recent-commands-label');
-  const $presence = root.querySelector('.cmd-footer .presence');
+  const $input = root.querySelector('input') as HTMLInputElement;
+  const $list = root.querySelector('.suggestions') as HTMLUListElement;
+  const $clear = root.querySelector('#cmd-clear') as HTMLButtonElement;
+  const $recentLabel = root.querySelector('.recent-commands-label') as HTMLDivElement;
+  const $presence = root.querySelector('.cmd-footer .presence') as HTMLSpanElement;
 
   /* ── state ── */
-  let filtered = [], sel = -1;
-  let mode = 'browse';           // 'browse' | 'awaiting' | 'pending'
-  let pending = null;            // command awaiting free-text
+  let filtered: SuggestionItem[] = [];
+  let sel = -1;
+  let mode: PaletteMode = 'browse';           // 'browse' | 'awaiting' | 'pending'
+  let pending: CommandItem | null = null;            // command awaiting free-text
   let showingRecent = false;     // whether we're showing recent commands
 
 
-  controller.crdt.onPresenceChange( (awareness) => {
+  controller.crdt.onPresenceChange((awareness: any[]) => {
     controller.requestRender();
-    $presence.innerHTML = `${awareness.map( p => `<span class="client">${p.client.clientId}</span>`).join('')}<span class="total">${awareness.length} peers</span>`;
-  })
+    $presence.innerHTML = `${awareness.map(p => `<span class="client">${p.client.clientId}</span>`).join('')}<span class="total">${awareness.length} peers</span>`;
+  });
 
   /* ── render ── */
-  const render = () => {
+  const render = (): void => {
     $list.innerHTML = '';
     $recentLabel.style.display = showingRecent ? 'block' : 'none';
-    
-    (mode === 'browse' ? filtered: []).forEach((it, i) => {
+
+    (mode === 'browse' ? filtered : []).forEach((it, i) => {
       const li = document.createElement('li');
       li.className = 'suggestion' + (i === sel ? ' active' : '');
-      
+
       if (it.kind === 'command') {
         let iconHtml = '';
         if (it.icon) {
@@ -210,24 +220,24 @@ export function installCommandPalette(controller, opts = {}) {
     });
   };
 
-  const computeFiltered = q => {
+  const computeFiltered = (q: string): SuggestionItem[] => {
     if (!q) {
       // Show recent commands when no query
       showingRecent = recentCommands.length > 0;
       return showingRecent ? recentCommands : [];
     }
-    
+
     showingRecent = false;
     const term = q.toLowerCase();
-    
+
     // Combine command pool and element pool
-    const allItems = [...commandPool(), ...buildElementPool()];
-    
+    const allItems: SuggestionItem[] = [...commandPool(), ...buildElementPool()];
+
     // Filter based on fuzzy search or regular includes
     const matchedItems = cfg.fuzziness
       ? allItems.filter(i => fuzzyMatch(i.searchText, term))
       : allItems.filter(i => i.searchText.includes(term));
-    
+
     // Sort by relevance - exact matches first, then by path length (shorter paths first)
     return matchedItems
       .sort((a, b) => {
@@ -236,28 +246,28 @@ export function installCommandPalette(controller, opts = {}) {
         const bExact = b.searchText.includes(' ' + term + ' ');
         if (aExact && !bExact) return -1;
         if (!aExact && bExact) return 1;
-        
+
         // Then by path length (shorter paths first)
         if (a.kind === 'command' && b.kind === 'command') {
           return a.path.length - b.path.length;
         }
-        
+
         return 0;
       })
       .slice(0, cfg.maxResults);
   };
 
   /* ── helpers ── */
-  const startInput = cmd => {
+  const startInput = (cmd: CommandItem): void => {
     mode = 'awaiting';
     pending = cmd;
     $input.value = '';
-    $input.placeholder = cmd.path.at(-1) + '…';
+    $input.placeholder = (cmd.path[cmd.path.length - 1] || '') + '…';
     $input.focus();
     root.classList.add('awaiting');
     filtered = []; sel = -1; render();
   };
-  const quitInput = () => {
+  const quitInput = (): void => {
     mode = 'browse'; pending = null;
     root.classList.remove('awaiting');
     root.classList.remove('pending');
@@ -265,24 +275,23 @@ export function installCommandPalette(controller, opts = {}) {
     reset();
   };
 
-  const enterPending = (p) => {
-    mode = 'pending'; pending = p;
+  const enterPending = (): void => {
+    mode = 'pending';
     $input.value = '';
     root.classList.add('pending');
     root.classList.remove('awaiting');
-    p?.then(quitInput);
-  }
+  };
 
   /* ── run ── */
-  function run(item) {
+  function run(item: SuggestionItem | undefined): void {
     if (!item) return;
     if (item.kind === 'command') {
       // Add to recent commands
       addToRecent(item);
-      
-      if (item.needsInput) { 
-        startInput(item); 
-        return; 
+
+      if (item.needsInput) {
+        startInput(item);
+        return;
       }
       item.action?.(controller);
     } else {
@@ -293,19 +302,21 @@ export function installCommandPalette(controller, opts = {}) {
     reset();
   }
 
-  const reset = () => {
-    $input.value = ''; 
-    sel = -1; 
+  const reset = (): void => {
+    $input.value = '';
+    sel = -1;
     filtered = showingRecent ? recentCommands : [];
-    root.classList.add('empty'); 
+    root.classList.add('empty');
     render();
   };
 
   /* ── zoom helper ── */
-  const zoomToElement = (ctrl, id) => {
+  const zoomToElement = (ctrl: CanvasController, id: string): void => {
     const el = ctrl.findElementById(id); if (!el) return;
-    const box = ctrl.canvas.getBoundingClientRect(), m = 60;
-    const w = el.width * (el.scale || 1) + m, h = el.height * (el.scale || 1) + m;
+    const box = ctrl.canvas.getBoundingClientRect();
+    const m = 60;
+    const w = el.width * (el.scale || 1) + m;
+    const h = el.height * (el.scale || 1) + m;
     ctrl.viewState.scale = Math.min(box.width / w, box.height / h, ctrl.MAX_SCALE);
     ctrl.recenterOnElement(id); ctrl.updateCanvasTransform(); ctrl.saveLocalViewState?.();
   };
@@ -323,59 +334,63 @@ export function installCommandPalette(controller, opts = {}) {
     }
   });
   
-  $input.addEventListener('input', e => {
-    const q = e.target.value.trim();
+  $input.addEventListener('input', (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const q = target.value.trim();
     root.classList.toggle('empty', q === '');
-    filtered = computeFiltered(q); 
-    sel = -1; 
+    filtered = computeFiltered(q);
+    sel = -1;
     render();
   });
 
-  $input.addEventListener('blur', e => {
+  $input.addEventListener('blur', () => {
     root.classList.remove('focused');
   });
 
-  $input.addEventListener('keydown', async (e) => {
+  $input.addEventListener('keydown', async (e: KeyboardEvent) => {
     // Tab completion - select first item
     if (e.key === 'Tab' && filtered.length && sel === -1) {
-      sel = 0; 
-      render(); 
+      sel = 0;
+      render();
       e.preventDefault();
       return;
     }
-    
+
     // Navigation
-    if (e.key === 'ArrowDown' && filtered.length) { 
-      sel = (sel + 1) % filtered.length; 
-      render(); 
-      e.preventDefault(); 
+    if (e.key === 'ArrowDown' && filtered.length) {
+      sel = (sel + 1) % filtered.length;
+      render();
+      e.preventDefault();
     }
-    else if (e.key === 'ArrowUp' && filtered.length) { 
-      sel = (sel - 1 + filtered.length) % filtered.length; 
-      render(); 
-      e.preventDefault(); 
+    else if (e.key === 'ArrowUp' && filtered.length) {
+      sel = (sel - 1 + filtered.length) % filtered.length;
+      render();
+      e.preventDefault();
     }
     else if (e.key === 'Enter') {
       const val = $input.value.trim();
-      if (mode === 'awaiting') { 
+      if (mode === 'awaiting') {
         enterPending();
-        const res = await pending?.action?.(controller, val); 
-        quitInput(); 
-        return; 
+        await pending?.action?.(controller, val);
+        quitInput();
+        return;
       }
-      
+
       if (sel >= 0) {
         run(filtered[sel]);
       }
       else if (val) {
         const selId = controller.selectedElementId;
         if (selId) {
-          editElementWithPrompt(val, controller.findElementById(selId), controller).catch(console.error);
+          const el = controller.findElementById(selId);
+          if (el) {
+            editElementWithPrompt(val, el, controller).catch(console.error);
+          }
           reset();
         } else {
           const r = controller.canvas.getBoundingClientRect();
           const pt = controller.screenToCanvas(r.width / 2, r.height / 2);
-          controller.createNewElement(pt.x, pt.y, 'markdown', val); 
+          controller.createNewElement(pt.x, pt.y, 'markdown', val);
           reset();
         }
       }
@@ -388,12 +403,12 @@ export function installCommandPalette(controller, opts = {}) {
   $clear.onclick = quitInput;
 
   // Global keyboard shortcut to open command palette
-  window.addEventListener('keydown', e => {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { 
-      e.preventDefault(); 
-      $input.focus(); 
-      $input.select(); 
-      
+  const globalKeydownHandler = (e: KeyboardEvent): void => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      $input.focus();
+      $input.select();
+
       // Show recent commands when opened
       if (recentCommands.length > 0) {
         filtered = recentCommands;
@@ -401,13 +416,21 @@ export function installCommandPalette(controller, opts = {}) {
         render();
       }
     }
-  });
+  };
+
+  window.addEventListener('keydown', globalKeydownHandler);
 
   // Initialize with recent commands if available
   filtered = recentCommands.length > 0 ? recentCommands : [];
   showingRecent = recentCommands.length > 0;
   render();
-  
+
   // Install keyboard shortcuts
   installKeyboardShortcuts(controller);
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('keydown', globalKeydownHandler);
+    root.remove();
+  };
 }

@@ -1,7 +1,7 @@
-module.exports = {
+export default {
   testEnvironment: 'jsdom',
-  moduleFileExtensions: ['js'],
-  testMatch: ['**/tests/**/*.test.js'],
+  moduleFileExtensions: ['js', 'ts'],
+  testMatch: ['**/tests/**/*.test.js', '**/tests/**/*.test.ts'],
   setupFiles: ['<rootDir>/tests/setup.js'],
   collectCoverage: true,
   coverageDirectory: 'coverage',

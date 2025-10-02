@@ -1,4 +1,5 @@
-/* 
+// @ts-nocheck - TODO: Add proper types
+/*
  * ---------------------------------------------------------------------------
  * XState finite-state machine describing     (  mode   ×   gesture  )
  * ---------------------------------------------------------------------------
@@ -7,11 +8,11 @@ import { createMachine, assign } from 'xstate';
 import { buildContextMenu } from '../context-menu';
 
 
-const groupSelected = (e) => {
+const groupSelected = (e: any) => {
   return e.selected.has(e.elementId) && e.selected.size > 0
 }
 
-const guardLog = (g) => { }
+const guardLog = (g: any) => { }
 
 export const gestureMachine = createMachine({
 

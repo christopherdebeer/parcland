@@ -375,7 +375,7 @@ export const gestureMachine = createMachine({
         ctx.controller.removeSelectionBox();
       },
       capPress: assign({ draft: (_c, e) => ({ start: e.xy }) }),
-      capPan: assign({ draft: (_c, e) => ({ start: e.xy, view: e.view }) }),
+      capPan: assign({ draft: (ctx, e) => ({ ...ctx.draft, view: e.view }) }),
       capPinch: assign({
         draft: (_c, e) => {
           // 1. Get the active pointer coordinates as an array of {x, y} objects.
@@ -401,6 +401,12 @@ export const gestureMachine = createMachine({
           // 5. Calculate the starting center point (midpoint) on the screen.
           const centerX = (p1.x + p2.x) / 2;
           const centerY = (p1.y + p2.y) / 2;
+
+          // 6. Guard against missing e.view to prevent null pointer dereference
+          if (!e.view) {
+            console.error("capPinch called without view state:", e);
+            return {};
+          }
 
           return {
             points: points,
@@ -433,6 +439,11 @@ export const gestureMachine = createMachine({
           const start = new Map();
           ids.forEach(id => {
             const el = state.context.controller.findElementById(id);
+            // Guard against missing elements (race condition or stale selection)
+            if (!el) {
+              console.error("capGroupMove: Element not found!", id);
+              return;
+            }
             start.set(id, { x: el.x, y: el.y });
           });
           return { origin: e.xy, startPositions: start };
@@ -569,6 +580,34 @@ export const gestureMachine = createMachine({
 
       capReorder: assign({ draft: (_c, e) => ({ origin: e.xy, id: e.elementId }) }),
       capEdge: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) }),
-      capNode: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) })
+      capNode: assign({ draft: (_c, e) => ({ start: e.xy, sourceId: e.elementId }) }),
+
+      // Selection actions
+      clearSelection: (ctx) => {
+        ctx.controller.clearSelection();
+      },
+      selectElement: (ctx, e) => {
+        if (e.elementId) {
+          ctx.controller.selectElement(e.elementId);
+        }
+      },
+
+      // Lasso selection actions
+      applyLassoUpdate: (ctx, e) => {
+        if (!ctx.draft.start || !e.xy) return;
+        ctx.controller.updateSelectionBox(
+          ctx.draft.start.x,
+          ctx.draft.start.y,
+          e.xy.x,
+          e.xy.y
+        );
+      },
+      commitLassoSelection: (ctx) => {
+        ctx.controller.removeSelectionBox();
+        // Clear draft state
+        if (ctx.draft) {
+          delete ctx.draft.start;
+        }
+      }
     }
   });

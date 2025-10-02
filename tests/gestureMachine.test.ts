@@ -27,6 +27,7 @@ describe('GestureMachine - Core Interactions', () => {
       findElementById: jest.fn(),
       requestRender: jest.fn(),
       clearSelection: jest.fn(() => mockController.selectedElementIds.clear()),
+      selectElement: jest.fn((id: string) => { mockController.selectedElementIds.add(id); }),
       isElementSelected: jest.fn((id: string) => mockController.selectedElementIds.has(id)),
       updateCanvasTransform: jest.fn(),
       screenToCanvas: jest.fn((x: number, y: number) => ({ x, y })),

@@ -33,12 +33,12 @@ jobs:
       - name: Install dependencies
         run: cd vite-app && npm install
       
-      - name: Compile TypeScript
+      - name: Build Vite app
         run: cd vite-app && npm run build
-        
+      
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: vite-app/dist
         
   # Deployment job
   deploy:

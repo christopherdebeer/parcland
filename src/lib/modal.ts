@@ -1,30 +1,30 @@
-// @ts-nocheck - TODO: Add proper types
+import type { CanvasElement } from '../types';
 
-let $root = null;    // modal shell (created on-demand)
-let $contentEditorHost = null;    // div that will hold CodeMirror
-let $srcEditorHost = null;
-let $btnPrev = null;
-let $btnNext = null;
-let $info = null;
-let $btnClear = null;
-let $btnCopy = null;
-let $btnCancel = null;
-let $btnSave = null;
-let $btnGenerate = null;
-let $tabContent = null;
-let $tabSrc = null;
-let $errorBox = null;
+let $root: HTMLElement | null = null;    // modal shell (created on-demand)
+let $contentEditorHost: HTMLElement | null = null;    // div that will hold CodeMirror
+let $srcEditorHost: HTMLElement | null = null;
+let $btnPrev: HTMLElement | null = null;
+let $btnNext: HTMLElement | null = null;
+let $info: HTMLElement | null = null;
+let $btnClear: HTMLElement | null = null;
+let $btnCopy: HTMLElement | null = null;
+let $btnCancel: HTMLElement | null = null;
+let $btnSave: HTMLElement | null = null;
+let $btnGenerate: HTMLElement | null = null;
+let $tabContent: HTMLElement | null = null;
+let $tabSrc: HTMLElement | null = null;
+let $errorBox: HTMLElement | null = null;
 
-let cmContent = null;    // CodeMirror instances
-let cmSrc = null;
+let cmContent: any = null;    // CodeMirror instances
+let cmSrc: any = null;
 
-let activeTab = 'content';
-let currentEl = null;    // element being edited (live reference)
+let activeTab: 'content' | 'src' = 'content';
+let currentEl: CanvasElement | null = null;    // element being edited (live reference)
 let currentVerIdx = 0;       // 0 … el.versions.length  (top == current)
-let resolver = null;    // Promise resolver returned by showModal
-let generateFn = null;    // callback injected by caller (optional)
+let resolver: ((value: { status: string; el: CanvasElement | null }) => void) | null = null;    // Promise resolver returned by showModal
+let generateFn: ((seed: string) => Promise<string> | string) | null = null;    // callback injected by caller (optional)
 
-export function showModal(el, opts = {}) {
+export function showModal(el: CanvasElement, opts: { generateContent?: (seed: string) => Promise<string> | string } = {}): Promise<{ status: string; el: CanvasElement | null }> {
   if (!el) throw new Error('showModal: element required');
   generateFn = opts.generateContent ?? null;
 
@@ -34,7 +34,7 @@ export function showModal(el, opts = {}) {
   return new Promise((res) => { resolver = res; });
 }
 
-function ensureDom() {
+function ensureDom(): void {
   if ($root) return;
   const tpl = /*html*/`
 <div id="edit-modal" class="modal">
@@ -95,18 +95,18 @@ function ensureDom() {
   $tabSrc.onclick = () => switchTab('src');
 
   /* Escape key closes modal */
-  document.addEventListener('keydown', (e) => {
-    if (!$root.hidden && e.key === 'Escape') close('cancelled');
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (!$root!.hidden && e.key === 'Escape') close('cancelled');
   });
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
  *  Modal lifecycle helpers
  * ------------------------------------------------------------------------- */
-function hydrateUiFor(el) {
+function hydrateUiFor(el: CanvasElement): void {
   /* editors (lazy) */
   if (!cmContent) {
-    cmContent = CodeMirror($contentEditorHost, {
+    cmContent = (window as any).CodeMirror($contentEditorHost, {
       value: '', mode: getMode(el.type), lineNumbers: true,
       theme: 'default', lineWrapping: true
     });
@@ -114,7 +114,7 @@ function hydrateUiFor(el) {
     cmContent.setOption('mode', getMode(el.type));
   }
   if (!cmSrc) {
-    cmSrc = CodeMirror($srcEditorHost, {
+    cmSrc = (window as any).CodeMirror($srcEditorHost, {
       value: '', mode: 'text', lineNumbers: true,
       theme: 'default', lineWrapping: true
     });
@@ -128,39 +128,39 @@ function hydrateUiFor(el) {
   loadVersion(currentVerIdx);
   clearError();
 
-  $root.style.display = "block";
+  $root!.style.display = "block";
 }
 
-function loadVersion(idx) {
-  const vCount = (currentEl.versions ?? []).length;
+function loadVersion(idx: number): void {
+  const vCount = (currentEl!.versions ?? []).length;
   currentVerIdx = idx = Math.max(0, Math.min(idx, vCount));
 
   if (idx < vCount) {
-    cmContent.setValue(currentEl.versions[idx].content);
+    cmContent.setValue(currentEl!.versions![idx].content);
   } else {
-    cmContent.setValue(currentEl.content ?? '');
+    cmContent.setValue(currentEl!.content ?? '');
   }
-  cmSrc.setValue(currentEl.src ?? '');
+  cmSrc.setValue(currentEl!.src ?? '');
 
-  $info.textContent = `Version ${idx + 1} of ${vCount + 1}`;
+  $info!.textContent = `Version ${idx + 1} of ${vCount + 1}`;
 }
 
-function navVersion(delta) {
+function navVersion(delta: number): void {
   loadVersion(currentVerIdx + delta);
 }
 
-function switchTab(tab, silent = false) {
+function switchTab(tab: 'content' | 'src', silent = false): void {
   activeTab = tab;
-  $tabContent.classList.toggle('active', tab === 'content');
-  $tabSrc.classList.toggle('active', tab === 'src');
-  $contentEditorHost.style.display = tab === 'content' ? 'block' : 'none';
-  $srcEditorHost.style.display = tab === 'src' ? 'block' : 'none';
+  $tabContent!.classList.toggle('active', tab === 'content');
+  $tabSrc!.classList.toggle('active', tab === 'src');
+  $contentEditorHost!.style.display = tab === 'content' ? 'block' : 'none';
+  $srcEditorHost!.style.display = tab === 'src' ? 'block' : 'none';
   if (!silent) getActiveCM().refresh();
 }
 
-function getActiveCM() { return activeTab === 'content' ? cmContent : cmSrc; }
+function getActiveCM(): any { return activeTab === 'content' ? cmContent : cmSrc; }
 
-function saveAndClose() {
+function saveAndClose(): void {
   if (!currentEl) return;
 
   if (activeTab === 'content') {
@@ -177,37 +177,37 @@ function saveAndClose() {
   close('saved', currentEl);
 }
 
-function generateContent() {
+function generateContent(): void {
   clearError();
   if (typeof generateFn !== 'function') return;
 
-  $btnGenerate.disabled = true;
-  const oldLabel = $btnGenerate.textContent;
-  $btnGenerate.innerHTML = `Generating… <i class="fa-solid fa-spinner fa-spin"></i>`;
+  ($btnGenerate as HTMLButtonElement).disabled = true;
+  const oldLabel = $btnGenerate!.textContent;
+  $btnGenerate!.innerHTML = `Generating… <i class="fa-solid fa-spinner fa-spin"></i>`;
 
   const seed = getActiveCM().getValue();
-  Promise.resolve(generateFn(seed))
-    .then(res => {
+  Promise.resolve(generateFn!(seed))
+    .then((res: string) => {
       if (res) getActiveCM().setValue(res);
       else showError('No content generated.');
     })
-    .catch(err => {
+    .catch((err: Error) => {
       console.error('Generate error', err);
       showError('Error while generating content.');
     })
     .finally(() => {
-      $btnGenerate.disabled = false;
-      $btnGenerate.innerHTML = oldLabel;
+      ($btnGenerate as HTMLButtonElement).disabled = false;
+      $btnGenerate!.innerHTML = oldLabel!;
     });
 }
 
-function copyToClipboard() {
+function copyToClipboard(): void {
   navigator.clipboard.writeText(getActiveCM().getValue())
     .then(() => alert('Copied to clipboard!'))
-    .catch(err => console.warn('Clipboard error', err));
+    .catch((err: Error) => console.warn('Clipboard error', err));
 }
 
-function getMode(type) {
+function getMode(type: string): string {
   switch (type) {
     case 'html': return 'htmlmixed';
     case 'markdown': return 'markdown';
@@ -216,11 +216,11 @@ function getMode(type) {
   }
 }
 
-function clearError() { $errorBox.textContent = ''; }
-function showError(msg) { $errorBox.textContent = msg; }
+function clearError(): void { $errorBox!.textContent = ''; }
+function showError(msg: string): void { $errorBox!.textContent = msg; }
 
-function close(status, el = null) {
-  $root.style.display = "none";
+function close(status: string, el: CanvasElement | null = null): void {
+  $root!.style.display = "none";
   resolver?.({ status, el });
   resolver = null;
   currentEl = null;

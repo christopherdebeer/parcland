@@ -1,9 +1,15 @@
-// @ts-nocheck - TODO: Add proper types
 import * as Y from 'yjs';
 import { WebrtcProvider } from 'y-webrtc';
+import type { CanvasElement, Edge } from '../../types';
 
 export class CrdtAdapter {
-    constructor(id) {
+    doc: Y.Doc;
+    elements: Y.Map<CanvasElement>;
+    edges: Y.Map<Edge>;
+    provider: WebrtcProvider;
+    clientInfo: { clientId: number; user: string };
+
+    constructor(id: string) {
         this.doc = new Y.Doc();
         this.elements = this.doc.getMap('elements');
         this.edges = this.doc.getMap('edges');
@@ -19,22 +25,22 @@ export class CrdtAdapter {
         //     console.log("[CRDT] Awareness full", Array.from(this.provider.awareness.getStates().values()));
         // });
 
-        this.provider.on('synced', (isSynced) => {
+        this.provider.on('synced', (isSynced: boolean) => {
             console.log("[CRDT] Synced", isSynced);
         });
 
-        const clientInfo = {
+        this.clientInfo = {
             clientId: this.provider.awareness.clientID,
             user: 'Unknown'
-        }
+        };
 
         this.provider.awareness.setLocalStateField("client", {
-            ...clientInfo,
+            ...this.clientInfo,
             selection: [],
         });
     }
 
-    updateElement(id, data) {
+    updateElement(id: string, data: CanvasElement): void {
         const existing = this.elements.get(id);
         const delta = JSON.stringify(existing) !== JSON.stringify(data);
         
@@ -47,28 +53,28 @@ export class CrdtAdapter {
         this.elements.set(id, data);
     }
 
-    updateEdge(id, data) {
+    updateEdge(id: string, data: Edge): void {
         this.edges.set(id, data);
     }
 
-    updateView(data) {
+    updateView(data: any): void {
         this.provider.awareness.setLocalStateField("viewState", data);
     }
 
-    updateSelection(data) {
+    updateSelection(data: Set<string>): void {
         this.provider.awareness.setLocalStateField("client", {
             ...this.clientInfo,
             selection: Array.from(data),
         });
     }
 
-    onPresenceChange(callback) {
-        this.provider.awareness.on('change', (changes) => {
-            callback(Array.from(this.provider.awareness.getStates().values()).filter( p => p.client.clientId !== this.provider.awareness.clientID));
+    onPresenceChange(callback: (presence: any[]) => void): void {
+        this.provider.awareness.on('change', (changes: any) => {
+            callback(Array.from(this.provider.awareness.getStates().values()).filter((p: any) => p.client?.clientId !== this.provider.awareness.clientID));
         });
     }
 
-    onUpdate(callback) {
+    onUpdate(callback: (event: any) => void): void {
         this.elements.observe((event) => {
             callback(event);
         });

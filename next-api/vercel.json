@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd .. && npm install && npm run build:all",
-  "installCommand": "cd .. && npm install",
+  "buildCommand": "cd ../vite-app && npm install && BUILD_TARGET=vercel npm run build && cd ../next-api && npm install && npm run build",
+  "installCommand": "npm install",
   "framework": "nextjs"
 }

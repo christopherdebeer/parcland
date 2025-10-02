@@ -137,18 +137,21 @@ export interface CanvasController {
 
   // Methods
   clickCapture(element: HTMLElement, callback: (event: Event) => void): void;
-  updateElementNode(node: HTMLElement, element: CanvasElement, isSelected: boolean): void;
+  updateElementNode(node: HTMLElement, element: CanvasElement, isSelected: boolean, skipHandles?: boolean): void;
   hideContextMenu(): void;
   requestRender(): void;
   requestEdgeUpdate(): void;
-  regenerateImage(element: CanvasElement): void;
+  regenerateImage?(element: CanvasElement): void;
   toggleStatic(element: CanvasElement): void;
   openEditModal(element: CanvasElement): void;
   createEditElement(event: Event, element: CanvasElement, property: string): void;
   selectElement(id: string): void;
+  clearSelection(): void;
   handleDrillIn(element: CanvasElement): void;
   findElementById(id: string): CanvasElement | undefined;
-  createNewElement(x: number, y: number, type: string, content: string): string;
+  findEdgeElementById?(id: string): Edge | undefined;
+  createNewElement(x: number, y: number, type: string, content: string, isCanvasContainer?: boolean, data?: any): string;
+  createNewEdge?(sourceId: string, targetId: string, label: string, data?: any, style?: any): void;
   screenToCanvas(x: number, y: number): { x: number; y: number };
   updateCanvasTransform(): void;
   saveLocalViewState?(): void;
@@ -157,6 +160,12 @@ export interface CanvasController {
   undo(): void;
   redo(): void;
   _pushHistorySnapshot(label: string): void;
+  updateSelectionBox(startX: number, startY: number, curX: number, curY: number): void;
+  removeSelectionBox(): void;
+  isElementSelected(id: string): boolean;
+  getGroupBBox(): { x1: number; y1: number; x2: number; y2: number; cx: number; cy: number } | null;
+  buildContextMenu?(elementId?: string): void;
+  showContextMenu?(x: number, y: number): void;
 
   // Legacy properties (used by some files)
   [key: string]: any;

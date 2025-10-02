@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Add proper types
 /**
  * CanvasController-aware helpers that *mutate model objects* but never touch
  * the DOM outside controller methods.  They are injected into gestureMachine
@@ -6,10 +5,57 @@
  */
 import { saveCanvas } from '../network/storage.ts';
 import { generateContent } from '../network/generation.ts';
+import type { CanvasController } from '../../types.ts';
 
-export function createGestureHelpers(controller) {
+// XState context and event types
+interface GestureContext {
+  controller: CanvasController;
+  draft: {
+    start?: { x: number; y: number };
+    view?: { translateX: number; translateY: number; scale: number };
+    startDist?: number;
+    initialScale?: number;
+    center?: { x: number; y: number };
+    origin?: { x: number; y: number };
+    startPos?: { x: number; y: number };
+    resize?: {
+      startX: number;
+      startY: number;
+      startW: number;
+      startH: number;
+      cx?: number;
+      cy?: number;
+    };
+    rotate?: {
+      center: { x: number; y: number };
+      startScreen: { x: number; y: number };
+      startRotation: number;
+    };
+    startScale?: number;
+    startPositions?: Map<string, { x: number; y: number; offsetX?: number; offsetY?: number; rotation?: number; scale?: number }>;
+    startAngle?: number;
+    bboxCenter?: { cx: number; cy: number };
+    tempLine?: SVGLineElement;
+    sourceId?: string;
+    id?: string;
+    startCx?: number;
+    startCy?: number;
+  };
+  pointers?: Record<string, { x: number; y: number }>;
+}
 
-  const dpi = () => controller.viewState.scale || 1;     // “device-pixels” ⇄ canvas
+interface GestureEvent {
+  xy: { x: number; y: number };
+  elementId?: string;
+  edgeId?: string;
+  ev?: any;
+  deltaY?: number;
+  active?: Record<string, { x: number; y: number }>;
+}
+
+export function createGestureHelpers(controller: CanvasController) {
+
+  const dpi = () => controller.viewState.scale || 1;     // "device-pixels" ⇄ canvas
 
   function commitElementMutation() {
     controller.requestRender();
@@ -21,7 +67,7 @@ export function createGestureHelpers(controller) {
     // controller._pushHistorySnapshot('View change');
   }
 
-  function applyCanvasPan(ctx, ev) {
+  function applyCanvasPan(ctx: GestureContext, ev: GestureEvent) {
     if (!ctx.draft.start || !ctx.draft.view) return;
     const dx = ev.xy.x - ctx.draft.start.x;
     const dy = ev.xy.y - ctx.draft.start.y;
@@ -30,7 +76,7 @@ export function createGestureHelpers(controller) {
     controller.updateCanvasTransform();
   }
 
-  function applyCanvasPinch(ctx, ev) {
+  function applyCanvasPinch(ctx: GestureContext, ev: GestureEvent) {
     const pts = Object.values(ev.active || {});
     if (pts.length !== 2 || !ctx.draft.startDist) return;
     const [p1, p2] = pts;
@@ -59,7 +105,7 @@ export function createGestureHelpers(controller) {
     controller.updateCanvasTransform();
   }
 
-  function applyWheelZoom(_ctx, ev) {
+  function applyWheelZoom(_ctx: GestureContext, ev: GestureEvent) {
     const { ev: wheelEv, deltaY } = ev;
     const delta = -(deltaY ?? wheelEv.deltaY);
     const zoomSpeed = 0.001;
@@ -77,7 +123,7 @@ export function createGestureHelpers(controller) {
     controller.updateCanvasTransform();
   }
 
-  function applyMoveElement(ctx, ev) {
+  function applyMoveElement(ctx: GestureContext, ev: GestureEvent) {
     const el = controller.findElementById(ev.elementId);
     if (!el || el.static) return;
     const dx = (ev.xy.x - ctx.draft.origin.x) / dpi();
@@ -92,13 +138,13 @@ export function createGestureHelpers(controller) {
     );
   }
 
-  function applyResizeElement(ctx, ev) {
-    const el = controller.findElementById(ev.elementId);
+  function applyResizeElement(ctx: GestureContext, ev: GestureEvent) {
+    const el = controller.findElementById(ev.elementId!);
     if (!el || el.static) return;
-    const dx = (ev.xy.x - ctx.draft.resize.startX) / dpi();
-    const dy = (ev.xy.y - ctx.draft.resize.startY) / dpi();
-    el.width = Math.max(20, ctx.draft.resize.startW + dx);
-    el.height = Math.max(20, ctx.draft.resize.startH + dy);
+    const dx = (ev.xy.x - ctx.draft.resize!.startX) / dpi();
+    const dy = (ev.xy.y - ctx.draft.resize!.startY) / dpi();
+    el.width = Math.max(20, ctx.draft.resize!.startW + dx);
+    el.height = Math.max(20, ctx.draft.resize!.startH + dy);
     const node = controller.elementNodesMap[el.id];
     controller.updateElementNode(
       node,
@@ -114,7 +160,7 @@ export function createGestureHelpers(controller) {
     });
   }
 
-  function applyRotateElement(ctx, ev) {
+  function applyRotateElement(ctx: GestureContext, ev: GestureEvent) {
     const el = controller.findElementById(ev.elementId);
     if (!el) return;
     const { center, startScreen, startRotation } = ctx.draft.rotate;
@@ -134,16 +180,16 @@ export function createGestureHelpers(controller) {
     );
   }
 
-  function applyScaleElement(ctx, ev) {
-    const el = controller.findElementById(ev.elementId);
+  function applyScaleElement(ctx: GestureContext, ev: GestureEvent) {
+    const el = controller.findElementById(ev.elementId!);
     if (!el) return;
     const sensitivity = 0.01;
-    const dx = (ev.xy.x - ctx.draft.origin.x) / dpi();
-    const dy = (ev.xy.y - ctx.draft.origin.y) / dpi();
+    const dx = (ev.xy.x - ctx.draft.origin!.x) / dpi();
+    const dy = (ev.xy.y - ctx.draft.origin!.y) / dpi();
     // Calculate a scale factor based on the distance moved
     const scaleFactor = 1 + (dx + dy) * sensitivity;
     // Apply the scale factor to the initial scale
-    el.scale = Math.max(ctx.draft.startScale * scaleFactor, 0.2);
+    el.scale = Math.max(ctx.draft.startScale! * scaleFactor, 0.2);
     controller.updateElementNode(
       controller.elementNodesMap[el.id],
       el,
@@ -152,11 +198,11 @@ export function createGestureHelpers(controller) {
     );
   }
 
-  function applyReorderElement(ctx, ev) {
-    const el = controller.findElementById(ev.elementId);
+  function applyReorderElement(ctx: GestureContext, ev: GestureEvent) {
+    const el = controller.findElementById(ev.elementId!);
     if (!el) return;
-    const dx = (ev.xy.x - ctx.draft.origin.x) / dpi();
-    const dy = (ev.xy.y - ctx.draft.origin.y) / dpi();
+    const dx = (ev.xy.x - ctx.draft.origin!.x) / dpi();
+    const dy = (ev.xy.y - ctx.draft.origin!.y) / dpi();
     const len = Math.hypot(dx, dy);
     el.zIndex = len * 0.1;
     controller.updateElementNode(
@@ -167,7 +213,7 @@ export function createGestureHelpers(controller) {
     );
   }
 
-  function applyGroupMove(ctx, ev) {
+  function applyGroupMove(ctx: GestureContext, ev: GestureEvent) {
     const dx = (ev.xy.x - ctx.draft.origin.x) / dpi();
     const dy = (ev.xy.y - ctx.draft.origin.y) / dpi();
     controller.selectedElementIds.forEach(id => {
@@ -180,7 +226,7 @@ export function createGestureHelpers(controller) {
   }
 
     /* ---------------- group resize (single-handle drag) ---------------- */
-  function applyGroupResize(ctx, ev) {
+  function applyGroupResize(ctx: GestureContext, ev: GestureEvent) {
     const { resize } = ctx.draft;               if (!resize) return;
     const dpi  = () => controller.viewState.scale || 1;
     const dx   = (ev.xy.x - resize.startX) / dpi();
@@ -192,10 +238,11 @@ export function createGestureHelpers(controller) {
 
     controller.selectedElementIds.forEach(id => {
       const el    = controller.findElementById(id);
-      const offX  = (el.x - resize.cx) * sx;
-      const offY  = (el.y - resize.cy) * sy;
-      el.x        = resize.cx + offX;
-      el.y        = resize.cy + offY;
+      if (!el) return;
+      const offX  = (el.x - resize.cx!) * sx;
+      const offY  = (el.y - resize.cy!) * sy;
+      el.x        = resize.cx! + offX;
+      el.y        = resize.cy! + offY;
       el.scale    = (el.scale || 1) * Math.max(sx, sy);   // uniform
     });
     controller.requestRender();
@@ -205,14 +252,16 @@ export function createGestureHelpers(controller) {
   const applyGroupScale = applyGroupResize;   /* identical behaviour   */
 
   /* ---------------- group rotate (ring handle) ----------------------- */
-  function applyGroupRotate(ctx, ev) {
+  function applyGroupRotate(ctx: GestureContext, ev: GestureEvent) {
     const { rotate } = ctx.draft;              if (!rotate) return;
     const a1 = Math.atan2(ev.xy.y - rotate.center.y,
                           ev.xy.x - rotate.center.x);
-    const dA = a1 - rotate.startAng;           // radians
+    const startAng = (rotate as any).startAng || 0;
+    const dA = a1 - startAng;           // radians
 
     controller.selectedElementIds.forEach(id => {
       const el = controller.findElementById(id);
+      if (!el) return;
       const dx = el.x - rotate.center.x;
       const dy = el.y - rotate.center.y;
       const rx =  dx * Math.cos(dA) - dy * Math.sin(dA);
@@ -224,7 +273,7 @@ export function createGestureHelpers(controller) {
     controller.requestRender();
   }
 
-  function applyGroupPinch(ctx, ev) {
+  function applyGroupPinch(ctx: GestureContext, ev: GestureEvent) {
     const pts = Object.values(ev.active || {});
     if (pts.length !== 2) return;
 
@@ -257,15 +306,15 @@ export function createGestureHelpers(controller) {
     controller.requestRender();
   }
 
-  function applyLassoUpdate(ctx, ev) {
+  function applyLassoUpdate(ctx: GestureContext, ev: GestureEvent) {
     controller.updateSelectionBox(
-      ctx.draft.start.x, ctx.draft.start.y,
+      ctx.draft.start!.x, ctx.draft.start!.y,
       ev.xy.x, ev.xy.y
     );
   }
-  function commitLassoSelection(ctx, ev) {
+  function commitLassoSelection(ctx: GestureContext, ev: GestureEvent) {
     const { start } = ctx.draft;
-    const { x: sx, y: sy } = start;
+    const { x: sx, y: sy } = start!;
     const { x: ex, y: ey } = ev.xy;
     const tl = controller.screenToCanvas(Math.min(sx, ex), Math.min(sy, ey));
     const br = controller.screenToCanvas(Math.max(sx, ex), Math.max(sy, ey));
@@ -284,11 +333,11 @@ export function createGestureHelpers(controller) {
 
     if (controller.selectedElementIds.size === 0 &&
       controller.mode === 'direct') {
-      controller.switchMode('navigate');
+      controller.switchMode!('navigate');
     }
   }
 
-  function selectElement(_ctx, ev) {
+  function selectElement(_ctx: GestureContext, ev: GestureEvent) {
     if (!ev.elementId) return;
 
     const isTouch = ev.ev.pointerType === 'touch';
@@ -305,7 +354,7 @@ export function createGestureHelpers(controller) {
       controller.selectedElementIds.add(ev.elementId);
     }
 
-    controller.crdt.updateSelection(controller.selectedElementIds)
+    (controller.crdt as any).updateSelection?.(controller.selectedElementIds)
 
     controller.requestRender();
   }
@@ -314,66 +363,67 @@ export function createGestureHelpers(controller) {
     controller.clearSelection();
   }
 
-  function spawnNewElementAtTap(ctx, evt) {
+  function spawnNewElementAtTap(_ctx: GestureContext, evt: GestureEvent) {
     const { x, y } = controller.screenToCanvas(evt.xy.x, evt.xy.y);
-    controller.createNewElement(x, y, 'markdown');
+    controller.createNewElement(x, y, 'markdown', '');
   }
 
-  function applyPinchElement(ctx, ev) {
+  function applyPinchElement(ctx: GestureContext, ev: GestureEvent) {
     const pts = Object.values(ev.active || {});
     if (pts.length !== 2) return;
     const [p1, p2] = pts;
     const newDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    const factor = newDist / ctx.draft.startDist;
+    const factor = newDist / ctx.draft.startDist!;
 
-    const el = controller.findElementById(ctx.draft.id);
+    const el = controller.findElementById(ctx.draft.id!);
     if (!el) return;
 
     /* scale & move */
     // Update scale instead of width/height
-    el.scale = ctx.draft.startScale * factor;
+    el.scale = ctx.draft.startScale! * factor;
     // Position still needs to be adjusted
-    el.x = ctx.draft.center.x + (ctx.draft.startCx - ctx.draft.center.x) * factor;
-    el.y = ctx.draft.center.y + (ctx.draft.startCy - ctx.draft.center.y) * factor;
+    el.x = ctx.draft.center!.x + (ctx.draft.startCx! - ctx.draft.center!.x) * factor;
+    el.y = ctx.draft.center!.y + (ctx.draft.startCy! - ctx.draft.center!.y) * factor;
 
     /* rotation */
-    const a0 = ctx.draft.startAngle;
+    const a0 = ctx.draft.startAngle!;
     const a1 = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-    el.rotation = ctx.draft.startRotation + ((a1 - a0) * 180 / Math.PI);
+    const startRotation = ctx.draft.rotate?.startRotation ?? 0;
+    el.rotation = startRotation + ((a1 - a0) * 180 / Math.PI);
 
     controller.updateElementNode(controller.elementNodesMap[el.id], el, true);
   }
 
-  function startTempLine(ctx, ev) {
+  function startTempLine(ctx: GestureContext, ev: GestureEvent) {
 
-    const sourceEl = controller.findElementById(ev.elementId);
+    const sourceEl = controller.findElementById(ev.elementId!);
     if (!sourceEl) return;
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('stroke', '#888');
     line.setAttribute('stroke-width', '4');
     line.setAttribute('stroke-dasharray', '5 5');
-    line.setAttribute('x1', sourceEl.x);
-    line.setAttribute('y1', sourceEl.y);
-    line.setAttribute('x2', sourceEl.x);
-    line.setAttribute('y2', sourceEl.y);
+    line.setAttribute('x1', String(sourceEl.x));
+    line.setAttribute('y1', String(sourceEl.y));
+    line.setAttribute('x2', String(sourceEl.x));
+    line.setAttribute('y2', String(sourceEl.y));
     controller.edgesLayer.appendChild(line);
     ctx.draft.tempLine = line;
     ctx.draft.sourceId = ev.elementId;
     ctx.draft.start = ev.xy;
   }
 
-  function applyEdgeDrag(ctx, ev) {
+  function applyEdgeDrag(ctx: GestureContext, ev: GestureEvent) {
     if (!ctx.draft.tempLine) return;
     const pt = controller.screenToCanvas(ev.xy.x, ev.xy.y);
-    ctx.draft.tempLine.setAttribute('x2', pt.x);
-    ctx.draft.tempLine.setAttribute('y2', pt.y);
+    ctx.draft.tempLine.setAttribute('x2', String(pt.x));
+    ctx.draft.tempLine.setAttribute('y2', String(pt.y));
   }
 
-  function commitEdgeCreation(ctx, ev) {
+  function commitEdgeCreation(ctx: GestureContext, ev: GestureEvent) {
     if (!ctx.draft.tempLine) return;
     ctx.draft.tempLine.remove();
-    const target = document.elementFromPoint(ev.xy.x, ev.xy.y)?.closest('.canvas-element');
-    const tgtId = target && target.dataset.elId;
+    const target = document.elementFromPoint(ev.xy.x, ev.xy.y)?.closest('.canvas-element') as HTMLElement | null;
+    const tgtId = target?.dataset?.elId;
     if (tgtId && tgtId !== ctx.draft.sourceId) {
       controller.createNewEdge(ctx.draft.sourceId, tgtId, '');
       controller.requestRender();
@@ -382,22 +432,22 @@ export function createGestureHelpers(controller) {
     }
   }
 
-  async function commitNodeCreation(ctx, ev) {
+  async function commitNodeCreation(ctx: GestureContext, ev: GestureEvent) {
     if (!ctx.draft.tempLine) return;
     ctx.draft.tempLine.remove();
     const pt = controller.screenToCanvas(ev.xy.x, ev.xy.y);
     const text = prompt('Enter label for the new element', '');
     if (!text) return;
     const elId = controller.createNewElement(pt.x, pt.y, 'markdown', 'generating…');
-    controller.createNewEdge(ctx.draft.sourceId, elId, text);
+    controller.createNewEdge!(ctx.draft.sourceId!, elId, text);
     controller.requestRender();
-    await generateContent?.(text, controller.findElementById(elId), controller);
+    await generateContent?.(text, controller.findElementById(elId)!, controller);
   }
 
-  function editEdgeLabel(ctx, ev) {
-    const edgeId = ev.edgeId;
+  function editEdgeLabel(_ctx: GestureContext, ev: GestureEvent) {
+    const edgeId = ev.edgeId!;
     const screenXY = ev.xy
-    const edge = controller.findEdgeElementById(edgeId);
+    const edge = controller.findEdgeElementById!(edgeId);
     if (!edge) return;
     const pt = controller.screenToCanvas(screenXY.x, screenXY.y);
     const editId = controller.createNewElement(
@@ -406,27 +456,27 @@ export function createGestureHelpers(controller) {
       false,
       { target: edge.id, property: 'label' }
     );
-    controller.createNewEdge(editId, edge.id, 'Editing…', { meta: true });
+    controller.createNewEdge!(editId, edge.id, 'Editing…', { meta: true });
     controller.requestRender();
   }
 
-  function buildContextMenu(ctx, ev) {
+  function buildContextMenu(_ctx: GestureContext, ev: any) {
     if (ev.hitElement) {
-      controller.buildContextMenu(ev.elementId);
+      controller.buildContextMenu!(ev.elementId);
     } else {
-      controller.buildContextMenu();
+      controller.buildContextMenu!();
     }
   }
 
-  function showContextMenu(c, e) {
-    controller.showContextMenu(e.xy.x, e.xy.y)
+  function showContextMenu(_c: GestureContext, e: GestureEvent) {
+    controller.showContextMenu!(e.xy.x, e.xy.y)
   }
-  function hideContextMenu(c, _e) {
+  function hideContextMenu(_c: GestureContext, _e: GestureEvent) {
     controller.hideContextMenu()
   }
 
-  function openEditModal(c, e) {
-    controller.openEditModal(controller.findElementById(e.elementId))
+  function openEditModal(_c: GestureContext, e: GestureEvent) {
+    controller.openEditModal(controller.findElementById(e.elementId!)!)
   }
 
   return {

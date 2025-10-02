@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Add proper types
 /*
  * ---------------------------------------------------------------------------
  * XState finite-state machine describing     (  mode   ×   gesture  )
@@ -6,13 +5,38 @@
  */
 import { createMachine, assign } from 'xstate';
 import { buildContextMenu } from '../context-menu';
+import type { CanvasController } from '../../types.ts';
 
-
-const groupSelected = (e: any) => {
-  return e.selected.has(e.elementId) && e.selected.size > 0
+// Event and context types for XState
+interface GestureEvent {
+  type: string;
+  xy?: { x: number; y: number };
+  elementId?: string;
+  edgeId?: string;
+  hitElement?: boolean;
+  edgeLabel?: boolean;
+  handle?: string;
+  active?: Record<string, { x: number; y: number }>;
+  selected?: Set<string>;
+  view?: { translateX: number; translateY: number; scale: number };
+  key?: string;
+  ev?: any;
+  deltaY?: number;
 }
 
-const guardLog = (g: any) => { }
+interface GestureContext {
+  controller: CanvasController;
+  pointers: Record<string, { x: number; y: number }>;
+  draft: {
+    [key: string]: any;
+  };
+}
+
+const groupSelected = (e: GestureEvent) => {
+  return e.selected?.has(e.elementId!) && (e.selected?.size ?? 0) > 0
+}
+
+const guardLog = (_g: any) => { }
 
 export const gestureMachine = createMachine({
 

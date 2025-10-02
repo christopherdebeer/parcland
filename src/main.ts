@@ -1,4 +1,3 @@
-// @ts-nocheck - TODO: Add proper types
 import { interpret } from 'xstate';
 import { gestureMachine } from './lib/gesture-machine/gestureMachine.ts';
 import { installPointerAdapter } from './lib/gesture-machine/pointerAdapter.ts';
@@ -10,10 +9,54 @@ import { loadInitialCanvas, saveCanvas, saveCanvasLocalOnly } from './lib/networ
 import { showModal } from './lib/modal.ts';
 import { elementRegistry } from './lib/elements/elementRegistry.ts';
 import { CrdtAdapter } from './lib/network/crdt.ts';
+import type { CanvasState, CanvasElement, ViewState, Edge } from './types.ts';
 
+declare global {
+    interface Window {
+        CC: CanvasController | null;
+    }
+}
 
 class CanvasController {
-    constructor(canvasState) {
+    canvasState: CanvasState;
+    crdt: CrdtAdapter;
+    selectedElementIds: Set<string>;
+    selectedElementId: string | null;
+    selectionBox: HTMLElement | null;
+    activeEditTab: string;
+    viewState: ViewState;
+    elementRegistry: any;
+    elementNodesMap: Record<string, HTMLElement>;
+    edgeNodesMap: Record<string, SVGLineElement>;
+    edgeLabelNodesMap?: Record<string, SVGTextElement>;
+    canvas: HTMLElement;
+    container: HTMLElement;
+    staticContainer: HTMLElement;
+    contextMenu: HTMLElement;
+    modeBtn: HTMLElement;
+    drillUpBtn: HTMLElement;
+    edgesLayer: SVGSVGElement;
+    groupBox: HTMLElement;
+    MAX_SCALE: number;
+    MIN_SCALE: number;
+    codeMirrorContent: any;
+    codeMirrorSrc: any;
+    tokenKey: string;
+    modes: string[];
+    mode: string;
+    _undo: any[];
+    _redo: any[];
+    _maxHistory: number;
+    fsmService: any;
+    uninstallAdapter: () => void;
+    uninstallCommandPalette: () => void;
+    _renderQueued: boolean;
+    _edgesQueued: boolean;
+    requestRender: () => void;
+    requestEdgeUpdate: () => void;
+    contextMenuPointerDownHandler?: (ev: Event) => void;
+
+    constructor(canvasState: CanvasState) {
         updateCanvasController(this)
         this.canvasState = canvasState;
         this.crdt = new CrdtAdapter(canvasState.canvasId);
@@ -72,7 +115,7 @@ class CanvasController {
         this.contextMenu = document.getElementById("context-menu");
         this.modeBtn = document.getElementById("mode");
         this.drillUpBtn = document.getElementById("drillUp");
-        this.edgesLayer = document.getElementById("edges-layer");
+        this.edgesLayer = document.getElementById("edges-layer") as any as SVGSVGElement;
         this.groupBox = document.createElement('div');
         this.groupBox.id = 'group-box';
         this.groupBox.innerHTML = `
@@ -143,7 +186,7 @@ class CanvasController {
             this.drillUpBtn.style.display = 'none';
         }
 
-        this.canvas.controller = this;
+        (this.canvas as any).controller = this;
 
         this.updateCanvasTransform();
         this._renderQueued = false;
@@ -197,7 +240,7 @@ class CanvasController {
         this.hideContextMenu();
 
         if (window.CC === this) {
-            window.CC = null;
+            window.CC = null as any;
             activeCanvasController = null;
         }
     }
@@ -297,7 +340,7 @@ class CanvasController {
     }
 
 
-    selectElement(id, additive = false) {
+    selectElement(id: string, additive = false) {
         if (!additive) this.selectedElementIds.clear();
         console.log("[Controller] selectElement", id, { additive })
         const el = this.findElementById(id);
@@ -329,11 +372,11 @@ class CanvasController {
         }
     }
 
-    isElementSelected(id) {
+    isElementSelected(id: string) {
         return this.selectedElementIds.has(id);
     }
 
-    getGroupBBox() {
+    getGroupBBox(): { x1: number; y1: number; x2: number; y2: number; cx: number; cy: number } | null {
         if (this.selectedElementIds.size === 0) return null;
         const els = [...this.selectedElementIds].map(id => this.findElementById(id));
         
@@ -402,9 +445,9 @@ class CanvasController {
         this.groupBox.style.height = (bb.y2 - bb.y1) + 'px';
     }
 
-    switchMode(m) {
+    switchMode(m?: string) {
         if (m && this.mode === m) return;
-        this.mode = m;
+        this.mode = m!;
         this.updateModeUI();
         this.fsmService?.send('TOGGLE_MODE');
     }
@@ -461,13 +504,13 @@ class CanvasController {
 
         // Set the viewBox attribute on the SVG layer so that its coordinate system
         // matches the visible region.
-        this.edgesLayer.setAttribute("viewBox", `${visibleX} ${visibleY} ${visibleWidth} ${visibleHeight}`);
+        this.edgesLayer.setAttribute("viewBox", `${String(visibleX)} ${String(visibleY)} ${String(visibleWidth)} ${String(visibleHeight)}`);
         // console.log("[DEBUG] SVG viewBox updated to:", visibleX, visibleY, visibleWidth, visibleHeight);
 
         this.updateGroupBox()
     }
 
-    recenterOnElement(elId) {
+    recenterOnElement(elId: string) {
         const el = this.findElementById(elId);
         if (!el) {
             console.warn(`Element with ID "${elId}" not found.`);
@@ -493,7 +536,7 @@ class CanvasController {
     }
 
     renderElementsImmediately() {
-        if (this.canvas.controller !== this) return;
+        if ((this.canvas as any).controller !== this) return;
         console.log(`requestRender()`);
         const existingIds = new Set(Object.keys(this.elementNodesMap));
         const usedIds = new Set();
@@ -514,7 +557,7 @@ class CanvasController {
             if (!usedIds.has(id)) {
                 const node = this.elementNodesMap[id];
                 const view = elementRegistry.viewFor(node?.dataset.type);
-                view?.unmount?.(node.firstChild);
+                view?.unmount?.(node.firstChild as HTMLElement);
                 node.remove();
 
                 delete this.elementNodesMap[id];
@@ -587,7 +630,7 @@ class CanvasController {
         }
     }
 
-    updateEdgePosition(edge, line) {
+    updateEdgePosition(edge: Edge, line: SVGLineElement) {
         if (!line) return;
         const sourceEl = this.findElementById(edge.source);
         const targetEl = this.findElementById(edge.target);
@@ -613,10 +656,10 @@ class CanvasController {
         }
 
         if (sourcePoint && targetPoint) {
-            line.setAttribute("x1", sourcePoint.x);
-            line.setAttribute("y1", sourcePoint.y);
-            line.setAttribute("x2", targetPoint.x);
-            line.setAttribute("y2", targetPoint.y);
+            line.setAttribute("x1", String(sourcePoint.x));
+            line.setAttribute("y1", String(sourcePoint.y));
+            line.setAttribute("x2", String(targetPoint.x));
+            line.setAttribute("y2", String(targetPoint.y));
             line.setAttribute("stroke-dasharray", edge.data?.meta ? "5,5" : edge.style?.dash || "");
 
             // Handle edge label:
@@ -638,8 +681,8 @@ class CanvasController {
             // Calculate midpoint of the line.
             const midX = (sourcePoint.x + targetPoint.x) / 2;
             const midY = (sourcePoint.y + targetPoint.y) / 2;
-            textEl.setAttribute("x", midX);
-            textEl.setAttribute("y", midY);
+            textEl.setAttribute("x", String(midX));
+            textEl.setAttribute("y", String(midY));
             textEl.textContent = labelText;
 
         } else {
@@ -648,14 +691,14 @@ class CanvasController {
         }
     }
 
-    createElementNode(el) {
+    createElementNode(el: CanvasElement) {
         const node = document.createElement("div");
         node.classList.add("canvas-element");
         node.dataset.elId = el.id;
         return node;
     }
 
-    updateElementNode(node, el, isSelected, skipHandles) {
+    updateElementNode(node: HTMLElement, el: CanvasElement, isSelected: boolean, skipHandles?: boolean) {
         this.crdt.updateElement(el.id, el)
         const view = this.elementRegistry.viewFor(el.type);
         if (view && typeof view.update === 'function') {
@@ -670,16 +713,16 @@ class CanvasController {
         if (isSelected) {
             node.classList.add("selected");
         }
-        const peerSelected = Array.from(this.crdt.provider.awareness.getStates().values())
-            .filter( p => p.client.clientId !== this.crdt.provider.awareness.clientID)
-            .flatMap( p => p.client.selection || [])
+        const peerSelected = Array.from((this.crdt as any).provider?.awareness?.getStates?.()?.values?.() || [])
+            .filter( (p: any) => p.client?.clientId !== (this.crdt as any).provider?.awareness?.clientID)
+            .flatMap( (p: any) => p.client?.selection || [])
         
         if (peerSelected.indexOf(el.id) >= 0) {
             node.classList.add("peer-selected");
         } else {
             node.classList.remove("peer-selected");
         }
-        if (this.crdt.provider.awareness.getStates())
+        if ((this.crdt as any).provider?.awareness?.getStates?.())
         //this.setElementContent(node, el);
 
         if (!skipHandles) {
@@ -748,11 +791,11 @@ ${script.getAttribute('src')}`);
 
                 try {
                     const fn = new Function('element', 'controller', 'node',
-                        scriptElement.textContent);
+                        scriptElement.textContent || '');
                     fn(el, this, node);
-                } catch (err) {
+                } catch (err: any) {
                     console.warn('Inline script error', err);
-                    this._showElementError(node.closest('.canvas-element'), err.message);
+                    this._showElementError(node.closest('.canvas-element') as HTMLElement, err.message);
                 }
 
             } else {
@@ -761,24 +804,24 @@ ${script.getAttribute('src')}`);
         }
     }
 
-    findElementOrEdgeById(id) {
+    findElementOrEdgeById(id: string): CanvasElement | Edge | undefined {
         console.log(`[DEBUG] findElementOrEdgeById("${id}")`);
         return this.findElementById(id) || this.findEdgeElementById(id);
     }
 
-    findElementById(id) {
+    findElementById(id: string): CanvasElement | undefined {
         return this.canvasState.elements.find(e => e.id === id);
     }
 
-    findEdgesByElementId(id) {
+    findEdgesByElementId(id: string): Edge[] {
         return this.canvasState.edges.filter(e => e.source === id || e.target === id);
     }
 
-    findEdgeElementById(id) {
+    findEdgeElementById(id: string): Edge | undefined {
         return this.canvasState.edges.find(e => e.id === id);
     }
 
-    createNewElement(x, y, type = 'markdown', content = '', isCanvasContainer = false, data = {}) {
+    createNewElement(x: number, y: number, type = 'markdown', content = '', isCanvasContainer = false, data: any = {}) {
         const newId = "el-" + Date.now();
         const defaultMap = {
             text: "New text element",
@@ -809,9 +852,9 @@ ${script.getAttribute('src')}`);
         return newId;
     }
 
-    createNewEdge(sourceId, targetId, label, data = {}, style = {}) {
+    createNewEdge(sourceId: string, targetId: string, label: string, data: any = {}, style: any = {}) {
         // Create a new edge object.
-        const newEdge = {
+        const newEdge: Edge = {
             id: "edge-" + Date.now(),
             source: sourceId,
             target: targetId,
@@ -828,7 +871,7 @@ ${script.getAttribute('src')}`);
 
     }
 
-    createEditElement(ev, el, prop) {
+    createEditElement(ev: MouseEvent, el: CanvasElement, prop: string) {
         const canvasPt = this.screenToCanvas(ev.clientX, ev.clientY);
         const elId = this.createNewElement(canvasPt.x, canvasPt.y, "edit-prompt", el[prop], false, {
             target: el.id,
@@ -838,15 +881,15 @@ ${script.getAttribute('src')}`);
         this.createNewEdge(elId, el.id, "Editing...", { meta: true });
     }
 
-    clickCapture(btn, handler) {
-        btn.addEventListener("pointerdown", (ev) => {
+    clickCapture(btn: HTMLElement, handler: (event: Event) => void) {
+        btn.addEventListener("pointerdown", (ev: PointerEvent) => {
             ev.stopPropagation();
             btn.setPointerCapture(ev.pointerId);
         });
         btn.onclick = handler;
     }
 
-    toggleStatic(el) {
+    toggleStatic(el: CanvasElement) {
         const node = this.elementNodesMap[el.id];
         if (!node) return;
         if (!el.static) {
@@ -865,7 +908,7 @@ ${script.getAttribute('src')}`);
         }
     }
 
-    screenToCanvas(px, py) {
+    screenToCanvas(px: number, py: number): { x: number; y: number } {
         const dx = px - this.canvas.offsetLeft;
         const dy = py - this.canvas.offsetTop;
         return {
@@ -874,7 +917,7 @@ ${script.getAttribute('src')}`);
         };
     }
 
-    setElementContent(node, el) {
+    setElementContent(node: HTMLElement, el: CanvasElement) {
         const currentType = node.dataset.type || "";
         const currentContent = node.dataset.content || "";
         const currentSrc = node.dataset.src || "";
@@ -907,7 +950,7 @@ ${script.getAttribute('src')}`);
         } else if (el.type === "markdown") {
             const t = document.createElement('div');
             t.classList.add('content');
-            t.innerHTML = marked.parse(el.content);
+            t.innerHTML = (window as any).marked.parse(el.content);
             t.style.color = el.color || "#000000";
             node.appendChild(t);
         } else if (el.type === "img") {
@@ -921,7 +964,7 @@ ${script.getAttribute('src')}`);
 
             if (!el.src && !i.src) {
                 regenerateImage(el).then(() => {
-                    saveCanvasLocalOnly();
+                    saveCanvasLocalOnly(this.canvasState);
                     this.requestRender();
                 });
             }
@@ -933,8 +976,8 @@ ${script.getAttribute('src')}`);
             const container = document.createElement('div');
             container.classList.add('content');
             node.appendChild(container);
-            if (!node.editor) {
-                node.editor = CodeMirror(container, {
+            if (!(node as any).editor) {
+                (node as any).editor = (window as any).CodeMirror(container, {
                     value: el.content || "",
                     lineNumbers: false,
                     mode: "text",
@@ -967,7 +1010,7 @@ ${script.getAttribute('src')}`);
             };
 
             saveBtn.onclick = () => {
-                const val = node.editor.getValue();
+                const val = (node as any).editor.getValue();
                 const target = this.findElementOrEdgeById(el.target);
                 if (target) {
                     console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el);
@@ -1011,7 +1054,7 @@ ${script.getAttribute('src')}`);
         }
     }
 
-    deleteElementById(id) {
+    deleteElementById(id: string) {
         this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== id);
         if (this.elementNodesMap[id]) {
             this.elementNodesMap[id].remove();
@@ -1021,7 +1064,7 @@ ${script.getAttribute('src')}`);
 
     }
 
-    async handleDrillIn(el) {
+    async handleDrillIn(el: CanvasElement) {
         console.log("handleDrillIn()", el)
         if (!el.refCanvasId) return alert("No canvas reference found.");
         const canvasState = await loadInitialCanvas({
@@ -1032,13 +1075,13 @@ ${script.getAttribute('src')}`);
             parentCanvas: this.canvasState.canvasId,
         });
         this.detach()
-        const childController = new CanvasController(canvasState, this);
+        const childController = new CanvasController(canvasState);
         updateCanvasController(childController);
         childController.recenterOnElement(el.id);
         window.history.pushState({}, "", "?canvas=" + el.refCanvasId);
     }
 
-    async handleDrillUp(ev) {
+    async handleDrillUp(ev: Event) {
         ev.stopPropagation();
         const canvasId = this.canvasState.parentCanvas;
         if (!canvasId) return;
@@ -1047,7 +1090,7 @@ ${script.getAttribute('src')}`);
             elements: [],
             edges: [],
             versionHistory: [],
-        });
+        } as CanvasState);
         this.detach();
         const controller = new CanvasController(canvasState);
         updateCanvasController(controller);
@@ -1057,8 +1100,8 @@ ${script.getAttribute('src')}`);
         window.history.pushState({}, "", "?canvas=" + canvasId);
     };
 
-    buildHandles(node, el) {
-        const h = (className, icon, click) => {
+    buildHandles(node: HTMLElement, _el: CanvasElement) {
+        const h = (className: string, icon: string, click?: (event: Event) => void) => {
             const wrap = document.createElement('div');
             wrap.className = className + ' element-handle';
             const i = document.createElement('i');
@@ -1091,7 +1134,7 @@ ${script.getAttribute('src')}`);
         h('create-handle', 'fa-solid fa-plus');
     }
 
-    applyPositionStyles(node, el) {
+    applyPositionStyles(node: HTMLElement, el: CanvasElement) {
         const scale = el.scale || 1;
         const rotation = el.rotation || 0;
         const zIndex = Math.floor(el.zIndex) || 1;
@@ -1109,8 +1152,8 @@ ${script.getAttribute('src')}`);
 
             node.style.setProperty('--width', (el.width * scale) + 'px');
             node.style.setProperty('--height', (el.height * scale) + 'px');
-            node.style.setProperty('--scale', scale);   // used by CSS for .content
-            node.style.zIndex = zIndex;                  // plain style, not a CSS var
+            node.style.setProperty('--scale', String(scale));   // used by CSS for .content
+            node.style.zIndex = String(zIndex);                  // plain style, not a CSS var
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         } else {
             node.style.position = 'absolute';
@@ -1120,8 +1163,8 @@ ${script.getAttribute('src')}`);
             // node.style.height = (el.height * scale) + "px";
             node.style.setProperty('--width', (el.width * scale) + 'px');
             node.style.setProperty('--height', (el.height * scale) + 'px');
-            node.style.setProperty('--scale', scale);   // used by CSS for .content
-            node.style.zIndex = zIndex;
+            node.style.setProperty('--scale', String(scale));   // used by CSS for .content
+            node.style.zIndex = String(zIndex);
             node.style.transform = `rotate(${rotation}deg) translate(calc(0px - var(--padding)), calc(0px - var(--padding)))`;
         }
         const edges = this.findEdgesByElementId(el.id) || [];
@@ -1131,7 +1174,7 @@ ${script.getAttribute('src')}`);
     //  Registry helpers (new)
     // ------------------------------------------------------------------
     /** Ensure a DOM node exists for el, mounted through its ElementView. */
-    _ensureDomFor(el) {
+    _ensureDomFor(el: CanvasElement) {
         let node = this.elementNodesMap[el.id];
         if (node) return node;
 
@@ -1153,13 +1196,13 @@ ${script.getAttribute('src')}`);
         return node;
     }
 
-    computeIntersection(el, otherEl) {
+    computeIntersection(el: CanvasElement | { x: number; y: number }, otherEl: CanvasElement | { x: number; y: number }): { x: number; y: number } {
         // 1) Center and scale as before
         const cx = el.x;
         const cy = el.y;
-        const scaleFactor = el.scale || 1;
-        const w = (el.width || 10) * scaleFactor;
-        const h = (el.height || 10) * scaleFactor;
+        const scaleFactor = ('scale' in el) ? (el.scale || 1) : 1;
+        const w = (('width' in el) ? (el.width || 10) : 10) * scaleFactor;
+        const h = (('height' in el) ? (el.height || 10) : 10) * scaleFactor;
         const halfW = w / 2;
         const halfH = h / 2;
 
@@ -1173,7 +1216,7 @@ ${script.getAttribute('src')}`);
         }
 
         // 3) Un-rotate the direction vector into the rectangle's local axes
-        const theta = ((el.rotation || 0) * Math.PI) / 180;
+        const theta = ((('rotation' in el) ? (el.rotation || 0) : 0) * Math.PI) / 180;
         const cosθ = Math.cos(-theta);
         const sinθ = Math.sin(-theta);
         const localDX = dx * cosθ - dy * sinθ;
@@ -1201,26 +1244,26 @@ ${script.getAttribute('src')}`);
     }
 
 
-    buildContextMenu(elId) {
-        const el = this.findElementById(elId) || this.findEdgeElementById(elId);
-        buildContextMenu(el, this);
+    buildContextMenu(elId?: string) {
+        const el = elId ? (this.findElementById(elId) || this.findEdgeElementById(elId)) : undefined;
+        buildContextMenu(el as any, this);
     }
 
     hideContextMenu() {
         this.contextMenu.style.display = "none";
     }
 
-    showContextMenu(x, y) {
+    showContextMenu(x: number, y: number) {
         this.contextMenu.style.left = x + "px";
         this.contextMenu.style.top = y + "px";
         this.contextMenu.style.display = "flex";
     }
 
 
-    async openEditModal(el) {
+    async openEditModal(el?: CanvasElement) {
         console.log("[openEditModa] init", el);
-        // If caller didn’t pass one, use the single selected element (legacy path)
-        if (!el) el = this.findElementById(this.selectedElementId);
+        // If caller didn't pass one, use the single selected element (legacy path)
+        if (!el && this.selectedElementId) el = this.findElementById(this.selectedElementId);
         if (!el) return;                              // nothing to edit
 
         try {
@@ -1246,8 +1289,8 @@ ${script.getAttribute('src')}`);
     }
 }
 
-let activeCanvasController = null;
-function updateCanvasController(controller) {
+let activeCanvasController: CanvasController | null = null;
+function updateCanvasController(controller: CanvasController) {
     activeCanvasController = window.CC = controller
 }
 

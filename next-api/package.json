@@ -1,0 +1,20 @@
+{
+  "name": "parcland-api",
+  "version": "1.0.0",
+  "description": "Next.js API for Parcland with Turso database",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "next": "^15.1.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

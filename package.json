@@ -12,6 +12,7 @@
     "dev:next": "npm run dev --workspace=next-api",
     "build:vite": "npm run build --workspace=vite-app",
     "build:next": "npm run build --workspace=next-api",
+    "build:all": "npm run build:vercel --workspace=vite-app && npm run build:next",
     "test": "npm run test --workspace=vite-app"
   }
 }

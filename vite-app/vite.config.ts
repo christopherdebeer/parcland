@@ -12,7 +12,7 @@ export default defineConfig({
   },
   build: {
     minify: false, // Disable minification for easier debugging
-    outDir: '../dist', // Output to next directory in project root
+    outDir: process.env.BUILD_TARGET === 'vercel' ? '../next-api/public' : '../dist',
     emptyOutDir: true, // Clean the output directory before build
   },
 });

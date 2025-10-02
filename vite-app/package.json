@@ -7,6 +7,7 @@
     "dev": "vite",
     "test": "jest",
     "build": "vite build",
+    "build:vercel": "BUILD_TARGET=vercel vite build",
     "preview": "vite preview",
     "lint": "eslint src/",
     "format": "prettier --write src/",

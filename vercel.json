@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd next-api && npm install && npm run build",
+  "buildCommand": "npm install && npm run build:all",
   "outputDirectory": "next-api/.next",
-  "installCommand": "cd next-api && npm install",
+  "installCommand": "npm install",
   "framework": null,
   "rewrites": [
     {

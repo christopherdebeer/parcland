@@ -23,15 +23,19 @@ npm run dev:next
 
 ## Deployment
 
-### GitHub Pages (Vite Static Site)
-The Vite application automatically deploys to GitHub Pages on push to `main` branch via GitHub Actions.
-
-### Vercel (Next.js API)
-The Next.js API is configured for Vercel deployment via `vercel.json`.
+### Vercel (Combined Static Site + API)
+Both the Vite static site and Next.js API deploy together to Vercel:
+- Static files are served from the root path
+- API routes are available at `/api/*`
+- Configured via `vercel.json`
 
 **Required Environment Variables in Vercel:**
 - `SQLITE_DB_TURSO_DATABASE_URL` - Your Turso database URL
 - `SQLITE_DB_TURSO_AUTH_TOKEN` - Your Turso auth token
+
+### GitHub Pages (Static Site Only)
+The Vite application also deploys to GitHub Pages on push to `main` branch via GitHub Actions.
+This provides a static-only version without the API integration.
 
 ## Migrating from val.town to Vercel API
 

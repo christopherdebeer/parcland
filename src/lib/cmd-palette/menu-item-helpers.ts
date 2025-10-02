@@ -1,20 +1,20 @@
-// @ts-nocheck - TODO: Add proper types
 /* ──────────────────────────────────────────────────────────────────────────────
  *  menu item helper functions for parc.land            (2025-04-29)
  * ──────────────────────────────────────────────────────────────────────────── */
 import { saveCanvas } from '../network/storage.ts';
 import { generateContent } from '../network/generation.ts';
+import type { CanvasElement } from '../../types';
 
 /* internal clipboard — page-lifetime only */
-const _clip = { elements: null };
+const _clip: { elements: CanvasElement[] | null } = { elements: null };
 
 /**
  * Add a fresh element centred on screen
- * @param {CanvasController} c
- * @param {'text'|'markdown'|'img'|'canvas-container'} type
- * @param {string} [content]
+ * @param c - Canvas controller
+ * @param type - Element type
+ * @param content - Initial content
  */
-export function addEl(c, type, content = '') {
+export function addEl(c: any, type: string, content = ''): void {
   const { innerWidth: W, innerHeight: H } = window;
   const pt = c.screenToCanvas(W / 2, H / 2);
   c.createNewElement(pt.x, pt.y, type, content);
@@ -22,19 +22,19 @@ export function addEl(c, type, content = '') {
 
 /* ─── duplicate / delete ─────────────────────────────────────────────────── */
 
-export function duplicateEl(c, id) {
+export function duplicateEl(c: any, id: string): void {
   const el = c.findElementById(id);
   if (!el) return;
-  const dup = { ...el, id: 'el-' + Date.now(), x: el.x + 20, y: el.y + 20 };
+  const dup: CanvasElement = { ...el, id: 'el-' + Date.now(), x: el.x + 20, y: el.y + 20 };
   c.canvasState.elements.push(dup);
   c.selectElement(dup.id);
   c.requestRender();
   saveCanvas(c.canvasState);
 }
 
-export function deleteSelection(c) {
+export function deleteSelection(c: any): void {
   if (!c.selectedElementIds.size) return;
-  const keep = el => !c.selectedElementIds.has(el.id);
+  const keep = (el: CanvasElement | { id: string }): boolean => !c.selectedElementIds.has(el.id);
   /* drop elements */
   c.canvasState.elements = c.canvasState.elements.filter(keep);
   /* drop edges referencing deleted elements */
@@ -47,38 +47,38 @@ export function deleteSelection(c) {
 
 /* ─── clipboard helpers ──────────────────────────────────────────────────── */
 
-export function copySelection(c) {
+export function copySelection(c: any): void {
   if (!c.selectedElementIds.size) return;
-  const els = c.canvasState.elements
-    .filter(el => c.selectedElementIds.has(el.id))
-    .map(el => ({ ...el }));                               // deepish clone
+  const els: CanvasElement[] = c.canvasState.elements
+    .filter((el: CanvasElement) => c.selectedElementIds.has(el.id))
+    .map((el: CanvasElement) => ({ ...el }));                               // deepish clone
   try { navigator.clipboard?.writeText(JSON.stringify(els)); } catch { }
   _clip.elements = els;
 }
 
-export function clipboardHasContent() {
+export function clipboardHasContent(): boolean {
   return Array.isArray(_clip.elements) && _clip.elements.length > 0;
 }
 
-export async function pasteClipboard(c) {
+export async function pasteClipboard(c: any): Promise<void> {
   if (!clipboardHasContent()) return;
   /* offset new items a bit */
   const now = Date.now();
-  const pastedEls = _clip.elements.map((el, i) => ({
+  const pastedEls: CanvasElement[] = _clip.elements!.map((el: CanvasElement, i: number) => ({
     ...el,
     id: 'el-' + (now + i),
     x: el.x + 30,
     y: el.y + 30
   }));
   c.canvasState.elements.push(...pastedEls);
-  c.selectedElementIds = new Set(pastedEls.map(e => e.id));
+  c.selectedElementIds = new Set(pastedEls.map((e: CanvasElement) => e.id));
   c.requestRender();
   saveCanvas(c.canvasState);
 }
 
 /* ─── AI regenerate (non-image elements only) ─────────────────────────────── */
 
-export async function generateNew(c) {
+export async function generateNew(c: any): Promise<void> {
   if (c.selectedElementIds.size !== 1) return;
   const id = [...c.selectedElementIds][0];
   const el = c.findElementById(id);
@@ -93,7 +93,7 @@ export async function generateNew(c) {
 
 /* ─── quick inline edit using the existing modal ‐ one element only ───────── */
 
-export function inlineEdit(c) {
+export function inlineEdit(c: any): void {
   if (c.selectedElementIds.size !== 1) return;
   const el = c.findElementById([...c.selectedElementIds][0]);
   console.log("opening edit modal for element:", el);
@@ -102,9 +102,9 @@ export function inlineEdit(c) {
 
 /* ─── re-order in Z space ─────────────────────────────────────────────────── */
 
-export function reorder(c, dir /* 'front' | 'back' */) {
+export function reorder(c: any, dir: 'front' | 'back'): void {
   const delta = dir === 'front' ? +10 : -10;
-  c.selectedElementIds.forEach(id => {
+  c.selectedElementIds.forEach((id: string) => {
     const el = c.findElementById(id);
     if (el) el.zIndex = (el.zIndex || 1) + delta;
   });
@@ -115,27 +115,27 @@ export function reorder(c, dir /* 'front' | 'back' */) {
 /* ─── group / ungroup - minimalist implementation ‐───────────────────────── */
 /* We emulate grouping by giving every element an optional `group` string.    */
 
-function _nextGroupId() { return 'grp-' + Date.now().toString(36); }
+function _nextGroupId(): string { return 'grp-' + Date.now().toString(36); }
 
-export function groupSelection(c) {
+export function groupSelection(c: any): void {
   if (c.selectedElementIds.size < 2) return;
   const gid = _nextGroupId();
-  c.selectedElementIds.forEach(id => {
+  c.selectedElementIds.forEach((id: string) => {
     const el = c.findElementById(id);
     if (el) el.group = gid;
   });
   saveCanvas(c.canvasState);
 }
 
-export function canUngroup(c) {
-  return [...c.selectedElementIds].some(id => {
+export function canUngroup(c: any): boolean {
+  return [...c.selectedElementIds].some((id: string) => {
     const el = c.findElementById(id);
     return el?.group;
   });
 }
 
-export function ungroupSelection(c) {
-  c.selectedElementIds.forEach(id => {
+export function ungroupSelection(c: any): void {
+  c.selectedElementIds.forEach((id: string) => {
     const el = c.findElementById(id);
     if (el && el.group) delete el.group;
   });
@@ -144,18 +144,18 @@ export function ungroupSelection(c) {
 
 /* ─── viewport helpers ───────────────────────────────────────────────────── */
 
-export function zoom(c, factor) {
+export function zoom(c: any, factor: number): void {
   c.viewState.scale = Math.min(
     Math.max(c.viewState.scale * factor, c.MIN_SCALE), c.MAX_SCALE);
   c.updateCanvasTransform();
   c.saveLocalViewState?.();
 }
 
-export function zoomToFit(c) {
-  /* fit all elements’ bounding box into the visible canvas */
+export function zoomToFit(c: any): void {
+  /* fit all elements' bounding box into the visible canvas */
   if (!c.canvasState.elements.length) return;
-  const xs = [], ys = [], xe = [], ye = [];
-  c.canvasState.elements.forEach(el => {
+  const xs: number[] = [], ys: number[] = [], xe: number[] = [], ye: number[] = [];
+  c.canvasState.elements.forEach((el: CanvasElement) => {
     const s = el.scale || 1;
     xs.push(el.x - el.width * s / 2);
     ys.push(el.y - el.height * s / 2);
@@ -177,13 +177,13 @@ export function zoomToFit(c) {
 
 /* ─── version history & export stubs (minimal yet useful) ─────────────────── */
 
-export function openHistory(c) {
+export function openHistory(c: any): void {
   const js = JSON.stringify(c.canvasState.versionHistory ?? [], null, 2);
   const w = window.open('', '_blank');
-  w.document.write(`<pre>${js.replace(/</g, '&lt;')}</pre>`);
+  w!.document.write(`<pre>${js.replace(/</g, '&lt;')}</pre>`);
 }
 
-export function exportJSON(c) {
+export function exportJSON(c: any): void {
   const data = JSON.stringify(c.canvasState, null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -194,9 +194,9 @@ export function exportJSON(c) {
 }
 
 /* Convert selection to a different element type */
-export function changeType(c, newType) {
+export function changeType(c: any, newType: string): void {
   if (!c.selectedElementIds.size) return;
-  Array.from(c.selectedElementIds).forEach(id => {
+  Array.from(c.selectedElementIds).forEach((id: string) => {
     const el = c.findElementById(id);
     if (!el || el.type === newType) return;
     /* 1 . mutate */

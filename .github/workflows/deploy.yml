@@ -35,9 +35,6 @@ jobs:
       
       - name: Compile TypeScript
         run: cd vite-app && npm run build
-
-      - name: Compile TypeScript
-        run: npm run build
         
       - uses: actions/upload-pages-artifact@v3
         with:

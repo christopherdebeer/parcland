@@ -100,7 +100,7 @@ export interface MenuItem {
   category?: string;
   shortcut?: string;
   children?: MenuItem[];
-  action?: (controller: CanvasController, input?: string) => void | Promise<void> | any;
+  action?: (controller: any, input?: any) => void | Promise<void> | any;
   needsInput?: string;
   visible?: (controller: CanvasController) => boolean;
   enabled?: (controller: CanvasController) => boolean;
@@ -121,14 +121,14 @@ export interface CanvasController {
   selectedElementId: string | null;
   selectedElementIds: Set<string>;
   elementNodesMap: Record<string, HTMLElement>;
-  edgeNodesMap: Record<string, HTMLElement>;
+  edgeNodesMap: Record<string, SVGLineElement>;
   canvas: HTMLElement;
   container: HTMLElement;
   staticContainer: HTMLElement;
   contextMenu: HTMLElement;
   modeBtn: HTMLElement;
   drillUpBtn: HTMLElement;
-  edgesLayer: HTMLElement;
+  edgesLayer: SVGSVGElement;
   groupBox: HTMLElement;
   elementRegistry?: ElementRegistry;
   crdt: CrdtAdapter;

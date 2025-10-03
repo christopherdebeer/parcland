@@ -38,11 +38,12 @@ const groupSelected = (e: GestureEvent) => {
 
 const guardLog = (_g: any) => { }
 
-export const gestureMachine = createMachine({
+export const gestureMachine = createMachine<GestureContext, GestureEvent>({
 
   id: 'canvas',
   preserveActionOrder: true,
   context: {
+    controller: null as any,
     pointers: {},
     draft: {}
   },
@@ -369,7 +370,10 @@ export const gestureMachine = createMachine({
     },
 
     actions: {
-      log: (c, e, meta) => console.log('[FSM]', `${meta.state.value.mode}:${meta.state.value.gesture}`, { c, e, meta }),
+      log: (c, e, meta) => {
+        const stateValue = meta.state.value as any;
+        console.log('[FSM]', `${stateValue.mode}:${stateValue.gesture}`, { c, e, meta });
+      },
       clearLasso: (ctx) => {
         ctx.draft && delete ctx.draft.start;
         ctx.controller.removeSelectionBox();

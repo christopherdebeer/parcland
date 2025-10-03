@@ -25,8 +25,8 @@ export class CrdtAdapter {
         //     console.log("[CRDT] Awareness full", Array.from(this.provider.awareness.getStates().values()));
         // });
 
-        this.provider.on('synced', (isSynced: boolean) => {
-            console.log("[CRDT] Synced", isSynced);
+        this.provider.on('synced', (event: { synced: boolean }) => {
+            console.log("[CRDT] Synced", event.synced);
         });
 
         this.clientInfo = {

@@ -1289,6 +1289,12 @@ function updateCanvasController(controller: CanvasController) {
 }
 
 (async function main() {
+    // Vercel Preview Debug - Issue #30
+    console.log('🚀 [VERCEL-PREVIEW] Application initialized');
+    console.log('🚀 [VERCEL-PREVIEW] Timestamp:', new Date().toISOString());
+    console.log('🚀 [VERCEL-PREVIEW] User Agent:', navigator.userAgent);
+    console.log('🚀 [VERCEL-PREVIEW] URL:', window.location.href);
+
     const params = new URLSearchParams(window.location.search);
     const canvasId = params.get("canvas") || "canvas-002";
     const token = params.get("token");
@@ -1300,4 +1306,6 @@ function updateCanvasController(controller: CanvasController) {
     };
     rootCanvasState = await loadInitialCanvas(rootCanvasState, token);
     updateCanvasController(new CanvasController(rootCanvasState));
+
+    console.log('🚀 [VERCEL-PREVIEW] Canvas controller ready');
 })();

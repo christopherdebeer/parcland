@@ -25,7 +25,16 @@
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 
-  <button id="drillUp">↑ Drill Up</button>
+  <!-- Debug banner for Vercel preview validation -->
+  <div id="debug-banner" style="position: fixed; top: 0; left: 0; right: 0; background: #00aaff; color: white; padding: 8px; text-align: center; font-size: 14px; z-index: 9999; font-weight: bold;">
+    🚀 Vercel Preview - Build: <span id="build-timestamp"></span>
+  </div>
+  <script>
+    document.getElementById('build-timestamp').textContent = new Date().toISOString();
+    console.log('[VERCEL-PREVIEW] Debug banner loaded at:', new Date().toISOString());
+  </script>
+
+  <button id="drillUp" style="top: 48px;">↑ Drill Up</button>
 
   <div id="canvas" mode="navigate">
     <svg id="edges-layer"></svg>

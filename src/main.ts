@@ -1008,17 +1008,21 @@ ${script.getAttribute('src')}`);
                 const target = this.findElementOrEdgeById(el.target);
                 if (target) {
                     console.log(`[DEBUG] Saving edit prompt content to [${target.id}] as property [${el.property}]. with value: "${val}"`, target, el);
-                    if (target) {
-                        target[el.property] = val;
-                        this.requestEdgeUpdate();
-                        saveCanvas(this.canvasState);
-                    }
+                    target[el.property] = val;
+                    this.requestEdgeUpdate();
+                    saveCanvas(this.canvasState);
                 }
+                // Remove the edit-prompt element after saving
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
+                // Remove the meta edge connecting edit-prompt to the target
+                this.canvasState.edges = this.canvasState.edges.filter(e => e.source !== el.id && e.target !== el.id);
                 this.requestRender();
             };
             cancelBtn.onclick = () => {
+                // Remove the edit-prompt element
                 this.canvasState.elements = this.canvasState.elements.filter(e => e.id !== el.id);
+                // Remove the meta edge connecting edit-prompt to the target
+                this.canvasState.edges = this.canvasState.edges.filter(e => e.source !== el.id && e.target !== el.id);
                 this.requestRender();
                 saveCanvas(this.canvasState);
             };

@@ -252,20 +252,48 @@ describe('generation module', () => {
   });
 
   describe('generateContent', () => {
-    it('should not generate without valid auth token', async () => {
+    it('should fallback to old API without valid auth token', async () => {
       mockGetAuthToken.mockReturnValue(null);
 
-      // Note: The function has a bug where it tries to call `this.generateContentOld`
-      // which doesn't exist in a standalone function context, so it will throw
-      await expect(generateContent('test content', mockElement, mockController)).rejects.toThrow();
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          thinking: 'Processing',
+          result: 'Fallback content',
+        }),
+      });
+
+      const result = await generateContent('test content', mockElement, mockController);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/ai_completion',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+      expect(result).toBe('Fallback content');
     });
 
-    it('should not generate with TBC token', async () => {
+    it('should fallback to old API with TBC token', async () => {
       mockGetAuthToken.mockReturnValue('TBC');
 
-      // Note: The function has a bug where it tries to call `this.generateContentOld`
-      // which doesn't exist in a standalone function context, so it will throw
-      await expect(generateContent('test content', mockElement, mockController)).rejects.toThrow();
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          thinking: 'Processing',
+          result: 'Fallback result',
+        }),
+      });
+
+      const result = await generateContent('test content', mockElement, mockController);
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/ai_completion',
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+      expect(result).toBe('Fallback result');
     });
 
     it('should make API request with valid token', async () => {

@@ -109,7 +109,7 @@ export async function generateContent(content, el, c) {
   const edges = c.findEdgesByElementId(id).filter(e => e.target === id).map(e => ({ label: e.label, el: c.findElementById(e.source) }));
   console.log("Relevant edges", edges);
   const token = getAuthToken();
-  if (!token || token === 'TBC') return await this.generateContentOld(content, type);
+  if (!token || token === 'TBC') return await generateContentOld(content, type);
   try {
     const response = await fetch('https://gen.parc.land', {
       method: 'POST',

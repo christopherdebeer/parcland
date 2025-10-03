@@ -35,7 +35,14 @@ export function showModal(el: CanvasElement, opts: { generateContent?: (seed: st
 }
 
 function ensureDom(): void {
-  if ($root) return;
+  if ($root && $root.parentElement) return;
+
+  // Reset CodeMirror instances if DOM was cleared
+  if ($root && !$root.parentElement) {
+    cmContent = null;
+    cmSrc = null;
+  }
+
   const tpl = /*html*/`
 <div id="edit-modal" class="modal">
   <div class="modal-content">
@@ -96,7 +103,7 @@ function ensureDom(): void {
 
   /* Escape key closes modal */
   document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (!$root!.hidden && e.key === 'Escape') close('cancelled');
+    if ($root!.style.display !== 'none' && e.key === 'Escape') close('cancelled');
   });
 }
 

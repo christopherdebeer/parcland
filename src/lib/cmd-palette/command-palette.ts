@@ -323,8 +323,15 @@ export function installCommandPalette(controller: CanvasController, opts: Partia
 
   /* ── events ── */
   $input.addEventListener('focus', () => {
-    root.classList.add('focused'); 
-    window.scrollTo(0, 0);
+    root.classList.add('focused');
+    // Only scroll in real browser environments
+    if (typeof window.scrollTo === 'function') {
+      try {
+        window.scrollTo(0, 0);
+      } catch (e) {
+        // scrollTo may not be implemented in test environment
+      }
+    }
     
     // Show recent commands when focused with empty input
     if (!$input.value.trim()) {

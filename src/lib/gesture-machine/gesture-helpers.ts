@@ -221,8 +221,16 @@ export function createGestureHelpers(controller: CanvasController) {
       const start = ctx.draft.startPositions.get(id);
       el.x = start.x + dx;
       el.y = start.y + dy;
+      // Update each element individually for better performance
+      controller.updateElementNode(
+        controller.elementNodesMap[el.id],
+        el,
+        controller.isElementSelected(el.id),
+        true
+      );
     });
-    controller.requestRender();
+    controller.updateGroupBox();
+    controller.requestEdgeUpdate();
   }
 
     /* ---------------- group resize (single-handle drag) ---------------- */
@@ -446,10 +454,30 @@ export function createGestureHelpers(controller: CanvasController) {
 
   function editEdgeLabel(_ctx: GestureContext, ev: GestureEvent) {
     const edgeId = ev.edgeId!;
-    const screenXY = ev.xy
     const edge = controller.findEdgeElementById!(edgeId);
     if (!edge) return;
-    const pt = controller.screenToCanvas(screenXY.x, screenXY.y);
+
+    // Calculate the midpoint of the edge for better positioning
+    const sourceEl = controller.findElementById(edge.source);
+    const targetEl = controller.findElementById(edge.target);
+
+    let pt;
+    if (sourceEl && targetEl) {
+      // Position the edit-prompt at the midpoint between source and target
+      const sourceCenterX = sourceEl.x + (sourceEl.width * (sourceEl.scale || 1)) / 2;
+      const sourceCenterY = sourceEl.y + (sourceEl.height * (sourceEl.scale || 1)) / 2;
+      const targetCenterX = targetEl.x + (targetEl.width * (targetEl.scale || 1)) / 2;
+      const targetCenterY = targetEl.y + (targetEl.height * (targetEl.scale || 1)) / 2;
+
+      pt = {
+        x: (sourceCenterX + targetCenterX) / 2,
+        y: (sourceCenterY + targetCenterY) / 2
+      };
+    } else {
+      // Fallback to click position if elements not found
+      pt = controller.screenToCanvas(ev.xy.x, ev.xy.y);
+    }
+
     const editId = controller.createNewElement(
       pt.x, pt.y, 'edit-prompt',
       edge.label || '',

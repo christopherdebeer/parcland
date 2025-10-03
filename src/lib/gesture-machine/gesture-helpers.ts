@@ -229,6 +229,7 @@ export function createGestureHelpers(controller: CanvasController) {
         true
       );
     });
+    controller.updateGroupBox();
     controller.requestEdgeUpdate();
   }
 

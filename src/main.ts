@@ -11,12 +11,6 @@ import { elementRegistry } from './lib/elements/elementRegistry.ts';
 import { CrdtAdapter } from './lib/network/crdt.ts';
 import type { CanvasState, CanvasElement, ViewState, Edge } from './types.ts';
 
-declare global {
-    interface Window {
-        CC: CanvasController | null;
-    }
-}
-
 class CanvasController {
     canvasState: CanvasState;
     crdt: CrdtAdapter;
@@ -148,18 +142,18 @@ class CanvasController {
 
         this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
-        let safeActions = {};
-        Object.entries(helperActions).forEach(([key, fn]) => {
-            safeActions[key] = (ctx, ev, meta) => {
+        let safeActions: any = {};
+        Object.entries(helperActions).forEach(([key, fn]: [string, any]) => {
+            safeActions[key] = (ctx: any, ev: any, meta?: any) => {
                 console.log(`[Gesture Action: ${key}]`);
                 try {
                     // run the real helper
-                    return fn(ctx, ev, meta);
+                    return (fn as any)(ctx, ev, meta);
                 } catch (err) {
                     console.error(`[Gesture Action Error: ${key}]`, err);
                     // emit an in‐machine event—this will bubble to your state machine
                     this.fsmService.send({ type: 'ERROR', action: key, error: err });
-                    // swallow, so the machine’s transition still completes
+                    // swallow, so the machine's transition still completes
                 }
             };
         });
@@ -482,12 +476,12 @@ class CanvasController {
     }
 
     updateCanvasTransform() {
-        if (this.canvas.controller !== this) return;
+        if ((this.canvas as any).controller !== this) return;
 
         this.container.style.transform = `translate(${this.viewState.translateX}px, ${this.viewState.translateY}px) scale(${this.viewState.scale})`;
-        this.container.style.setProperty('--translateX', this.viewState.translateX);
-        this.container.style.setProperty('--translateY', this.viewState.translateY);
-        this.container.style.setProperty('--zoom', this.viewState.scale);
+        this.container.style.setProperty('--translateX', String(this.viewState.translateX));
+        this.container.style.setProperty('--translateY', String(this.viewState.translateY));
+        this.container.style.setProperty('--zoom', String(this.viewState.scale));
 
         // Get the canvas (visible) size
         const canvasRect = this.canvas.getBoundingClientRect();
@@ -769,13 +763,13 @@ class CanvasController {
 
         // defer execution
         await new Promise(r => requestAnimationFrame(r));
-        const scriptElements = Array.from(node.querySelectorAll('script'));
+        const scriptElements = Array.from(node.querySelectorAll('script')) as HTMLScriptElement[];
 
-        const loadScript = (script) => {
+        const loadScript = (script: HTMLScriptElement) => {
             return new Promise((resolve, reject) => {
                 script.onload = resolve;
                 script.onerror = () => {
-                    this._showElementError(node.closest('.canvas-element'),
+                    this._showElementError(node.closest('.canvas-element') as HTMLElement,
                         `Failed to load
 ${script.getAttribute('src')}`);
                     reject(new Error(`Failed to load script: ${script.getAttribute('src')}`));
@@ -1073,7 +1067,7 @@ ${script.getAttribute('src')}`);
             edges: [],
             versionHistory: [],
             parentCanvas: this.canvasState.canvasId,
-        });
+        }, undefined);
         this.detach()
         const childController = new CanvasController(canvasState);
         updateCanvasController(childController);
@@ -1090,7 +1084,7 @@ ${script.getAttribute('src')}`);
             elements: [],
             edges: [],
             versionHistory: [],
-        } as CanvasState);
+        } as CanvasState, undefined);
         this.detach();
         const controller = new CanvasController(canvasState);
         updateCanvasController(controller);
@@ -1146,9 +1140,9 @@ ${script.getAttribute('src')}`);
             node.style.top = (el.fixedTop || 0) + '%';
             // node.style.width = (el.width * scale) + "px";
             // node.style.height = (el.height * scale) + "px";
-            node.style.setProperty('--translateX', this.viewState.translateX);
-            node.style.setProperty('--translateY', this.viewState.translateY);
-            node.style.setProperty('--zoom', this.viewState.scale);
+            node.style.setProperty('--translateX', String(this.viewState.translateX));
+            node.style.setProperty('--translateY', String(this.viewState.translateY));
+            node.style.setProperty('--zoom', String(this.viewState.scale));
 
             node.style.setProperty('--width', (el.width * scale) + 'px');
             node.style.setProperty('--height', (el.height * scale) + 'px');

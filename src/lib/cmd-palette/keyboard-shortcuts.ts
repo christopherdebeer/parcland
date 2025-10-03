@@ -4,7 +4,7 @@ import { buildRootItems } from './menu-items.ts';
 
 interface MenuItem {
   shortcut?: string;
-  action?: (controller: any) => void;
+  action?: (controller: any, input?: any) => void | Promise<void> | any;
   children?: MenuItem[];
 }
 
@@ -13,8 +13,8 @@ interface MenuItem {
  * @param controller - The canvas controller
  * @returns A map of shortcut strings to action functions
  */
-function buildShortcutMap(controller: any): Map<string, (controller: any) => void> {
-  const shortcutMap = new Map<string, (controller: any) => void>();
+function buildShortcutMap(controller: any): Map<string, (controller: any, input?: any) => void | Promise<void> | any> {
+  const shortcutMap = new Map<string, (controller: any, input?: any) => void | Promise<void> | any>();
 
   function walkItems(items: MenuItem[]): void {
     items.forEach((item: MenuItem) => {

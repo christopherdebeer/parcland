@@ -37,6 +37,8 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Or use OAuth token instead:
           # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          additional_permissions: |
+            actions: read
           claude_args: |
             --model claude-sonnet-4-5-20250929
             --allowedTools Read,Write,Edit,Glob,Grep,WebFetch,mcp__github__*,Bash(npm:*),Bash(git:*),Bash(exec:*),Bash(grep:*),Bash(bun:*),Bash(ls:*),Bash(node:*),Bash(cat:*),Bash(cd:*),Bash(cp:*),Bash(mv:*),Bash(mkdir:*),Bash(rm:*),Bash(curl:*)

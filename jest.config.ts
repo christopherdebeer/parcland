@@ -6,6 +6,9 @@ export default {
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
-  transform: {},
+  transform: {
+    '^.+\\.(t|j)sx?$': '@swc/jest'
+  },
+  extensionsToTreatAsEsm: ['.ts'],
   testPathIgnorePatterns: ['/node_modules/']
 };

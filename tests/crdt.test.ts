@@ -1,6 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 import * as Y from 'yjs';
-import { CrdtAdapter } from '../src/lib/network/crdt';
 
 // Create mock provider factory
 const createMockProvider = (id: string, doc: any, opts: any) => {
@@ -18,12 +17,28 @@ const createMockProvider = (id: string, doc: any, opts: any) => {
   };
 };
 
-// Mock y-webrtc
+// Mock y-webrtc BEFORE importing CrdtAdapter
 jest.mock('y-webrtc', () => {
   return {
-    WebrtcProvider: jest.fn().mockImplementation(createMockProvider),
+    WebrtcProvider: jest.fn().mockImplementation((id: string, doc: any, opts: any) => {
+      return {
+        doc,
+        awareness: {
+          clientID: 12345,
+          setLocalStateField: jest.fn(),
+          on: jest.fn(),
+          getStates: jest.fn().mockReturnValue(new Map()),
+        },
+        on: jest.fn(),
+        destroy: jest.fn(),
+        disconnect: jest.fn(),
+      };
+    }),
   };
 });
+
+// Import AFTER mocking
+import { CrdtAdapter } from '../src/lib/network/crdt';
 
 describe('CrdtAdapter', () => {
   let adapter: CrdtAdapter;
@@ -295,9 +310,11 @@ describe('CrdtAdapter', () => {
 
     it('should register onPresenceChange callback', () => {
       const callback = jest.fn();
+      const awarenessOnMock = adapter.provider.awareness.on as jest.Mock;
+
       adapter.onPresenceChange(callback);
 
-      expect(adapter.provider.awareness.on).toHaveBeenCalledWith(
+      expect(awarenessOnMock).toHaveBeenCalledWith(
         'change',
         expect.any(Function)
       );
@@ -309,13 +326,15 @@ describe('CrdtAdapter', () => {
         [67890, { client: { clientId: 67890, user: 'Other' } }],
       ]);
 
-      adapter.provider.awareness.getStates.mockReturnValue(mockStates);
+      const awarenessGetStatesMock = adapter.provider.awareness.getStates as jest.Mock;
+      awarenessGetStatesMock.mockReturnValue(mockStates);
 
       const callback = jest.fn();
       adapter.onPresenceChange(callback);
 
       // Get the registered callback
-      const registeredCallback = (adapter.provider.awareness.on as jest.Mock).mock.calls[0][1];
+      const awarenessOnMock = adapter.provider.awareness.on as jest.Mock;
+      const registeredCallback = awarenessOnMock.mock.calls[0][1];
 
       // Trigger it
       registeredCallback({});
@@ -367,10 +386,13 @@ describe('CrdtAdapter', () => {
   });
 
   describe('sync events', () => {
-    it('should handle synced event', () => {
+    beforeEach(() => {
       adapter = new CrdtAdapter(testId);
+    });
 
-      const syncedCallback = (adapter.provider.on as jest.Mock).mock.calls.find(
+    it('should handle synced event', () => {
+      const providerOnMock = adapter.provider.on as jest.Mock;
+      const syncedCallback = providerOnMock.mock.calls.find(
         call => call[0] === 'synced'
       )?.[1];
 

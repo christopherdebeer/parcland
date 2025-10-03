@@ -26,7 +26,7 @@ async function _saveCanvas(canvasState) {
   saveCanvasLocalOnly(canvasState);
 
   const token = getAuthToken();
-  if (!token) {
+  if (!token || token === 'TBC') {
     console.warn('No auth token found – skipping remote save');
     return;
   }
@@ -58,7 +58,7 @@ async function _saveCanvas(canvasState) {
 
 export async function setBackpackItem(key, val) {
   const token = getAuthToken();
-  if (!token) {
+  if (!token || token === 'TBC') {
     console.warn('No auth token – skipping API save');
     return;
   }

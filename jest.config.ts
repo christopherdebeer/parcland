@@ -9,6 +9,9 @@ export default {
   transform: {
     '^.+\\.(t|j)sx?$': '@swc/jest'
   },
+  moduleNameMapper: {
+    '\\.(css|less|scss|sass)$': '<rootDir>/tests/styleMock.js'
+  },
   extensionsToTreatAsEsm: ['.ts'],
   testPathIgnorePatterns: ['/node_modules/']
 };

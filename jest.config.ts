@@ -1,17 +1,35 @@
 export default {
-  testEnvironment: 'jsdom',
-  moduleFileExtensions: ['js', 'ts'],
-  testMatch: ['**/tests/**/*.test.js', '**/tests/**/*.test.ts'],
-  setupFiles: ['<rootDir>/tests/setup.js'],
+  testEnvironment: "jsdom",
+  moduleFileExtensions: ["js", "ts"],
+  testMatch: ["**/tests/**/*.test.js", "**/tests/**/*.test.ts"],
+  setupFiles: ["<rootDir>/tests/setup.js"],
   collectCoverage: true,
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov'],
+  coverageDirectory: "coverage",
+  coverageReporters: ["text", "lcov", "html"],
+  coverageThreshold: {
+    global: {
+      statements: 70,
+      branches: 50,
+      functions: 60,
+      lines: 70,
+    },
+    // Higher thresholds for service classes (our refactored code)
+    "./src/services/**/*.ts": {
+      statements: 80,
+      branches: 50,
+      functions: 75,
+      lines: 80,
+    },
+  },
   transform: {
-    '^.+\\.(t|j)sx?$': '@swc/jest'
+    "^.+\\.(t|j)sx?$": "@swc/jest",
   },
   moduleNameMapper: {
-    '\\.(css|less|scss|sass)$': '<rootDir>/tests/styleMock.js'
+    "\\.(css|less|scss|sass)$": "<rootDir>/tests/styleMock.js",
   },
-  extensionsToTreatAsEsm: ['.ts'],
-  testPathIgnorePatterns: ['/node_modules/']
+  extensionsToTreatAsEsm: [".ts"],
+  testPathIgnorePatterns: ["/node_modules/"],
+  // Option 3: Configure test timeout and parallel execution
+  testTimeout: 30000, // 30 seconds per test (default is 5s)
+  maxWorkers: "50%", // Use half of CPU cores for better CI performance
 };

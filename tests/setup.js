@@ -10,15 +10,15 @@ global.ResizeObserver = class ResizeObserver {
 
 // Mock setPointerCapture/releasePointerCapture
 if (!Element.prototype.setPointerCapture) {
-  Element.prototype.setPointerCapture = function() {};
+  Element.prototype.setPointerCapture = function () {};
 }
 if (!Element.prototype.releasePointerCapture) {
-  Element.prototype.releasePointerCapture = function() {};
+  Element.prototype.releasePointerCapture = function () {};
 }
 
 // Ensure Element.prototype.closest is available for all events
 if (!Element.prototype.closest) {
-  Element.prototype.closest = function(selector) {
+  Element.prototype.closest = function (selector) {
     let el = this;
     while (el) {
       if (el.matches && el.matches(selector)) return el;
@@ -29,7 +29,7 @@ if (!Element.prototype.closest) {
 }
 
 // Polyfill PointerEvent for JSDOM
-if (typeof global.PointerEvent === 'undefined') {
+if (typeof global.PointerEvent === "undefined") {
   global.PointerEvent = class PointerEvent extends MouseEvent {
     constructor(type, params = {}) {
       super(type, params);
@@ -41,12 +41,18 @@ if (typeof global.PointerEvent === 'undefined') {
       this.tiltX = params.tiltX || 0;
       this.tiltY = params.tiltY || 0;
       this.twist = params.twist || 0;
-      this.pointerType = params.pointerType || 'mouse';
+      this.pointerType = params.pointerType || "mouse";
       this.isPrimary = params.isPrimary || false;
     }
   };
 }
 
+// Polyfill structuredClone for Node.js < 17
+if (typeof global.structuredClone === "undefined") {
+  global.structuredClone = (obj) => {
+    return JSON.parse(JSON.stringify(obj));
+  };
+}
 // Mock global fetch for API calls
 global.fetch = jest.fn(() =>
   Promise.resolve({

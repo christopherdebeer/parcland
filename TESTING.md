@@ -220,11 +220,65 @@ test('should create a text element via command palette', async ({ page }) => {
 ```
 
 **Running E2E tests:**
+
+*Local Development:*
 ```bash
-npm run test:e2e              # Run all E2E tests
+npm run test:e2e              # Run all E2E tests (local dev server)
 npm run test:e2e:ui           # Run with Playwright UI
 npm run test:e2e:headed       # Run in headed mode (visible browser)
 ```
+
+*Vercel Preview Deployments:*
+```bash
+# Set environment variables
+export VERCEL_PREVIEW_URL=https://parcland-git-branch-project.vercel.app
+export VERCEL_AUTOMATION_BYPASS_SECRET=your_secret_here
+
+# Run E2E tests against Vercel preview
+npm run test:e2e:vercel       # Run headless
+npm run test:e2e:vercel:debug # Run headed with debugger
+```
+
+**Vercel Preview Integration:**
+
+E2E tests automatically support Vercel preview deployments with deployment protection bypass. The configuration detects the `VERCEL_PREVIEW_URL` environment variable and:
+
+1. Uses the preview URL instead of local dev server
+2. Appends bypass query parameters automatically: `?x-vercel-protection-bypass=${SECRET}&x-vercel-set-bypass-cookie=samesitenone`
+3. Skips starting the local dev server
+
+**Environment Variables:**
+- `VERCEL_PREVIEW_URL`: Full URL to the Vercel preview deployment
+- `VERCEL_AUTOMATION_BYPASS_SECRET`: Secret for bypassing Vercel deployment protection (must be configured as a GitHub secret)
+
+**How It Works:**
+
+The Playwright config (`playwright.config.ts`) detects when `VERCEL_PREVIEW_URL` is set and:
+- Sets `baseURL` to the preview URL
+- Disables the local web server
+- Tests automatically append bypass parameters to all page navigations
+
+No changes are needed to individual test files - the bypass is handled transparently in the test setup.
+
+**Example Workflow:**
+
+```bash
+# 1. Push changes to branch
+git push origin feature-branch
+
+# 2. Wait for Vercel deployment (check PR comments)
+# Preview URL: https://parcland-git-feature-branch-project.vercel.app
+
+# 3. Run E2E tests against preview
+export VERCEL_PREVIEW_URL=https://parcland-git-feature-branch-project.vercel.app
+export VERCEL_AUTOMATION_BYPASS_SECRET=$(gh secret list | grep VERCEL | awk '{print $1}')
+npm run test:e2e:vercel
+
+# 4. Review results in test report
+npx playwright show-report
+```
+
+See [CLAUDE.md](./CLAUDE.md) for the full Vercel preview iteration workflow.
 
 **Test Coverage:**
 - Canvas loading and initialization
@@ -241,6 +295,7 @@ npm run test:e2e:headed       # Run in headed mode (visible browser)
 - Test user-facing behavior, not implementation
 - Use page.waitForSelector for dynamic content
 - Screenshot on failure (configured automatically)
+- Test on Vercel preview before merging to catch deployment-specific issues
 
 ### Mutation Testing
 
@@ -294,13 +349,25 @@ Runs Stryker mutation testing on service classes.
 
 ### E2E Tests
 
+*Local Development:*
 ```bash
-npm run test:e2e              # Run all E2E tests
+npm run test:e2e              # Run all E2E tests (local dev server)
 npm run test:e2e:ui           # Run with Playwright UI
 npm run test:e2e:headed       # Run in headed mode (visible browser)
 ```
 
-Runs Playwright E2E tests in real browsers.
+*Vercel Preview:*
+```bash
+# Set environment variables first
+export VERCEL_PREVIEW_URL=https://parcland-git-branch-project.vercel.app
+export VERCEL_AUTOMATION_BYPASS_SECRET=your_secret_here
+
+# Run tests
+npm run test:e2e:vercel       # Run against Vercel preview (headless)
+npm run test:e2e:vercel:debug # Run with debugger (headed mode)
+```
+
+Runs Playwright E2E tests in real browsers. Supports both local dev server and Vercel preview deployments.
 
 ### All Tests
 

@@ -3,13 +3,24 @@
  *
  * These tests verify complete user workflows by interacting with the
  * application through the browser, just like a real user would.
+ *
+ * Supports both local dev server and Vercel preview deployments.
+ * When testing on Vercel, deployment protection is bypassed using query parameters.
  */
 
 import { test, expect, Page } from '@playwright/test';
 
+// Get Vercel bypass parameters from environment
+const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+const isVercelPreview = !!process.env.VERCEL_PREVIEW_URL;
+const bypassParams = isVercelPreview && vercelBypassSecret
+  ? `?x-vercel-protection-bypass=${vercelBypassSecret}&x-vercel-set-bypass-cookie=samesitenone`
+  : '';
+
 test.describe('Canvas Interactions', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    // Navigate to the app with bypass parameters if needed
+    await page.goto(`/${bypassParams}`);
     await page.waitForLoadState('networkidle');
   });
 
@@ -242,7 +253,7 @@ test.describe('Canvas Interactions', () => {
 
 test.describe('Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto(`/${bypassParams}`);
     await page.waitForLoadState('networkidle');
   });
 
@@ -293,7 +304,7 @@ test.describe('Keyboard Shortcuts', () => {
 
 test.describe('Error Handling', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
+    await page.goto(`/${bypassParams}`);
     await page.waitForLoadState('networkidle');
   });
 

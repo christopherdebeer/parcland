@@ -460,17 +460,23 @@ EventBus
 
 ## Progress Tracking
 
-### Phase 1 Progress (Current)
+### Phase 1 Progress (COMPLETED)
 - [x] Planning complete
-- [ ] HistoryManager extracted
-- [ ] ViewportManager extracted
-- [ ] SelectionManager extracted
-- [ ] Tests passing
-- [ ] Code review
-- [ ] Documentation updated
+- [x] HistoryManager extracted (166 lines)
+- [x] ViewportManager extracted (247 lines)
+- [x] SelectionManager extracted (314 lines)
+- [x] Tests passing
+- [x] Code review
+- [x] Documentation updated
+- [x] Main controller reduced to 1,209 lines (from 1,274 - 5% reduction)
 
-### Phase 2 Progress
-- [ ] Not started
+### Phase 2 Progress (COMPLETED)
+- [x] RenderingPipeline class created
+- [x] ElementRenderer extracted (213 lines)
+- [x] EdgeRenderer extracted (172 lines)
+- [x] Controller updated to use pipeline
+- [x] All tests passing (73.23% coverage maintained)
+- [x] Main controller reduced to 1,144 lines (from 1,209)
 
 ### Phase 3 Progress
 - [ ] Not started
@@ -480,22 +486,50 @@ EventBus
 ## Lessons Learned
 
 ### Phase 1
-*To be filled in during/after Phase 1*
+*Completed 2025-10-04*
 
 **What went well:**
-- TBD
+- Clean extraction of three cohesive service classes
+- All services < 350 lines as planned
+- Backward compatibility maintained
+- Test coverage maintained at 73.23%
 
 **Challenges encountered:**
-- TBD
+- Some properties needed to remain on controller for backward compatibility
+- Service interdependencies required careful coordination
 
 **Adjustments made:**
-- TBD
+- Kept legacy properties on controller while delegating to services
+- Services reference controller for shared state access
 
 **Recommendations for Phase 2:**
-- TBD
+- Focus on isolating rendering logic completely
+- Consider event-driven architecture for better decoupling
+- Be mindful of performance when adding abstraction layers
 
 ### Phase 2
-*To be filled in during/after Phase 2*
+*Completed 2025-10-04*
+
+**What went well:**
+- Clean extraction of rendering pipeline with separate renderers
+- Property delegation pattern worked well for backward compatibility
+- Rendering logic nicely isolated from controller
+- All tests continue to pass
+
+**Challenges encountered:**
+- Still have rendering helper methods in controller (setElementContent, buildHandles, etc.)
+- These are called by renderers, creating some coupling
+- Target of < 600 lines not met yet - need Phase 3 for further reduction
+
+**Adjustments made:**
+- Created property accessors for elementNodesMap, edgeNodesMap to delegate to renderers
+- Kept helper methods in controller temporarily for renderer callbacks
+- Maintained queued rendering via requestAnimationFrame
+
+**Recommendations for Phase 3:**
+- Extract remaining rendering helpers into renderers or separate utilities
+- Consider breaking controller into smaller domain-specific managers
+- Event bus architecture may help decouple remaining dependencies
 
 ### Phase 3
 *To be filled in during/after Phase 3*

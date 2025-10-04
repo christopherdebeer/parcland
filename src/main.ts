@@ -13,6 +13,9 @@ import type { CanvasState, CanvasElement, ViewState, Edge } from './types.ts';
 import { HistoryManager } from './services/HistoryManager.ts';
 import { ViewportManager } from './services/ViewportManager.ts';
 import { SelectionManager } from './services/SelectionManager.ts';
+import { RenderingPipeline } from './services/renderers/RenderingPipeline.ts';
+import { ElementRenderer } from './services/renderers/ElementRenderer.ts';
+import { EdgeRenderer } from './services/renderers/EdgeRenderer.ts';
 
 class CanvasController {
     canvasState: CanvasState;
@@ -22,6 +25,7 @@ class CanvasController {
     historyManager: HistoryManager;
     viewportManager: ViewportManager;
     selectionManager: SelectionManager;
+    renderingPipeline: RenderingPipeline;
 
     // Legacy properties (delegated to services)
     selectedElementIds: Set<string>;
@@ -97,8 +101,6 @@ class CanvasController {
 
         this.activeEditTab = "content"; // "content" or "src"
         this.elementRegistry = elementRegistry;
-        this.elementNodesMap = {};
-        this.edgeNodesMap = {};
 
         // Get DOM elements
         this.canvas = document.getElementById("canvas");
@@ -157,6 +159,23 @@ class CanvasController {
             }
         );
 
+        // Initialize rendering pipeline with renderers
+        const elementRenderer = new ElementRenderer(
+            this.elementRegistry,
+            this.container,
+            this.staticContainer,
+            this
+        );
+        const edgeRenderer = new EdgeRenderer(
+            this.edgesLayer,
+            this
+        );
+        this.renderingPipeline = new RenderingPipeline(
+            elementRenderer,
+            edgeRenderer,
+            this
+        );
+
         // Set up legacy property accessors that delegate to services
         Object.defineProperty(this, 'selectedElementIds', {
             get: () => this.selectionManager.getSelectedIds(),
@@ -211,6 +230,22 @@ class CanvasController {
             get: () => 100 // Internal to HistoryManager
         });
 
+        // Delegate element/edge node maps to renderers
+        Object.defineProperty(this, 'elementNodesMap', {
+            get: () => this.renderingPipeline.getElementRenderer().getElementNodesMap(),
+            set: (_v) => { /* no-op - managed by renderer */ }
+        });
+
+        Object.defineProperty(this, 'edgeNodesMap', {
+            get: () => this.renderingPipeline.getEdgeRenderer().getEdgeNodesMap(),
+            set: (_v) => { /* no-op - managed by renderer */ }
+        });
+
+        Object.defineProperty(this, 'edgeLabelNodesMap', {
+            get: () => this.renderingPipeline.getEdgeRenderer().getEdgeLabelNodesMap(),
+            set: (_v) => { /* no-op - managed by renderer */ }
+        });
+
         this.switchMode('navigate');
         const helperActions = createGestureHelpers(this);
         let safeActions: any = {};
@@ -257,22 +292,9 @@ class CanvasController {
         this._renderQueued = false;
         this._edgesQueued = false;
 
-        this.requestRender = () => {
-            if (this._renderQueued) return;
-            this._renderQueued = true;
-            requestAnimationFrame(() => {
-                this._renderQueued = false;
-                this.renderElementsImmediately();
-            });
-        };
-        this.requestEdgeUpdate = () => {
-            if (this._edgesQueued) return;
-            this._edgesQueued = true;
-            requestAnimationFrame(() => {
-                this._edgesQueued = false;
-                this.renderEdgesImmediately();
-            });
-        };
+        // Delegate rendering to pipeline
+        this.requestRender = () => this.renderingPipeline.requestRender();
+        this.requestEdgeUpdate = () => this.renderingPipeline.requestEdgeUpdate();
 
         this.requestRender();
         this.uninstallCommandPalette = installCommandPalette(this);
@@ -441,98 +463,11 @@ class CanvasController {
     }
 
     renderElementsImmediately() {
-        if ((this.canvas as any).controller !== this) return;
-        console.log(`requestRender()`);
-        const existingIds = new Set(Object.keys(this.elementNodesMap));
-        const usedIds = new Set();
-
-        this.canvasState.elements.forEach(el => {
-            usedIds.add(el.id);
-            let node = this.elementNodesMap[el.id];
-            if (!node) {
-                node = this._ensureDomFor(el);
-                (el.static ? this.staticContainer : this.container).appendChild(node);
-                this.elementNodesMap[el.id] = node;
-            }
-            const isSel = this.selectedElementIds.has(el.id);
-            this.updateElementNode(node, el, isSel);
-        });
-
-        existingIds.forEach(id => {
-            if (!usedIds.has(id)) {
-                const node = this.elementNodesMap[id];
-                const view = elementRegistry.viewFor(node?.dataset.type);
-                view?.unmount?.(node.firstChild as HTMLElement);
-                node.remove();
-
-                delete this.elementNodesMap[id];
-            }
-        });
-        this.updateGroupBox()
-        this.requestEdgeUpdate();
+        this.renderingPipeline.renderElementsImmediately();
     }
 
     renderEdgesImmediately() {
-        // console.log("requestEdgeUpdate()");
-
-        // Ensure an SVG marker for arrowheads exists.
-        let defs = this.edgesLayer.querySelector("defs");
-        if (!defs) {
-            defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-            this.edgesLayer.prepend(defs);
-        }
-        if (!defs.querySelector("#arrowhead")) {
-            const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-            marker.setAttribute("id", "arrowhead");
-            marker.setAttribute("markerWidth", "10");
-            marker.setAttribute("markerHeight", "7");
-            marker.setAttribute("refX", "10");
-            marker.setAttribute("refY", "3.5");
-            marker.setAttribute("orient", "auto");
-            const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            arrowPath.setAttribute("d", "M0,0 L0,7 L10,3.5 Z");
-            arrowPath.setAttribute("fill", "#ccc");
-            marker.appendChild(arrowPath);
-            defs.appendChild(marker);
-        }
-
-        // Iterate over each edge in the canvas state.
-        this.canvasState.edges.forEach(edge => {
-            let line = this.edgeNodesMap[edge.id];
-            if (!line) {
-                // console.log("line node does not exists", edge, line)
-                line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                line.setAttribute("stroke", edge.style?.color || "#ccc");
-                line.setAttribute("stroke-width", edge.style?.thickness || "2");
-                // Set arrow marker at the target end.
-                line.setAttribute("marker-end", "url(#arrowhead)");
-                this.edgeNodesMap[edge.id] = line;
-                this.edgesLayer.appendChild(line);
-            } else {
-                // console.log("line node exists", edge, line)
-            }
-
-            this.updateEdgePosition(edge, line)
-        });
-
-        // Remove any orphaned SVG lines.
-        Object.keys(this.edgeNodesMap).forEach(edgeId => {
-            if (!this.canvasState.edges.find(e => e.id === edgeId)) {
-                console.log(`[DEBUG] Deleting orphaned edge node`, edgeId, this.edgeNodesMap[edgeId])
-                this.edgeNodesMap[edgeId].remove();
-                delete this.edgeNodesMap[edgeId];
-            }
-        });
-        // Remove orphaned labels.
-        if (this.edgeLabelNodesMap) {
-            Object.keys(this.edgeLabelNodesMap).forEach(edgeId => {
-                if (!this.canvasState.edges.find(e => e.id === edgeId)) {
-                    console.log(`[DEBUG] Deleting orphaned edge label`, edgeId, this.edgeLabelNodesMap[edgeId])
-                    this.edgeLabelNodesMap[edgeId].remove();
-                    delete this.edgeLabelNodesMap[edgeId];
-                }
-            });
-        }
+        this.renderingPipeline.renderEdgesImmediately();
     }
 
     updateEdgePosition(edge: Edge, line: SVGLineElement) {

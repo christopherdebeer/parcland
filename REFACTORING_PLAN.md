@@ -4,13 +4,21 @@
 
 This document outlines the complete refactoring strategy for the CanvasController monolith (`src/main.ts:14-1288`, 1,274 lines). The goal is to reduce complexity, improve maintainability, and enable future enhancements without altering behavior or losing features.
 
-**Current State:** Single monolithic class with 40+ properties, 60+ methods, and deep coupling.
+**Original State (Before Refactoring):** Single monolithic class with 40+ properties, 60+ methods, deep coupling - 1,274 lines
 
-**Target State:** Component-based architecture with clear separation of concerns, independent testability, and manageable complexity.
+**Current State (After Phases 1 & 2):** Service-based architecture with rendering pipeline - 1,144 lines
+- 3 service classes: HistoryManager, ViewportManager, SelectionManager (727 lines)
+- 3 renderer classes: RenderingPipeline, ElementRenderer, EdgeRenderer (483 lines)
+- Main controller delegates to services and renderers
+- All tests passing, 73.23% coverage maintained
+
+**Target State:** Component-based architecture with clear separation of concerns, independent testability, and manageable complexity (Phase 3 - not yet implemented)
 
 **Approach:** Hybrid phased refactoring (conservative → progressive → transformative)
 
-**Timeline:** 7-10 weeks total across 3 phases
+**Timeline:**
+- Phases 1 & 2: COMPLETED (2025-10-04)
+- Phase 3: Planned for future dedicated effort (1-2 weeks estimated)
 
 ---
 
@@ -479,7 +487,42 @@ EventBus
 - [x] Main controller reduced to 1,144 lines (from 1,209)
 
 ### Phase 3 Progress
-- [ ] Not started
+- [ ] NOT STARTED - Requires dedicated effort (see recommendations below)
+
+**Phase 3 Recommendations:**
+
+Given the complexity and scope of Phase 3 (full component architecture with event bus), this should be tackled as a separate, focused effort. Here's the recommended approach:
+
+**Prerequisites for Phase 3:**
+1. Phases 1 & 2 provide a solid foundation
+2. Rendering is now isolated in dedicated classes
+3. Services are independently testable
+
+**Suggested Phase 3 Scope (when undertaken):**
+1. **Extract remaining helper methods** (~150-200 lines)
+   - `setElementContent`, `executeScriptElements`, `_showElementError` → ContentRenderer utility
+   - `_ensureDomFor`, `createElementNode` → ElementManager
+   - `computeIntersection` → Geometry utility
+
+2. **Create EventBus for decoupling** (~100 lines)
+   - Simple pub/sub implementation
+   - Standard events: element:created, element:updated, selection:changed, etc.
+
+3. **Refactor services to use EventBus**
+   - Remove direct controller references where possible
+   - Services publish events instead of calling controller methods
+
+4. **Create ElementManager and EdgeManager**
+   - Encapsulate element/edge lifecycle
+   - Coordinate between services via events
+
+**Estimated Effort:** 1-2 weeks (not 3-4 weeks with pragmatic scope)
+
+**Expected Outcome:**
+- Controller: ~600-800 lines (from current 1,144)
+- Clear component boundaries
+- Event-driven architecture
+- Easier to test and extend
 
 ---
 

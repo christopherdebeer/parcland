@@ -6,7 +6,7 @@ export default {
   collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       statements: 70,
       branches: 50,

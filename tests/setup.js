@@ -53,3 +53,10 @@ if (typeof global.structuredClone === "undefined") {
     return JSON.parse(JSON.stringify(obj));
   };
 }
+// Mock global fetch for API calls
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ result: 'Generated content' }),
+  })
+);

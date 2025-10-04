@@ -29,4 +29,7 @@ export default {
   },
   extensionsToTreatAsEsm: [".ts"],
   testPathIgnorePatterns: ["/node_modules/"],
+  // Option 3: Configure test timeout and parallel execution
+  testTimeout: 30000, // 30 seconds per test (default is 5s)
+  maxWorkers: "50%", // Use half of CPU cores for better CI performance
 };

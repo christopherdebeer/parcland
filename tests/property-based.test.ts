@@ -13,6 +13,11 @@ import { ViewportManager } from "../src/services/ViewportManager";
 import { SelectionManager } from "../src/services/SelectionManager";
 import type { CanvasState, ViewState } from "../src/types";
 
+// Option 3: Reduce test runs in CI for faster execution
+// CI: 20 runs per test (~10-15 min total)
+// Local: 100 runs per test (~60 min total, thorough)
+const NUM_RUNS = process.env.CI ? 20 : 100;
+
 // Test data generators
 const canvasStateArbitrary = fc.record({
   elements: fc.array(
@@ -99,6 +104,7 @@ describe("Property-Based Tests", () => {
             expect(currentState.canvasState.elements.length).toBe(initialCount);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -144,6 +150,7 @@ describe("Property-Based Tests", () => {
             expect(undoCount).toBeLessThanOrEqual(100);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -217,6 +224,7 @@ describe("Property-Based Tests", () => {
             expect(manager.canRedo()).toBe(false);
           }
         }),
+        { numRuns: NUM_RUNS },
       );
     });
   });
@@ -255,6 +263,7 @@ describe("Property-Based Tests", () => {
             expect(viewState.scale).toBe(scale);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -312,6 +321,7 @@ describe("Property-Based Tests", () => {
             );
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -354,6 +364,7 @@ describe("Property-Based Tests", () => {
             randomViewState.translateY,
           );
         }),
+        { numRuns: NUM_RUNS },
       );
     });
   });
@@ -400,6 +411,7 @@ describe("Property-Based Tests", () => {
             expect(manager.getSelectedIds().has(elementId)).toBe(true);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -442,6 +454,7 @@ describe("Property-Based Tests", () => {
             expect(manager.getSelectedIds().size).toBe(0);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -487,6 +500,7 @@ describe("Property-Based Tests", () => {
             });
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -512,6 +526,7 @@ describe("Property-Based Tests", () => {
             // This test verifies the operation doesn't crash
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
   });
@@ -578,6 +593,7 @@ describe("Property-Based Tests", () => {
             expect(selectionManager.getSelectedIds().size).toBe(selectedCount);
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
 
@@ -636,6 +652,7 @@ describe("Property-Based Tests", () => {
             expect(currentState.canvasState.edges).toBeDefined();
           },
         ),
+        { numRuns: NUM_RUNS },
       );
     });
   });

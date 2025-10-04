@@ -60,9 +60,12 @@ export class ViewportManager {
 
     /**
      * Get current view state
+     * IMPORTANT: Returns the actual mutable reference for backward compatibility.
+     * External code may mutate viewState.translateX/Y/scale directly.
+     * After mutating, call notifyViewStateChanged() to update the canvas.
      */
     getViewState(): ViewState {
-        return { ...this.viewState };
+        return this.viewState;
     }
 
     /**
@@ -73,6 +76,15 @@ export class ViewportManager {
             ...this.viewState,
             ...state
         };
+        this.updateCanvasTransform();
+        this.saveLocalViewState();
+    }
+
+    /**
+     * Notify that viewState was mutated externally.
+     * Call this after directly mutating viewState properties.
+     */
+    notifyViewStateChanged(): void {
         this.updateCanvasTransform();
         this.saveLocalViewState();
     }

@@ -122,9 +122,21 @@ export class SelectionManager {
 
     /**
      * Get all selected element IDs
+     * IMPORTANT: Returns the actual mutable Set for backward compatibility.
+     * External code may call .add()/.delete()/.clear() directly.
+     * After mutating, call notifySelectionChanged() to update UI.
      */
     getSelectedIds(): Set<string> {
-        return new Set(this.selectedElementIds);
+        return this.selectedElementIds;
+    }
+
+    /**
+     * Notify that selectedElementIds was mutated externally.
+     * Call this after directly mutating the Set.
+     */
+    notifySelectionChanged(): void {
+        this.updateGroupBox();
+        this._notifyChange();
     }
 
     /**

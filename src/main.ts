@@ -118,15 +118,8 @@ class CanvasController {
         this.mode = 'direct';
 
         // Initialize service managers
-        this.historyManager = new HistoryManager(
-            () => ({ canvasState: this.canvasState, viewState: this.viewState }),
-            ({ canvasState, viewState }) => {
-                this.canvasState = canvasState;
-                this.viewState = viewState;
-                this.selectionManager.clearSelection();
-                this.requestRender();
-            }
-        );
+        // IMPORTANT: ViewportManager must be initialized before HistoryManager
+        // because HistoryManager immediately takes a snapshot that includes viewState
 
         // Create initial viewState for ViewportManager
         const initialViewState: ViewState = {
@@ -145,6 +138,16 @@ class CanvasController {
             () => {
                 this.crdt.updateView(this.viewState);
                 this.selectionManager.updateGroupBox();
+            }
+        );
+
+        this.historyManager = new HistoryManager(
+            () => ({ canvasState: this.canvasState, viewState: this.viewState }),
+            ({ canvasState, viewState }) => {
+                this.canvasState = canvasState;
+                this.viewState = viewState;
+                this.selectionManager.clearSelection();
+                this.requestRender();
             }
         );
 

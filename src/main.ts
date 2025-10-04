@@ -10,15 +10,32 @@ import { showModal } from './lib/modal.ts';
 import { elementRegistry } from './lib/elements/elementRegistry.ts';
 import { CrdtAdapter } from './lib/network/crdt.ts';
 import type { CanvasState, CanvasElement, ViewState, Edge } from './types.ts';
+import { HistoryManager } from './services/HistoryManager.ts';
+import { ViewportManager } from './services/ViewportManager.ts';
+import { SelectionManager } from './services/SelectionManager.ts';
 
 class CanvasController {
     canvasState: CanvasState;
     crdt: CrdtAdapter;
+
+    // Service managers
+    historyManager: HistoryManager;
+    viewportManager: ViewportManager;
+    selectionManager: SelectionManager;
+
+    // Legacy properties (delegated to services)
     selectedElementIds: Set<string>;
     selectedElementId: string | null;
     selectionBox: HTMLElement | null;
-    activeEditTab: string;
     viewState: ViewState;
+    groupBox: HTMLElement;
+    MAX_SCALE: number;
+    MIN_SCALE: number;
+    _undo: any[];
+    _redo: any[];
+    _maxHistory: number;
+
+    activeEditTab: string;
     elementRegistry: any;
     elementNodesMap: Record<string, HTMLElement>;
     edgeNodesMap: Record<string, SVGLineElement>;
@@ -30,17 +47,11 @@ class CanvasController {
     modeBtn: HTMLElement;
     drillUpBtn: HTMLElement;
     edgesLayer: SVGSVGElement;
-    groupBox: HTMLElement;
-    MAX_SCALE: number;
-    MIN_SCALE: number;
     codeMirrorContent: any;
     codeMirrorSrc: any;
     tokenKey: string;
     modes: string[];
     mode: string;
-    _undo: any[];
-    _redo: any[];
-    _maxHistory: number;
     fsmService: any;
     uninstallAdapter: () => void;
     uninstallCommandPalette: () => void;
@@ -84,25 +95,12 @@ class CanvasController {
             this.canvasState.edges = [];
         }
 
-        this.selectedElementIds = new Set();   // multiselect aware
-        Object.defineProperty(this, 'selectedElementId', {  // legacy shim
-            get: () => (this.selectedElementIds.size === 1 ? [...this.selectedElementIds][0] : null),
-            set: (v) => { this.selectedElementIds.clear(); if (v) this.selectedElementIds.add(v); }
-        });
-
-        this.selectionBox = null;              // DOM element for the rubber‑band rectangle
         this.activeEditTab = "content"; // "content" or "src"
-
-        this.viewState = {
-            scale: 1,
-            translateX: 0,
-            translateY: 0
-        };
-
         this.elementRegistry = elementRegistry;
         this.elementNodesMap = {};
         this.edgeNodesMap = {};
 
+        // Get DOM elements
         this.canvas = document.getElementById("canvas");
         this.container = document.getElementById("canvas-container");
         this.staticContainer = document.getElementById("static-container");
@@ -110,37 +108,110 @@ class CanvasController {
         this.modeBtn = document.getElementById("mode");
         this.drillUpBtn = document.getElementById("drillUp");
         this.edgesLayer = document.getElementById("edges-layer") as any as SVGSVGElement;
-        this.groupBox = document.createElement('div');
-        this.groupBox.id = 'group-box';
-        this.groupBox.innerHTML = `
-  <div class="box"></div>
-  <div class="element-handle resize-handle"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></div>
-  <div class="element-handle rotate-handle"><i class="fa-solid fa-rotate"></i></div>
-  <div class="element-handle scale-handle"><i class="fa-solid fa-up-down-left-right"></i></div>`;
-        this.container.appendChild(this.groupBox);
-        this.groupBox.style.display = 'none';
-
-        this.MAX_SCALE = 10;
-        this.MIN_SCALE = 0.1;
 
         this.codeMirrorContent = null;
         this.codeMirrorSrc = null;
-
         this.tokenKey = "PARC.LAND/BKPK_TOKEN";
-
         this.modes = ['direct', 'navigate'];
         this.mode = 'direct';
+
+        // Initialize service managers
+        this.historyManager = new HistoryManager(
+            () => ({ canvasState: this.canvasState, viewState: this.viewState }),
+            ({ canvasState, viewState }) => {
+                this.canvasState = canvasState;
+                this.viewState = viewState;
+                this.selectionManager.clearSelection();
+                this.requestRender();
+            }
+        );
+
+        // Create initial viewState for ViewportManager
+        const initialViewState: ViewState = {
+            scale: 1,
+            translateX: 0,
+            translateY: 0
+        };
+
+        this.viewportManager = new ViewportManager(
+            this.canvas,
+            this.container,
+            this.edgesLayer,
+            canvasState.canvasId || "default",
+            (id) => this.findElementById(id),
+            initialViewState,
+            () => {
+                this.crdt.updateView(this.viewState);
+                this.selectionManager.updateGroupBox();
+            }
+        );
+
+        this.selectionManager = new SelectionManager(
+            this.canvas,
+            this.container,
+            (id) => this.findElementById(id),
+            () => this.canvasState.elements,
+            (selectedIds) => {
+                this.crdt.updateSelection(selectedIds);
+                this.requestRender();
+            }
+        );
+
+        // Set up legacy property accessors that delegate to services
+        Object.defineProperty(this, 'selectedElementIds', {
+            get: () => this.selectionManager.getSelectedIds(),
+            set: (v: Set<string>) => this.selectionManager.setSelectedIds(v)
+        });
+
+        Object.defineProperty(this, 'selectedElementId', {
+            get: () => this.selectionManager.getSingleSelectedId(),
+            set: (v: string | null) => {
+                if (v) {
+                    this.selectionManager.selectElement(v, false);
+                } else {
+                    this.selectionManager.clearSelection();
+                }
+            }
+        });
+
+        Object.defineProperty(this, 'selectionBox', {
+            get: () => null, // Managed internally by SelectionManager
+            set: (_v) => { /* no-op */ }
+        });
+
+        Object.defineProperty(this, 'viewState', {
+            get: () => this.viewportManager.getViewState(),
+            set: (v: ViewState) => this.viewportManager.setViewState(v)
+        });
+
+        Object.defineProperty(this, 'groupBox', {
+            get: () => this.selectionManager.getGroupBoxElement()
+        });
+
+        Object.defineProperty(this, 'MAX_SCALE', {
+            get: () => this.viewportManager.MAX_SCALE
+        });
+
+        Object.defineProperty(this, 'MIN_SCALE', {
+            get: () => this.viewportManager.MIN_SCALE
+        });
+
+        // Legacy history properties (delegate to historyManager)
+        Object.defineProperty(this, '_undo', {
+            get: () => [], // Internal to HistoryManager
+            set: (_v) => { /* no-op */ }
+        });
+
+        Object.defineProperty(this, '_redo', {
+            get: () => [], // Internal to HistoryManager
+            set: (_v) => { /* no-op */ }
+        });
+
+        Object.defineProperty(this, '_maxHistory', {
+            get: () => 100 // Internal to HistoryManager
+        });
+
         this.switchMode('navigate');
-
-        /* ── UNDO / REDO stacks ─────────────────────────────────── */
-        this._undo = [];          // stack of past states
-        this._redo = [];          // stack of undone states
-        this._maxHistory = 100;   // ring-buffer size
-
-        // First entry = pristine state so the user can always go “Back to start”
-        this._pushHistorySnapshot('Init');
-
-        this.loadLocalViewState();
         const helperActions = createGestureHelpers(this);
         let safeActions: any = {};
         Object.entries(helperActions).forEach(([key, fn]: [string, any]) => {
@@ -208,11 +279,13 @@ class CanvasController {
     }
 
     detach() {
-
         // Remove context menu event listener
         if (this.contextMenuPointerDownHandler) {
             this.contextMenu.removeEventListener("pointerdown", this.contextMenuPointerDownHandler);
         }
+
+        // Clean up services
+        this.selectionManager.destroy();
 
         // Clean up DOM nodes
         Object.values(this.elementNodesMap).forEach(node => node.remove());
@@ -260,9 +333,20 @@ class CanvasController {
         this.drillUpBtn.onclick = this.handleDrillUp.bind(this);
     }
 
-    undo() { this._stepHistory(this._undo, this._redo, 'undo'); }
-    redo() { this._stepHistory(this._redo, this._undo, 'redo'); }
+    // History methods - delegate to HistoryManager
+    undo() {
+        this.historyManager.undo();
+    }
 
+    redo() {
+        this.historyManager.redo();
+    }
+
+    _pushHistorySnapshot(label: string) {
+        this.historyManager.snapshot(label);
+    }
+
+    // Legacy methods for compatibility
     _snapshot(label = '') {
         return {
             label,
@@ -273,170 +357,53 @@ class CanvasController {
         };
     }
 
-    _pushHistorySnapshot(label) {
-        const snap = this._snapshot(label);
-        this._undo.push(snap);
-        if (this._undo.length > this._maxHistory) this._undo.shift();
-        this._redo.length = 0;            // clear redo chain
+    _stepHistory(fromStack: any[], toStack: any[], direction: string) {
+        // Delegated to HistoryManager
+        if (direction === 'undo') {
+            this.historyManager.undo();
+        } else {
+            this.historyManager.redo();
+        }
     }
 
-    _stepHistory(fromStack, toStack, direction) {
-        if (fromStack.length === 0) return;
-        const cur = this._snapshot();     // current → opposite stack
-        toStack.push(cur);
-        const { data } = fromStack.pop(); // restore previous
-        this._restoreSnapshot(data);
-    }
-
-    _restoreSnapshot({ canvasState, viewState }) {
-        
+    _restoreSnapshot({ canvasState, viewState }: { canvasState: CanvasState; viewState: ViewState }) {
         this.canvasState = structuredClone(canvasState);
-        //this.viewState   = structuredClone(viewState);
-
-        // clear selection, keep mode
-        this.selectedElementIds.clear();
+        this.selectionManager.clearSelection();
         this.requestRender();
-        //this.updateCanvasTransform();
     }
 
 
-    createSelectionBox(startX, startY) {
-        this.selectionBox = document.createElement('div');
-        this.selectionBox.id = 'lasso-box';
-        Object.assign(this.selectionBox.style, {
-            position: 'absolute',
-            border: '1px dashed #00aaff',
-            background: 'rgba(0,170,255,0.05)',
-            left: `${startX}px`,
-            top: `${startY}px`,
-            width: '0px',
-            height: '0px',
-            zIndex: 10000,
-            pointerEvents: 'none'
-        });
-        this.canvas.appendChild(this.selectionBox);
+    // Selection methods - delegate to SelectionManager
+    createSelectionBox(startX: number, startY: number) {
+        this.selectionManager.createSelectionBox(startX, startY);
     }
 
-    updateSelectionBox(startX, startY, curX, curY) {
-        if (!this.selectionBox) this.createSelectionBox(startX, startY)
-        const x = Math.min(startX, curX);
-        const y = Math.min(startY, curY);
-        const w = Math.abs(curX - startX);
-        const h = Math.abs(curY - startY);
-        Object.assign(this.selectionBox.style, {
-            left: `${x}px`, top: `${y}px`,
-            width: `${w}px`, height: `${h}px`
-        });
+    updateSelectionBox(startX: number, startY: number, curX: number, curY: number) {
+        this.selectionManager.updateSelectionBox(startX, startY, curX, curY);
     }
 
     removeSelectionBox() {
-        if (this.selectionBox) { this.selectionBox.remove(); this.selectionBox = null; }
+        this.selectionManager.removeSelectionBox();
     }
 
-
     selectElement(id: string, additive = false) {
-        if (!additive) this.selectedElementIds.clear();
-        console.log("[Controller] selectElement", id, { additive })
-        const el = this.findElementById(id);
-        if (el?.group) {
-            // pull in every element with the same group ID
-            const gid = el.group;
-            this.canvasState.elements
-                .filter(e => e.group === gid)
-                .forEach(e => this.selectedElementIds.add(e.id));
-        } else {
-            // fall back to single‐element toggle
-            if (this.selectedElementIds.has(id) && additive) {
-                this.selectedElementIds.delete(id);
-            } else {
-                this.selectedElementIds.add(id);
-            }
-        }
-        this.crdt.updateSelection(this.selectedElementIds);
-        this.updateGroupBox()
-        this.requestRender();
+        this.selectionManager.selectElement(id, additive);
     }
 
     clearSelection() {
-        if (this.selectedElementIds.size) {
-            this.selectedElementIds.clear();
-            this.crdt.updateSelection(this.selectedElementIds);
-            this.updateGroupBox()
-            this.requestRender();
-        }
+        this.selectionManager.clearSelection();
     }
 
     isElementSelected(id: string) {
-        return this.selectedElementIds.has(id);
+        return this.selectionManager.isElementSelected(id);
     }
 
-    getGroupBBox(): { x1: number; y1: number; x2: number; y2: number; cx: number; cy: number } | null {
-        if (this.selectedElementIds.size === 0) return null;
-        const els = [...this.selectedElementIds].map(id => this.findElementById(id));
-        
-        // Calculate corners for each element considering rotation
-        const allCorners = [];
-        
-        els.forEach(el => {
-            const scaleFactor = el.scale || 1;
-            const halfW = (el.width * scaleFactor) / 2;
-            const halfH = (el.height * scaleFactor) / 2;
-            const cx = el.x;
-            const cy = el.y;
-            const theta = ((el.rotation || 0) * Math.PI) / 180;
-            const cosθ = Math.cos(theta);
-            const sinθ = Math.sin(theta);
-            
-            // Calculate the four corners of the rotated rectangle
-            const corners = [
-                { x: -halfW, y: -halfH }, // top-left
-                { x: halfW, y: -halfH },  // top-right
-                { x: halfW, y: halfH },   // bottom-right
-                { x: -halfW, y: halfH }   // bottom-left
-            ].map(pt => {
-                // Rotate point
-                const rx = pt.x * cosθ - pt.y * sinθ;
-                const ry = pt.x * sinθ + pt.y * cosθ;
-                // Translate to element position
-                return { x: cx + rx, y: cy + ry };
-            });
-            
-            allCorners.push(...corners);
-        });
-        
-        // Find min/max coordinates from all corners
-        const xs = allCorners.map(pt => pt.x);
-        const ys = allCorners.map(pt => pt.y);
-        
-        return {
-            x1: Math.min(...xs), y1: Math.min(...ys),
-            x2: Math.max(...xs), y2: Math.max(...ys),
-            cx: (Math.min(...xs) + Math.max(...xs)) / 2,
-            cy: (Math.min(...ys) + Math.max(...ys)) / 2
-        };
+    getGroupBBox() {
+        return this.selectionManager.getGroupBBox();
     }
 
     updateGroupBox() {
-        if (this.selectedElementIds.size < 2) {
-            this.groupBox.style.display = 'none';
-            this.canvas.classList.remove('group-selected')
-            return;
-        }
-
-        const bb = this.getGroupBBox();
-        if (!bb) {
-            this.groupBox.style.display = 'none';
-            this.canvas.classList.remove('group-selected')
-            return;
-        }
-
-        this.canvas.classList.add('group-selected')
-
-        this.groupBox.style.display = 'block';
-        this.groupBox.style.left = bb.x1 + 'px';           // canvas-space
-        this.groupBox.style.top = bb.y1 + 'px';
-        this.groupBox.style.width = (bb.x2 - bb.x1) + 'px';
-        this.groupBox.style.height = (bb.y2 - bb.y1) + 'px';
+        this.selectionManager.updateGroupBox();
     }
 
     switchMode(m?: string) {
@@ -451,82 +418,26 @@ class CanvasController {
         this.modeBtn.innerHTML = `<i class="fa-solid fa-${this.mode === 'direct' ? 'arrow-pointer' : 'hand'}"></i> ${this.mode === 'direct' ? 'Editing' : 'Viewing'}`;
     }
 
+    // Viewport methods - delegate to ViewportManager
     loadLocalViewState() {
-        try {
-            const key = "canvasViewState_" + (this.canvasState.canvasId || "default");
-            const saved = localStorage.getItem(key);
-            if (saved) {
-                const vs = JSON.parse(saved);
-                this.viewState.scale = vs.scale || 1;
-                this.viewState.translateX = vs.translateX || 0;
-                this.viewState.translateY = vs.translateY || 0;
-            }
-        } catch (e) {
-            console.warn("No local viewState found", e);
-        }
+        this.viewportManager.loadLocalViewState();
     }
 
     saveLocalViewState() {
-        try {
-            const key = "canvasViewState_" + (this.canvasState.canvasId || "default");
-            localStorage.setItem(key, JSON.stringify(this.viewState));
-        } catch (e) {
-            console.warn("Could not store local viewState", e);
-        }
+        this.viewportManager.saveLocalViewState();
     }
 
     updateCanvasTransform() {
         if ((this.canvas as any).controller !== this) return;
-
-        this.container.style.transform = `translate(${this.viewState.translateX}px, ${this.viewState.translateY}px) scale(${this.viewState.scale})`;
-        this.container.style.setProperty('--translateX', String(this.viewState.translateX));
-        this.container.style.setProperty('--translateY', String(this.viewState.translateY));
-        this.container.style.setProperty('--zoom', String(this.viewState.scale));
-
-        // Get the canvas (visible) size
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const W = canvasRect.width;
-        const H = canvasRect.height;
-
-        this.crdt.updateView(this.viewState);
-
-        // Compute the visible region in canvas coordinates:
-        const visibleX = -this.viewState.translateX / this.viewState.scale;
-        const visibleY = -this.viewState.translateY / this.viewState.scale;
-        const visibleWidth = W / this.viewState.scale;
-        const visibleHeight = H / this.viewState.scale;
-
-        // Set the viewBox attribute on the SVG layer so that its coordinate system
-        // matches the visible region.
-        this.edgesLayer.setAttribute("viewBox", `${String(visibleX)} ${String(visibleY)} ${String(visibleWidth)} ${String(visibleHeight)}`);
-        // console.log("[DEBUG] SVG viewBox updated to:", visibleX, visibleY, visibleWidth, visibleHeight);
-
-        this.updateGroupBox()
+        this.viewportManager.updateCanvasTransform();
     }
 
     recenterOnElement(elId: string) {
-        const el = this.findElementById(elId);
-        if (!el) {
-            console.warn(`Element with ID "${elId}" not found.`);
-            return;
-        }
+        this.viewportManager.recenterOnElement(elId);
+    }
 
-        // Compute the center of the element in canvas coordinates
-        const scale = this.viewState.scale || 1;
-        const elCenterX = el.x;
-        const elCenterY = el.y;
-
-        // Get canvas size in pixels
-        const canvasRect = this.canvas.getBoundingClientRect();
-        const canvasCenterX = canvasRect.width / 2;
-        const canvasCenterY = canvasRect.height / 2;
-
-        // Compute new translation to center the element
-        this.viewState.translateX = canvasCenterX - (elCenterX * scale);
-        this.viewState.translateY = canvasCenterY - (elCenterY * scale);
-
-        this.updateCanvasTransform();
-        this.saveLocalViewState();
+    screenToCanvas(px: number, py: number): { x: number; y: number } {
+        return this.viewportManager.screenToCanvas(px, py);
     }
 
     renderElementsImmediately() {
@@ -900,15 +811,6 @@ ${script.getAttribute('src')}`);
             el.y = centerCanvas.y - (el.height * (el.scale || 1)) / 2;
             el.static = false;
         }
-    }
-
-    screenToCanvas(px: number, py: number): { x: number; y: number } {
-        const dx = px - this.canvas.offsetLeft;
-        const dy = py - this.canvas.offsetTop;
-        return {
-            x: (dx - this.viewState.translateX) / this.viewState.scale,
-            y: (dy - this.viewState.translateY) / this.viewState.scale
-        };
     }
 
     setElementContent(node: HTMLElement, el: CanvasElement) {

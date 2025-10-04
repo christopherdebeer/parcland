@@ -46,3 +46,11 @@ if (typeof global.PointerEvent === 'undefined') {
     }
   };
 }
+
+// Mock global fetch for API calls
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({ result: 'Generated content' }),
+  })
+);

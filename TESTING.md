@@ -20,13 +20,17 @@ The Parcland project uses a multi-layered testing strategy to ensure code qualit
 - **Unit Tests**: Test individual functions and classes in isolation
 - **Integration Tests**: Test interactions between services and components
 - **Contract Tests**: Verify API contracts remain consistent across refactoring
+- **Property-Based Tests**: Use randomized inputs to find edge cases automatically
+- **E2E Tests**: Test complete user workflows through the browser
 - **Mutation Testing**: Validate test quality by introducing code mutations
 
 ### Current Test Coverage
 
 - **Overall Coverage**: ~70% statement coverage
 - **Service Classes**: 68-88% coverage with higher thresholds (80% target)
-- **Total Tests**: 426 tests across 15 test suites
+- **Total Tests**: 450+ tests across 17 test suites
+- **E2E Tests**: 13 end-to-end scenarios
+- **Property-Based Tests**: 12 invariant tests
 
 ## Testing Philosophy
 
@@ -59,7 +63,8 @@ it('should add element to internal Set', () => {
 - **Unit tests** for business logic and algorithms
 - **Integration tests** for service interactions
 - **Contract tests** for API boundaries
-- **E2E tests** (future) for critical user workflows
+- **Property-based tests** for invariants and edge cases
+- **E2E tests** for critical user workflows
 
 ### 3. Test Failures, Not Just Success Cases
 
@@ -145,6 +150,98 @@ it('getViewState() should return mutable reference', () => {
 });
 ```
 
+### Property-Based Tests
+
+Located in: `tests/property-based.test.ts`
+
+Property-based tests use the `fast-check` library to automatically generate hundreds of random inputs and verify that certain invariants always hold true. This helps find edge cases that manual tests might miss.
+
+**Example:**
+```typescript
+import fc from 'fast-check';
+
+it('selection should be idempotent', () => {
+  fc.assert(
+    fc.property(
+      fc.array(fc.string(), { minLength: 1, maxLength: 20 }),
+      (elementIds) => {
+        const manager = new SelectionManager(...);
+
+        // Select the same element multiple times
+        const elementId = elementIds[0];
+        manager.selectElement(elementId);
+        manager.selectElement(elementId);
+        manager.selectElement(elementId);
+
+        // Should only be selected once
+        expect(manager.getSelectedIds().size).toBe(1);
+      }
+    )
+  );
+});
+```
+
+**Benefits:**
+- Finds edge cases automatically
+- Tests hundreds of inputs in seconds
+- Validates invariants across the input space
+- Catches bugs that manual tests miss
+
+**Example Invariants Tested:**
+- `undo` followed by `redo` restores state
+- Selection remains unchanged when viewport transforms
+- History operations preserve state integrity
+- Clear selection always results in empty set
+
+### E2E Tests
+
+Located in: `tests/e2e/*.spec.ts`
+
+End-to-end tests use Playwright to test the application through a real browser, simulating actual user interactions.
+
+**Example:**
+```typescript
+import { test, expect } from '@playwright/test';
+
+test('should create a text element via command palette', async ({ page }) => {
+  await page.goto('/');
+
+  // Open command palette (Cmd/Ctrl+K)
+  await page.keyboard.press('Control+K');
+
+  // Type "text" to filter commands
+  await page.keyboard.type('text');
+  await page.keyboard.press('Enter');
+
+  // Verify that a text element was created
+  const elements = page.locator('.canvas-element');
+  await expect(elements).toHaveCount(1);
+});
+```
+
+**Running E2E tests:**
+```bash
+npm run test:e2e              # Run all E2E tests
+npm run test:e2e:ui           # Run with Playwright UI
+npm run test:e2e:headed       # Run in headed mode (visible browser)
+```
+
+**Test Coverage:**
+- Canvas loading and initialization
+- Element creation via command palette
+- Pan and zoom gestures
+- Selection (single and multi-select)
+- Undo/redo functionality
+- Keyboard shortcuts
+- Drag and drop
+- Error handling
+
+**Best Practices:**
+- Use data-testid attributes for reliable selectors
+- Test user-facing behavior, not implementation
+- Use page.waitForSelector for dynamic content
+- Screenshot on failure (configured automatically)
+
 ### Mutation Testing
 
 Mutation testing validates the quality of your tests by introducing small changes (mutations) to the code and checking if tests catch them.
@@ -194,6 +291,24 @@ npm run test:mutation
 ```
 
 Runs Stryker mutation testing on service classes.
+
+### E2E Tests
+
+```bash
+npm run test:e2e              # Run all E2E tests
+npm run test:e2e:ui           # Run with Playwright UI
+npm run test:e2e:headed       # Run in headed mode (visible browser)
+```
+
+Runs Playwright E2E tests in real browsers.
+
+### All Tests
+
+```bash
+npm run test:all
+```
+
+Runs both unit/integration tests and E2E tests.
 
 ### Specific Test File
 
@@ -525,12 +640,68 @@ it('should allow in-place mutation of selectedElementIds Set', () => {
 - Add tests for error conditions
 - Test boundary values (0, -1, MAX, etc.)
 
+## Future Testing Enhancements
+
+### Visual Regression Testing
+
+Visual regression testing can catch unintended UI changes by comparing screenshots.
+
+**Recommended Tools:**
+- **Percy**: Automated visual testing platform
+- **Chromatic**: Visual testing for Storybook components
+- **Playwright Visual Comparisons**: Built-in screenshot comparison
+
+**Implementation Approach:**
+1. Take baseline screenshots of key UI states
+2. On each commit, capture new screenshots
+3. Compare pixel-by-pixel differences
+4. Flag visual changes for human review
+
+**Example with Playwright:**
+```typescript
+test('should render canvas correctly', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveScreenshot('canvas-initial-state.png');
+});
+```
+
+**Benefits:**
+- Catch CSS regressions
+- Detect layout shifts
+- Verify responsive design
+- Document visual changes
+
+### Performance Testing
+
+Monitor application performance over time.
+
+**Recommended Approach:**
+- Use Playwright to measure page load times
+- Track rendering performance with Performance API
+- Set performance budgets in CI
+- Monitor bundle size changes
+
+**Example:**
+```typescript
+test('should load within 2 seconds', async ({ page }) => {
+  const startTime = Date.now();
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  const loadTime = Date.now() - startTime;
+
+  expect(loadTime).toBeLessThan(2000);
+});
+```
+
 ## Resources
 
 - [Jest Documentation](https://jestjs.io/docs/getting-started)
+- [Playwright Documentation](https://playwright.dev/docs/intro)
+- [fast-check Documentation](https://fast-check.dev/)
 - [Testing Library Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
 - [Stryker Mutator Documentation](https://stryker-mutator.io/docs/)
 - [Test-Driven Development](https://martinfowler.com/bliki/TestDrivenDevelopment.html)
+- [Property-Based Testing Guide](https://fsharpforfunandprofit.com/posts/property-based-testing/)
 
 ## Contributing
 
@@ -540,7 +711,8 @@ When adding new code:
 2. Ensure tests pass locally: `npm test`
 3. Check coverage: Review `coverage/index.html`
 4. Run mutation tests: `npm run test:mutation` (for service classes)
-5. Pre-commit hooks will run automatically
+5. Consider E2E tests for user-facing features: `npm run test:e2e`
+6. Pre-commit hooks will run automatically
 
 When reviewing PRs:
 
@@ -548,6 +720,38 @@ When reviewing PRs:
 - Check that tests are testing behavior, not implementation
 - Ensure edge cases are covered
 - Look for integration tests for service interactions
+- Verify E2E tests cover critical user workflows
+- Consider property-based tests for complex logic
+
+### Test Selection Guide
+
+**When to write Unit Tests:**
+- Business logic and algorithms
+- Data transformations
+- Utility functions
+- Individual class methods
+
+**When to write Integration Tests:**
+- Service-to-service interactions
+- State management across components
+- Event handling chains
+
+**When to write Contract Tests:**
+- Public API boundaries
+- Service interfaces
+- Refactoring existing code
+
+**When to write Property-Based Tests:**
+- Complex algorithms with invariants
+- Functions with many edge cases
+- Mathematical operations
+- State machines
+
+**When to write E2E Tests:**
+- Critical user workflows
+- Multi-step interactions
+- UI interactions
+- Cross-browser compatibility
 
 ---
 

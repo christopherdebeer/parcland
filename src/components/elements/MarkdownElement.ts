@@ -8,13 +8,7 @@ import { BaseElementComponent } from '../BaseElementComponent.ts';
 import type { CanvasElement } from '../../types.ts';
 import type { ComponentContext } from '../BaseComponent.ts';
 
-declare global {
-  interface Window {
-    marked?: {
-      parse(markdown: string): string;
-    };
-  }
-}
+// Use existing window.marked declaration from types.ts
 
 export class MarkdownElement extends BaseElementComponent {
   constructor(data: CanvasElement, context: ComponentContext) {

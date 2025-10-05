@@ -14,6 +14,7 @@ import type { CanvasElement, Edge } from '../types.ts';
 export interface ComponentContext {
   controller: any;
   eventBus?: any;
+  requestRender?: () => void;
 }
 
 /**

@@ -14,6 +14,8 @@ import type { ComponentContext } from './BaseComponent.ts';
 import { TextElement } from './elements/TextElement.ts';
 import { MarkdownElement } from './elements/MarkdownElement.ts';
 import { ImageElement } from './elements/ImageElement.ts';
+import { HtmlElement } from './elements/HtmlElement.ts';
+import { JsonElement } from './elements/JsonElement.ts';
 import { StandardEdge } from './edges/StandardEdge.ts';
 
 type ElementComponentConstructor = new (data: CanvasElement, context: ComponentContext) => BaseElementComponent;
@@ -31,6 +33,8 @@ export class ComponentRegistry {
     this.registerElementType('text', TextElement);
     this.registerElementType('markdown', MarkdownElement);
     this.registerElementType('img', ImageElement);
+    this.registerElementType('html', HtmlElement);
+    this.registerElementType('json', JsonElement);
 
     // Register built-in edge types
     this.registerEdgeType('standard', StandardEdge);

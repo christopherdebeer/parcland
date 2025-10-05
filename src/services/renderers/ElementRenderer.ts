@@ -1,9 +1,11 @@
 import type { CanvasElement } from '../../types.ts';
+import { componentRegistry, type BaseElementComponent } from '../../components/index.ts';
 
 /**
  * ElementRenderer
  *
  * Handles rendering of canvas elements to DOM nodes.
+ * Uses new component system when available, falls back to legacy for compatibility.
  * Responsible for:
  * - DOM node creation and lifecycle
  * - Content rendering delegation
@@ -13,6 +15,7 @@ import type { CanvasElement } from '../../types.ts';
 export class ElementRenderer {
     private elementRegistry: any;
     private elementNodesMap: Record<string, HTMLElement>;
+    private componentInstances: Map<string, BaseElementComponent>; // Track component instances
     private container: HTMLElement;
     private staticContainer: HTMLElement;
     private controller: any; // Reference to CanvasController for callbacks
@@ -25,6 +28,7 @@ export class ElementRenderer {
     ) {
         this.elementRegistry = elementRegistry;
         this.elementNodesMap = {};
+        this.componentInstances = new Map();
         this.container = container;
         this.staticContainer = staticContainer;
         this.controller = controller;
@@ -53,8 +57,18 @@ export class ElementRenderer {
         existingIds.forEach(id => {
             if (!usedIds.has(id)) {
                 const node = this.elementNodesMap[id];
-                const view = this.elementRegistry.viewFor(node?.dataset.type);
-                view?.unmount?.(node.firstChild as HTMLElement);
+
+                // Unmount component if using new system
+                const component = this.componentInstances.get(id);
+                if (component) {
+                    component.unmount();
+                    this.componentInstances.delete(id);
+                } else {
+                    // Fallback to legacy view unmount
+                    const view = this.elementRegistry.viewFor(node?.dataset.type);
+                    view?.unmount?.(node.firstChild as HTMLElement);
+                }
+
                 node.remove();
                 delete this.elementNodesMap[id];
             }
@@ -68,19 +82,34 @@ export class ElementRenderer {
         let node = this.elementNodesMap[el.id];
         if (node) return node;
 
-        const view = this.elementRegistry.viewFor(el.type);
         node = document.createElement('div');
         node.classList.add('canvas-element');
         node.dataset.elId = el.id;
         node.dataset.type = el.type;
 
-        if (view) {
-            const inner = view.mount(el, this.controller);
+        // Try new component system first
+        const component = componentRegistry.createElementComponent(el, {
+            controller: this.controller,
+            requestRender: () => this.controller.requestRender()
+        });
+
+        if (component) {
+            // Use new component system
+            const inner = component.mount();
             inner && node.appendChild(inner);
+            this.componentInstances.set(el.id, component);
         } else {
-            // Fallback to controller's legacy content rendering
-            this.controller.setElementContent(node, el);
+            // Fallback to legacy view system
+            const view = this.elementRegistry.viewFor(el.type);
+            if (view) {
+                const inner = view.mount(el, this.controller);
+                inner && node.appendChild(inner);
+            } else {
+                // Final fallback to controller's legacy content rendering
+                this.controller.setElementContent(node, el);
+            }
         }
+
         this.elementNodesMap[el.id] = node;
         return node;
     }
@@ -92,12 +121,19 @@ export class ElementRenderer {
         // Update CRDT
         this.controller.crdt.updateElement(el.id, el);
 
-        // Update content via view or legacy method
-        const view = this.elementRegistry.viewFor(el.type);
-        if (view && typeof view.update === 'function') {
-            view.update(el, node.firstChild, this.controller);
+        // Update content: try component system first, then legacy
+        const component = this.componentInstances.get(el.id);
+        if (component) {
+            // Use new component system
+            component.update(el);
         } else {
-            this.controller.setElementContent(node, el);
+            // Fallback to legacy view system
+            const view = this.elementRegistry.viewFor(el.type);
+            if (view && typeof view.update === 'function') {
+                view.update(el, node.firstChild, this.controller);
+            } else {
+                this.controller.setElementContent(node, el);
+            }
         }
 
         // Apply positioning

@@ -13,6 +13,8 @@ export { BaseEdgeComponent } from './BaseEdgeComponent.ts';
 export { TextElement } from './elements/TextElement.ts';
 export { MarkdownElement } from './elements/MarkdownElement.ts';
 export { ImageElement } from './elements/ImageElement.ts';
+export { HtmlElement } from './elements/HtmlElement.ts';
+export { JsonElement } from './elements/JsonElement.ts';
 
 // Edge implementations
 export { StandardEdge } from './edges/StandardEdge.ts';

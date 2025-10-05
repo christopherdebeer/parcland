@@ -16,6 +16,7 @@ import { SelectionManager } from './services/SelectionManager.ts';
 import { RenderingPipeline } from './services/renderers/RenderingPipeline.ts';
 import { ElementRenderer } from './services/renderers/ElementRenderer.ts';
 import { EdgeRenderer } from './services/renderers/EdgeRenderer.ts';
+import { GeometryUtils } from './services/utils/GeometryUtils.ts';
 
 class CanvasController {
     canvasState: CanvasState;
@@ -482,14 +483,14 @@ class CanvasController {
 
         let sourcePoint, targetPoint;
         if ((sourceEl || sourceEdge) && (targetEl || targetEdge)) {
-            sourcePoint = this.computeIntersection(sourceEl || {
+            sourcePoint = GeometryUtils.computeIntersection(sourceEl || {
                 x: parseFloat(this.edgeLabelNodesMap[edge.source].getAttribute("x")),
                 y: parseFloat(this.edgeLabelNodesMap[edge.source].getAttribute("y"))
             }, targetEl || {
                 x: parseFloat(this.edgeLabelNodesMap[edge.target].getAttribute("x")),
                 y: parseFloat(this.edgeLabelNodesMap[edge.target].getAttribute("y"))
             });
-            targetPoint = this.computeIntersection(targetEl || {
+            targetPoint = GeometryUtils.computeIntersection(targetEl || {
                 x: parseFloat(this.edgeLabelNodesMap[edge.target].getAttribute("x")),
                 y: parseFloat(this.edgeLabelNodesMap[edge.target].getAttribute("y"))
             }, sourceEl || {
@@ -1034,52 +1035,6 @@ ${script.getAttribute('src')}`);
         return node;
     }
 
-    computeIntersection(el: CanvasElement | { x: number; y: number }, otherEl: CanvasElement | { x: number; y: number }): { x: number; y: number } {
-        // 1) Center and scale as before
-        const cx = el.x;
-        const cy = el.y;
-        const scaleFactor = ('scale' in el) ? (el.scale || 1) : 1;
-        const w = (('width' in el) ? (el.width || 10) : 10) * scaleFactor;
-        const h = (('height' in el) ? (el.height || 10) : 10) * scaleFactor;
-        const halfW = w / 2;
-        const halfH = h / 2;
-
-        // 2) Vector from el center to otherEl
-        let dx = otherEl.x - cx;
-        let dy = otherEl.y - cy;
-
-        // If same point, return center
-        if (dx === 0 && dy === 0) {
-            return { x: cx, y: cy };
-        }
-
-        // 3) Un-rotate the direction vector into the rectangle's local axes
-        const theta = ((('rotation' in el) ? (el.rotation || 0) : 0) * Math.PI) / 180;
-        const cosθ = Math.cos(-theta);
-        const sinθ = Math.sin(-theta);
-        const localDX = dx * cosθ - dy * sinθ;
-        const localDY = dx * sinθ + dy * cosθ;
-
-        // 4) Compute intersection on an axis-aligned box in local space
-        const scaleX = localDX !== 0 ? halfW / Math.abs(localDX) : Infinity;
-        const scaleY = localDY !== 0 ? halfH / Math.abs(localDY) : Infinity;
-        const scale = Math.min(scaleX, scaleY);
-
-        const localIX = localDX * scale;
-        const localIY = localDY * scale;
-
-        // 5) Rotate the intersection point back into world axes
-        const cosθf = Math.cos(theta);
-        const sinθf = Math.sin(theta);
-        const worldIX = localIX * cosθf - localIY * sinθf;
-        const worldIY = localIX * sinθf + localIY * cosθf;
-
-        // 6) Translate back to world coordinates
-        return {
-            x: cx + worldIX,
-            y: cy + worldIY
-        };
-    }
 
 
     buildContextMenu(elId?: string) {

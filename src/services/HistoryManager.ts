@@ -1,4 +1,6 @@
 import type { CanvasState, ViewState } from "../types";
+import type { EventBus } from "./EventBus";
+import { Events } from "./EventBus";
 
 /**
  * Snapshot of canvas state for undo/redo operations
@@ -19,6 +21,7 @@ interface HistorySnapshot {
  * - Undo/redo stack management
  * - Ring buffer with configurable max size
  * - Deep cloning to prevent mutation issues
+ * - Event-driven notifications for history changes
  */
 export class HistoryManager {
   private _undo: HistorySnapshot[] = [];
@@ -29,6 +32,7 @@ export class HistoryManager {
     canvasState: CanvasState;
     viewState: ViewState;
   }) => void;
+  private eventBus?: EventBus;
 
   /**
    * Creates a new HistoryManager
@@ -36,6 +40,7 @@ export class HistoryManager {
    * @param getState - Function that returns current canvas and view state
    * @param setState - Function that restores canvas and view state
    * @param maxHistory - Maximum number of history entries to keep (default: 100)
+   * @param eventBus - Optional EventBus for emitting history events
    */
   constructor(
     getState: () => { canvasState: CanvasState; viewState: ViewState },
@@ -44,10 +49,12 @@ export class HistoryManager {
       viewState: ViewState;
     }) => void,
     maxHistory: number = 100,
+    eventBus?: EventBus,
   ) {
     this.getState = getState;
     this.setState = setState;
     this._maxHistory = maxHistory;
+    this.eventBus = eventBus;
 
     // First entry = pristine state so the user can always go "Back to start"
     this.snapshot("Init");
@@ -58,6 +65,7 @@ export class HistoryManager {
    */
   undo(): void {
     this._stepHistory(this._undo, this._redo, "undo");
+    this.eventBus?.emit(Events.HISTORY_UNDO);
   }
 
   /**
@@ -65,6 +73,7 @@ export class HistoryManager {
    */
   redo(): void {
     this._stepHistory(this._redo, this._undo, "redo");
+    this.eventBus?.emit(Events.HISTORY_REDO);
   }
 
   /**
@@ -97,6 +106,9 @@ export class HistoryManager {
 
     // Clear redo chain when new action is taken
     this._redo.length = 0;
+
+    // Emit snapshot event
+    this.eventBus?.emit(Events.HISTORY_SNAPSHOT, { label });
   }
 
   /**

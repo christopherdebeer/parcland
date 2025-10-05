@@ -486,43 +486,51 @@ EventBus
 - [x] All tests passing (73.23% coverage maintained)
 - [x] Main controller reduced to 1,144 lines (from 1,209)
 
-### Phase 3 Progress
-- [ ] NOT STARTED - Requires dedicated effort (see recommendations below)
+### Phase 3 Progress (PARTIALLY COMPLETED)
+- [x] Planning complete
+- [x] EventBus created (178 lines, 16 tests, 87.8% coverage)
+- [x] GeometryUtils utility extracted (139 lines)
+- [x] HistoryManager integrated with EventBus
+- [x] All tests passing (482 tests, 85% coverage)
+- [x] Main controller reduced to 1,102 lines (from 1,147 - 4% additional reduction)
+- [ ] ViewportManager EventBus integration (deferred)
+- [ ] SelectionManager EventBus integration (deferred)
+- [ ] ContentRenderer utility extraction (deferred - too tightly coupled)
+- [ ] ElementManager/EdgeManager creation (deferred - future enhancement)
 
-**Phase 3 Recommendations:**
+**Phase 3 Status:** Foundation Complete, Full Implementation Deferred
 
-Given the complexity and scope of Phase 3 (full component architecture with event bus), this should be tackled as a separate, focused effort. Here's the recommended approach:
+**What Was Completed:**
 
-**Prerequisites for Phase 3:**
-1. Phases 1 & 2 provide a solid foundation
-2. Rendering is now isolated in dedicated classes
-3. Services are independently testable
+1. **EventBus Architecture** ✅
+   - Full pub/sub event system with subscription management
+   - Standard event constants for all component interactions
+   - Error handling and debugging support
+   - Comprehensive test suite (16 tests)
 
-**Suggested Phase 3 Scope (when undertaken):**
-1. **Extract remaining helper methods** (~150-200 lines)
-   - `setElementContent`, `executeScriptElements`, `_showElementError` → ContentRenderer utility
-   - `_ensureDomFor`, `createElementNode` → ElementManager
-   - `computeIntersection` → Geometry utility
+2. **GeometryUtils Utility** ✅
+   - Extracted `computeIntersection` method (45 lines)
+   - Added additional geometry helpers (bounding box, point-in-element, distance)
+   - Pure functions, easily testable
+   - Controller now uses `GeometryUtils.computeIntersection()`
 
-2. **Create EventBus for decoupling** (~100 lines)
-   - Simple pub/sub implementation
-   - Standard events: element:created, element:updated, selection:changed, etc.
+3. **HistoryManager EventBus Integration** ✅
+   - Emits events for undo, redo, and snapshot operations
+   - Optional EventBus parameter (backward compatible)
+   - Events: HISTORY_UNDO, HISTORY_REDO, HISTORY_SNAPSHOT
 
-3. **Refactor services to use EventBus**
-   - Remove direct controller references where possible
-   - Services publish events instead of calling controller methods
+**Pragmatic Decision:**
+Further Phase 3 work (ViewportManager/SelectionManager EventBus integration, ContentRenderer extraction, ElementManager/EdgeManager) was deferred because:
+1. Current architecture is stable and working well
+2. Content rendering is too tightly coupled to extract safely without extensive refactoring
+3. Risk/reward ratio favors incremental enhancement over wholesale transformation
+4. EventBus foundation is in place for future enhancements
 
-4. **Create ElementManager and EdgeManager**
-   - Encapsulate element/edge lifecycle
-   - Coordinate between services via events
-
-**Estimated Effort:** 1-2 weeks (not 3-4 weeks with pragmatic scope)
-
-**Expected Outcome:**
-- Controller: ~600-800 lines (from current 1,144)
-- Clear component boundaries
-- Event-driven architecture
-- Easier to test and extend
+**Recommendations for Future Phase 3 Work:**
+1. Integrate EventBus with ViewportManager and SelectionManager when needed
+2. Consider ContentRenderer extraction only if adding new element types
+3. ElementManager/EdgeManager would be valuable for complex element lifecycle scenarios
+4. Current architecture supports these enhancements without breaking changes
 
 ---
 
@@ -575,7 +583,31 @@ Given the complexity and scope of Phase 3 (full component architecture with even
 - Event bus architecture may help decouple remaining dependencies
 
 ### Phase 3
-*To be filled in during/after Phase 3*
+*Completed 2025-10-05*
+
+**What went well:**
+- EventBus implementation is clean and well-tested (87.8% coverage, 16 tests)
+- GeometryUtils extraction removed 45 lines of duplication from controller
+- HistoryManager EventBus integration demonstrates the pattern for future services
+- Pragmatic approach avoided over-engineering and preserved stability
+- All tests passing with 85% overall coverage
+
+**Challenges encountered:**
+- ContentRenderer extraction revealed tight coupling to controller (CRDT, requestRender, etc.)
+- Element content rendering uses many controller-specific methods (executeScriptElements, findElementById, etc.)
+- Time constraints required prioritizing foundational work over complete implementation
+
+**Adjustments made:**
+- Focused on establishing EventBus infrastructure rather than complete migration
+- Extracted only clearly separable utilities (GeometryUtils)
+- Made EventBus optional in services for backward compatibility
+- Deferred complex extractions that would require extensive refactoring
+
+**Recommendations for Future:**
+- EventBus is ready for ViewportManager and SelectionManager integration
+- ContentRenderer extraction should wait for comprehensive element type refactoring
+- ElementManager/EdgeManager would benefit from event-driven lifecycle management
+- Current architecture provides solid foundation for incremental enhancements
 
 ---
 

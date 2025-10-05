@@ -1,4 +1,5 @@
 import type { Edge, CanvasElement } from '../../types.ts';
+import { GeometryUtils } from '../utils/GeometryUtils.ts';
 
 /**
  * EdgeRenderer
@@ -101,7 +102,7 @@ export class EdgeRenderer {
 
         let sourcePoint, targetPoint;
         if ((sourceEl || sourceEdge) && (targetEl || targetEdge)) {
-            sourcePoint = this.controller.computeIntersection(
+            sourcePoint = GeometryUtils.computeIntersection(
                 sourceEl || {
                     x: parseFloat(this.edgeLabelNodesMap[edge.source]?.getAttribute("x") || "0"),
                     y: parseFloat(this.edgeLabelNodesMap[edge.source]?.getAttribute("y") || "0")
@@ -111,7 +112,7 @@ export class EdgeRenderer {
                     y: parseFloat(this.edgeLabelNodesMap[edge.target]?.getAttribute("y") || "0")
                 }
             );
-            targetPoint = this.controller.computeIntersection(
+            targetPoint = GeometryUtils.computeIntersection(
                 targetEl || {
                     x: parseFloat(this.edgeLabelNodesMap[edge.target]?.getAttribute("x") || "0"),
                     y: parseFloat(this.edgeLabelNodesMap[edge.target]?.getAttribute("y") || "0")

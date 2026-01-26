@@ -504,6 +504,20 @@ class CanvasController {
         this.updateGroupBox()
     }
 
+    /**
+     * Called when iOS visual viewport zoom is detected.
+     * This can corrupt pointer coordinates and interaction state.
+     */
+    onVisualViewportZoom(scale: number) {
+        console.warn('[CanvasController] iOS visual viewport zoom detected:', scale);
+        // Clear selection to reset interaction state
+        this.selectedElementIds.clear();
+        this.updateGroupBox();
+        this.hideContextMenu();
+        // Re-render to ensure clean state
+        this.requestRender();
+    }
+
     recenterOnElement(elId: string) {
         const el = this.findElementById(elId);
         if (!el) {

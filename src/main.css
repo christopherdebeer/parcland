@@ -1,11 +1,20 @@
+/* iOS zoom prevention - apply to all elements */
+* {
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
 html,
 body {
     margin: 0;
     padding: 0;
     overflow: hidden;
     height: 100%;
+    width: 100%;
     user-select: none;
+    -webkit-user-select: none;
     touch-action: none;
+    -ms-touch-action: none;
     font-family: sans-serif;
     background-color: white;
     position: fixed;
@@ -14,6 +23,9 @@ body {
     right: 0;
     bottom: 0;
     --highlight: #00aaff;
+    /* Prevent iOS text size adjustment which can trigger zoom */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 #canvas {
@@ -352,6 +364,9 @@ body {
     height: 100%;
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.7);
+    /* Prevent iOS zoom when interacting with modal */
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {

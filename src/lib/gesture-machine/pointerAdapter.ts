@@ -2,6 +2,41 @@
 // Thin DOM ⇆ FSM bridge.
 // Converts native pointer / wheel events into *pure* FSM events.
 // ----------------------------------------------------------------------------
+
+/**
+ * Get the visual viewport scale (iOS Safari native zoom level).
+ * Returns 1 if no zoom or visualViewport API unavailable.
+ */
+function getVisualViewportScale(): number {
+  return window.visualViewport?.scale ?? 1;
+}
+
+/**
+ * Adjust client coordinates to compensate for iOS native browser zoom.
+ * When iOS triggers native zoom, clientX/clientY are in visual viewport coords
+ * but we need layout viewport coords for consistent canvas calculations.
+ */
+function adjustForVisualViewport(clientX: number, clientY: number): { x: number; y: number } {
+  const vvScale = getVisualViewportScale();
+  if (vvScale === 1) {
+    return { x: clientX, y: clientY };
+  }
+
+  // Compensate for visual viewport zoom
+  const vv = window.visualViewport;
+  if (vv) {
+    // The visual viewport offset tells us how much the viewport has panned
+    const offsetX = vv.offsetLeft;
+    const offsetY = vv.offsetTop;
+    return {
+      x: (clientX + offsetX * vvScale) / vvScale,
+      y: (clientY + offsetY * vvScale) / vvScale
+    };
+  }
+
+  return { x: clientX / vvScale, y: clientY / vvScale };
+}
+
 export function installPointerAdapter(
   rootEl: HTMLElement,
   service: any,
@@ -15,6 +50,9 @@ export function installPointerAdapter(
   let lastTap: { t: number; x: number; y: number } = { t: 0, x: 0, y: 0 };
   const TAP_MS = 300;
   const TAP_DIST = 10;
+
+  // Track if visual viewport zoom is active (iOS native zoom corruption)
+  let lastKnownVVScale = 1;
 
   const classifyHandle = (node: Element | null): string | null => {
     if (!node) return null;
@@ -36,7 +74,11 @@ export function installPointerAdapter(
   };
 
   const send = (type: string, ev: PointerEvent | WheelEvent | KeyboardEvent, extra: Record<string, any> = {}): void => {
-    const xy = { x: (ev as any).clientX || 0, y: (ev as any).clientY || 0 };
+    // Adjust coordinates for iOS visual viewport zoom
+    const rawX = (ev as any).clientX || 0;
+    const rawY = (ev as any).clientY || 0;
+    const xy = adjustForVisualViewport(rawX, rawY);
+
     const elementNode = (ev.target as Element)?.closest('.canvas-element');
     const handleNode = (ev.target as Element)?.closest('.element-handle');
     const edgeLabelNode = (ev.target as Element)?.closest('text[data-id]');
@@ -61,7 +103,20 @@ export function installPointerAdapter(
 
   const onPointerDown = (ev: PointerEvent): void => {
     ev.preventDefault();
-    active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+
+    // Check for iOS visual viewport zoom corruption
+    const currentVVScale = getVisualViewportScale();
+    if (currentVVScale !== 1 && currentVVScale !== lastKnownVVScale) {
+      console.warn('[PointerAdapter] iOS native zoom detected, scale:', currentVVScale);
+      // Clear any stale pointer state from corrupted zoom session
+      active.clear();
+    }
+    lastKnownVVScale = currentVVScale;
+
+    // Store adjusted coordinates in active map
+    const adjusted = adjustForVisualViewport(ev.clientX, ev.clientY);
+    active.set(ev.pointerId, adjusted);
+
     const handleNode = (ev.target as Element)?.closest('.element-handle');
     const edgeLabelNode = (ev.target as Element)?.closest('text[data-id]');
     const elementNode = (ev.target as Element)?.closest('.canvas-element');
@@ -93,7 +148,9 @@ export function installPointerAdapter(
 
   const onPointerMove = (ev: PointerEvent): void => {
     if (!active.has(ev.pointerId)) return;
-    active.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    // Store adjusted coordinates in active map
+    const adjusted = adjustForVisualViewport(ev.clientX, ev.clientY);
+    active.set(ev.pointerId, adjusted);
     cancelLongPress();
     send('POINTER_MOVE', ev);
   };
@@ -108,15 +165,16 @@ export function installPointerAdapter(
 
     send('POINTER_UP', ev);
 
-    /*  tap / double-tap detection  */
+    /*  tap / double-tap detection - use adjusted coordinates */
     if (ev.button === 0) {
+      const adjusted = adjustForVisualViewport(ev.clientX, ev.clientY);
       const dt = ev.timeStamp - lastTap.t;
-      const dist = Math.hypot(ev.clientX - lastTap.x, ev.clientY - lastTap.y);
+      const dist = Math.hypot(adjusted.x - lastTap.x, adjusted.y - lastTap.y);
       if (dt < TAP_MS && dist < TAP_DIST) {
         send('DOUBLE_TAP', ev);
         lastTap.t = 0; // reset
       } else {
-        lastTap = { t: ev.timeStamp, x: ev.clientX, y: ev.clientY };
+        lastTap = { t: ev.timeStamp, x: adjusted.x, y: adjusted.y };
       }
     }
   };
@@ -147,6 +205,33 @@ export function installPointerAdapter(
   window.addEventListener('keydown', onKeydown, { passive: true });
   window.addEventListener('keyup', onKeyup, { passive: true });
 
+  /* iOS Safari gesture event prevention - these trigger native zoom */
+  const preventGesture = (e: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  document.addEventListener('gesturestart', preventGesture, { passive: false });
+  document.addEventListener('gesturechange', preventGesture, { passive: false });
+  document.addEventListener('gestureend', preventGesture, { passive: false });
+
+  /* Visual viewport zoom detection and recovery */
+  const onVisualViewportResize = () => {
+    const scale = getVisualViewportScale();
+    if (scale !== 1) {
+      console.warn('[PointerAdapter] Visual viewport zoom detected:', scale, '- clearing pointer state');
+      // Clear pointer state to prevent corrupted interactions
+      active.clear();
+      capturedTargets.clear();
+      // Notify controller to potentially reset
+      const controller = service.state?.context?.controller;
+      if (controller?.onVisualViewportZoom) {
+        controller.onVisualViewportZoom(scale);
+      }
+    }
+    lastKnownVVScale = scale;
+  };
+  window.visualViewport?.addEventListener('resize', onVisualViewportResize);
+
   /* teardown helper */
   return () => {
     rootEl.removeEventListener('pointerdown', onPointerDown);
@@ -156,5 +241,9 @@ export function installPointerAdapter(
     rootEl.removeEventListener('wheel', onWheel);
     window.removeEventListener('keydown', onKeydown);
     window.removeEventListener('keyup', onKeyup);
+    document.removeEventListener('gesturestart', preventGesture);
+    document.removeEventListener('gesturechange', preventGesture);
+    document.removeEventListener('gestureend', preventGesture);
+    window.visualViewport?.removeEventListener('resize', onVisualViewportResize);
   };
 }
